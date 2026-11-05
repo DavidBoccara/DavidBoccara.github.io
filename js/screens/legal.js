@@ -21,6 +21,9 @@ const head = (title) => [
 /** Liens vers les pages légales (bas du Profil, pages légales, création de compte). */
 export function legalLinks() {
   return h("div.legal-links",
+    h("a", { href: "/guides/" }, "Guides"),
+    h("a", { href: "/a-propos/" }, "À propos"),
+    h("a", { href: "/contact/" }, "Contact"),
     h("a", { href: "#terms" }, "Conditions d'utilisation"),
     h("a", { href: "#privacy" }, "Confidentialité"),
     h("a", { href: "#legal" }, "Mentions légales"),

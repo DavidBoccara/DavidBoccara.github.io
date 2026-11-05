@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Savoir quel avion passe au-dessus de chez soi | Plane GO</title>
+<meta name="description" content="Comment les avions annoncent leur position (ADS-B), d&#x27;où viennent les données de Plane GO et comment prévoir le passage d&#x27;un avion.">
+<link rel="canonical" href="https://plane-go.com/guides/reperer-les-avions/">
+<meta property="og:type" content="article"><meta property="og:site_name" content="Plane GO">
+<meta property="og:title" content="Savoir quel avion passe au-dessus de chez soi"><meta property="og:description" content="Comment les avions annoncent leur position (ADS-B), d&#x27;où viennent les données de Plane GO et comment prévoir le passage d&#x27;un avion.">
+<meta property="og:url" content="https://plane-go.com/guides/reperer-les-avions/"><meta property="og:image" content="https://plane-go.com/icons/icon-512.png">
+<meta name="theme-color" content="#0F1113">
+<meta name="google-adsense-account" content="ca-pub-1156180900899170">
+<link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+<link rel="stylesheet" href="/pages.css">
+</head>
+<body>
+<header class="top"><a class="brand" href="/"><img src="/icons/logo.svg" alt="" width="30" height="30">PLANE GO</a>
+<nav class="menu"><a href="/guides/">Guides</a><a href="/a-propos/">À propos</a><a href="/contact/">Contact</a><a class="app" href="/">Ouvrir l'appli</a></nav></header>
+<main><nav class="crumbs" aria-label="Fil d'Ariane"><a href="/">Accueil</a> › <a href="/guides/">Guides</a> › Savoir quel avion passe au-dessus de chez soi</nav>
+<article><h1>Savoir quel avion passe au-dessus de chez soi</h1>
+<p class="lead">Un avion de ligne traverse le ciel, très haut, en laissant une traînée blanche. D'où vient-il ? Où va-t-il ? Quel modèle est-ce ? Depuis quelques années, n'importe qui peut répondre à ces questions depuis son téléphone. Voici comment ça marche.</p>
+<h2>Les avions annoncent eux-mêmes leur position</h2>
+<p>La plupart des avions modernes sont équipés d'un transpondeur <b>ADS-B</b> (pour <i>Automatic Dependent Surveillance – Broadcast</i>). Plusieurs fois par seconde, il diffuse par radio un petit message : l'identifiant unique de l'appareil, sa position calculée par GPS, son altitude, sa vitesse, sa direction et souvent son indicatif de vol (par exemple AFR1234 pour un vol Air France).</p>
+<p>Ces messages ne sont pas chiffrés : ils sont faits pour être entendus par les contrôleurs aériens et par les autres avions. Partout dans le monde, des passionnés ont installé chez eux de petites antennes qui captent ces messages et les partagent sur Internet. Des réseaux communautaires comme <b>adsb.fi</b> ou <b>adsb.lol</b> rassemblent ces données et les mettent à disposition librement.</p>
+<h2>Ce que Plane GO en fait</h2>
+<p>Quand tu démarres le radar de Plane GO, l'appli demande à ces réseaux la liste des avions autour de toi (ta position est arrondie à environ 1 km avant d'être envoyée). Elle complète ensuite chaque avion avec sa fiche : modèle exact, compagnie, immatriculation, trajet du vol, grâce à la base libre <b>adsbdb</b> et à Wikipédia.</p>
+<p>Le calcul le plus utile se fait directement sur ton téléphone : à partir de la position, de la vitesse et du cap de l'avion, Plane GO prolonge sa trajectoire en ligne droite et calcule le moment où il passera au plus près de toi, à quelle distance, et dans quelle direction lever les yeux. C'est le compte à rebours « Visible dans 2 min 35 » du Scanner, et la notification qui te prévient même téléphone en poche.</p>
+<h2>Les limites à connaître</h2>
+<ul>
+<li><b>Tous les avions ne sont pas visibles.</b> Certains avions militaires, des avions légers anciens ou des vols sensibles n'émettent pas d'ADS-B, ou masquent une partie des informations.</li>
+<li><b>Une prévision reste une prévision.</b> Un avion peut virer, monter ou descendre. Plus le passage est lointain, plus l'estimation est incertaine. Les hélicoptères, qui changent souvent de direction, sont marqués d'un « ≈ ».</li>
+<li><b>Voir un avion à l'œil nu dépend du ciel.</b> Un avion de ligne à 11 000 m d'altitude reste souvent visible jusqu'à une dizaine de kilomètres de distance par beau temps ; derrière des nuages, il disparaît. Plane GO te laisse régler ta « zone visible » selon ta vue.</li>
+<li><b>Les avions qui atterrissent</b> descendent vite : s'ils touchent le sol avant d'arriver près de toi, l'appli l'indique au lieu de compter un passage qui n'aura pas lieu.</li>
+</ul>
+<h2>Petit lexique</h2>
+<dl>
+<dt>Code hexadécimal (ICAO 24 bits)</dt><dd>Identifiant unique de l'appareil, attribué à sa construction ou à son immatriculation, par exemple 3C6444. Il permet de reconnaître un avion précis, même quand il change de numéro de vol.</dd>
+<dt>Indicatif</dt><dd>Nom du vol utilisé à la radio : trois lettres de la compagnie suivies d'un numéro (AFR, EZY, RYR…).</dd>
+<dt>Immatriculation</dt><dd>La « plaque » de l'avion peinte sur le fuselage : F-GKXA en France, D-AIBA en Allemagne, G-EUPT au Royaume-Uni…</dd>
+<dt>Altitude</dt><dd>Donnée en pieds dans l'aviation : 35 000 ft valent environ 10 700 m. Plane GO affiche les deux.</dd>
+</dl>
+<p>Pour aller plus loin : <a href="/guides/lire-les-donnees-de-vol/">lire les données d'un vol</a> et <a href="/guides/reconnaitre-les-avions-de-ligne/">reconnaître les avions de ligne</a>.</p>
+</article>
+</main>
+<footer class="foot">
+<p><a href="/">Plane GO</a> · <a href="/guides/">Guides</a> · <a href="/a-propos/">À propos</a> · <a href="/contact/">Contact</a></p>
+<p><a href="/#legal">Mentions légales</a> · <a href="/#terms">Conditions d'utilisation</a> · <a href="/#privacy">Confidentialité</a></p>
+<p class="small">Mis à jour le 5 novembre 2026.</p>
+</footer>
+</body>
+</html>
