@@ -2,6 +2,7 @@
 import { h, toast, modal } from "../util.js";
 import { Supa } from "../supa.js";
 import { back, go, linkState } from "../app.js";
+import { PHOTO_RULES_TEXT, acceptPhotoRules } from "../photorules.js";
 
 export function authPage(view, [mode]) {
   if (mode === "reset") return resetPage(view);
@@ -16,7 +17,11 @@ export function authPage(view, [mode]) {
   const form = h("form", { onsubmit: (e) => { e.preventDefault(); submit(); } },
     userField, h("label.field", h("span", "E-mail"), email), h("label.field", h("span", "Mot de passe"), password), main);
   // Création du compte = acceptation des Conditions d'utilisation (affiché seulement en mode « Créer mon compte »)
-  const terms = h("p.small.dim.mt", "En créant ton compte, tu acceptes les ", h("a", { href: "#terms" }, "Conditions d'utilisation"), ".");
+  // + engagement obligatoire de photographier depuis des lieux publics (photorules.js)
+  const rulesBox = h("input", { type: "checkbox" });
+  const terms = h("div.mt",
+    h("label.rules-check", rulesBox, h("span", PHOTO_RULES_TEXT)),
+    h("p.small.dim.mt", "En créant ton compte, tu acceptes les ", h("a", { href: "#terms" }, "Conditions d'utilisation"), "."));
   view.append(h("div.page-head", h("button.back", { onclick: back, "aria-label": "Retour" }, "‹"), h("h1.title.grow", "Mon compte")),
     heading, form, switchBtn, h("button.btn.block.mt", { style: { background: "none", color: "var(--dim)" }, onclick: forgot }, "Mot de passe oublié ?"),
     h("p.small.dim.mt2", "Votre compte fonctionne sur tous vos appareils : collection, XP, amis et feed vous suivent partout."),
@@ -37,6 +42,8 @@ export function authPage(view, [mode]) {
     if (!/^\S+@\S+\.\S+$/.test(mail)) return toast("E-mail invalide");
     if (pass.length < 6) return toast("Mot de passe : 6 caractères minimum");
     if (signUp && !/^[A-Za-z0-9_.-]{3,20}$/.test(name)) return toast("Pseudo : 3 à 20 caractères, lettres, chiffres, . _ -");
+    if (signUp && !rulesBox.checked) return toast("Coche l'engagement de photographier depuis des lieux publics");
+    if (signUp) acceptPhotoRules();
     main.disabled = true;
     try {
       if (signUp) {

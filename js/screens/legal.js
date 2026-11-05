@@ -7,7 +7,7 @@ import { CONTACT_EMAIL, LEGAL, SITE_URL, GITHUB_SITE_URL } from "../config.js";
 const SITES = `${SITE_URL.replace(/\/$/, "")}, sa copie ${GITHUB_SITE_URL.replace(/\/$/, "")}`;
 import { adsOn, legalComplete, adChoices } from "../ads.js";
 
-const UPDATED = "3 novembre 2026";
+const UPDATED = "5 novembre 2026";
 const sec = (title, ...items) => h("div.card.pad.mt.privacy",
   h("h3", title), ...items.filter(Boolean).map((t) => (t instanceof Node ? t : h("p", t))));
 const list = (...rows) => h("ul", ...rows.filter(Boolean).map((r) => h("li", r)));
@@ -91,8 +91,10 @@ export function termsPage(view) {
       list(
         "Publie seulement tes propres photos d'avions, prises par toi. Pas de photo trouvée sur internet ou prise par quelqu'un d'autre.",
         "Rien d'obscène, de violent, de haineux, de discriminatoire ou d'illégal, ni dans les photos, ni dans les commentaires, ni dans le pseudo. Pas de harcèlement.",
-        "Ne photographie pas de personnes reconnaissables sans leur accord, et respecte les zones où la photo est interdite (certains sites militaires, par exemple).",
-        "Sécurité d'abord : ne joue pas en conduisant, respecte les règles des aéroports et des aérodromes, ne pénètre jamais sur un terrain interdit.",
+        h("span", h("b", "Photos depuis des lieux publics (engagement obligatoire) : "), "tu photographies les avions uniquement depuis des lieux publics (rue, parc, point de vue ou terrasse ouverts au public, parties publiques des aéroports…) ou des lieux où tu as le droit d'être. Tu n'entres jamais sur une propriété privée sans l'accord de son propriétaire, ni dans une zone réservée d'aéroport, sur une piste, derrière une clôture ou sur un terrain interdit. Tu respectes les interdictions de photographier (panneaux, sites militaires ou sensibles). Tu prends cet engagement en créant ton compte ou avant ta première photo ; sans lui, tu ne peux pas ajouter de photo."),
+        "Ne photographie pas de personnes reconnaissables sans leur accord.",
+        "Sécurité d'abord : ne joue pas en conduisant, respecte les règles des aéroports et des aérodromes et les consignes des agents.",
+        "Une photo prise en ne respectant pas cet engagement peut être signalée et supprimée, et le compte suspendu en cas d'abus.",
         "Pas de triche : fausses photos, comptes multiples, contournement des vérifications.",
       )),
 
