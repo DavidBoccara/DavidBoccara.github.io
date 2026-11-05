@@ -8,6 +8,7 @@ import { Cloud, sync } from "./cloud.js";
 import { flagOf, distanceBonus, MAX_PHOTO_KM, computeXp, spottedRarity, prettyModel } from "./game.js";
 import { renderHud, install, isStandalone, isIos, isAndroid, go } from "./app.js";
 import { Native } from "./native.js";
+import { APK_HOME } from "./config.js";
 import { DEFAULT_LOCATION, Radar } from "./radar.js";
 import { verifyPhoto, checksText } from "./verify.js";
 
@@ -582,7 +583,7 @@ export async function shareEntry(e) {
 
 // ---------- Installation ----------
 // L'appli Android est servie par le site lui-même (déposée par le workflow « Compiler l'appli Android »)
-export const APK_URL = "PlaneGO.apk";
+export const APK_URL = APK_HOME + "PlaneGO.apk"; // copie GitHub du site (voir config.js)
 
 /**
  * Encadré « Installer Plane GO » (rien si l'appli est déjà installée).
@@ -596,7 +597,7 @@ export function installCard({ dismissible = false } = {}) {
   const card = h("div.card.pad.install", { style: { marginBottom: "12px" } }, h("div", { style: { fontWeight: 800 } }, "Installer Plane GO"), how, btns);
   const hide = () => { localStorage.setItem("install_hidden2", "1"); card.remove(); };
   const render = () => {
-    if (isStandalone()) { card.remove(); return; }
+    if (isStandalone() || Native) { card.remove(); return; } // déjà dans l'appli Android : rien à installer
     how.textContent = isIos()
       ? "Sur iPhone : touchez le bouton Partager en bas de Safari, puis « Sur l'écran d'accueil »."
       : isAndroid()

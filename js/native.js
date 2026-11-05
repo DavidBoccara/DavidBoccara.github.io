@@ -7,6 +7,11 @@ import { Prefs } from "./store.js";
 /** Objet fourni par l'appli Android, ou null dans un navigateur. */
 export const Native = typeof window !== "undefined" && window.PlaneGONative ? window.PlaneGONative : null;
 
+/** Appli installée depuis le Play Store (appli 1.24+) : pas de PlaneGO.apk proposé, le Play Store fait les mises à jour. */
+export function fromPlayStore() {
+  try { return !!Native?.fromPlayStore?.(); } catch { return false; }
+}
+
 /** Réglages utiles au radar de l'appli : rayon, filtre de notifications, listes d'avions. */
 export function nativeConfig() {
   const chosen = Prefs.notifyModels;

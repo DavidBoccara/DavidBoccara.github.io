@@ -27,3 +27,8 @@ export const SITE_URL = "https://plane-go.com/";
 export const GITHUB_SITE_URL = "https://davidboccara.github.io/";
 /** Vrai sur la copie GitHub Pages (pas de publicité, hébergeur GitHub dans les mentions légales). */
 export const onGithubPages = () => /\.github\.io$/i.test(location.hostname);
+/**
+ * Appli Android hors Play Store (fichier .apk) : téléchargée depuis la copie GitHub du site, avec son numéro de version
+ * (apk-version.json, lu par update.js). plane-go.com renvoie vers le Play Store.
+ */
+export const APK_HOME = GITHUB_SITE_URL;

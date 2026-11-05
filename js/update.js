@@ -2,10 +2,11 @@
 // est écrit dans apk-version.json par la compilation (workflow « Compiler l'appli Android (APK) ») ; l'appli
 // installée donne le sien (Native.version()).
 import { h, ls, modal } from "./util.js";
-import { Native } from "./native.js";
-import { SITE_URL } from "./config.js";
+import { Native, fromPlayStore } from "./native.js";
+import { APK_HOME } from "./config.js";
 
-const APK = SITE_URL + "PlaneGO.apk";
+// APK et numéro de version lus au même endroit (copie GitHub du site) : jamais d'annonce d'une version pas encore en ligne
+const APK = APK_HOME + "PlaneGO.apk";
 /** « 1.10 » est plus récent que « 1.9 ». */
 const newer = (a, b) => {
   const x = String(a).split(".").map((n) => parseInt(n, 10) || 0), y = String(b).split(".").map((n) => parseInt(n, 10) || 0);
@@ -17,12 +18,13 @@ const RECHECK_MS = 10 * 60e3; // version publiée relue au plus toutes les 10 mi
 
 /** { latest, mine } si une version plus récente que celle de l'appli installée est publiée, sinon null. */
 export async function appUpdate() {
-  if (!Native) return null;
+  // Installée par le Play Store : c'est lui qui la met à jour (Google interdit de proposer un autre téléchargement)
+  if (!Native || fromPlayStore()) return null;
   let mine = "";
   try { mine = String(Native.version() || ""); } catch { return null; }
   if (!mine) return null;
   if (Date.now() - fetchedAt > RECHECK_MS) { published = null; fetchedAt = Date.now(); }
-  published ||= fetch("apk-version.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  published ||= fetch(APK_HOME + "apk-version.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const v = await published;
   return v?.versionName && newer(v.versionName, mine) ? { latest: v.versionName, mine } : null;
 }
@@ -34,7 +36,7 @@ export function downloadUpdate() {
   modal({ title: "Télécharger la mise à jour", body: [
     "Ta version de l'appli ne sait pas encore lancer le téléchargement toute seule (la nouvelle le pourra) :",
     "1. Ouvre Chrome (ou ton navigateur habituel).",
-    "2. Colle dans la barre d'adresse le lien qui vient d'être copié : plane-go.com/PlaneGO.apk",
+    "2. Colle dans la barre d'adresse le lien qui vient d'être copié : davidboccara.github.io/PlaneGO.apk",
     "3. Ouvre le fichier téléchargé puis touche « Mettre à jour ». Ta collection, tes XP et tes réglages sont conservés.",
   ] });
 }
