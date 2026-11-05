@@ -71,13 +71,25 @@ export function hangarList(box, mode, onChange) {
           h("span.chip.small", r.xpText))));
   }
 
+  const PAGE = 50;
   function render() {
     sortSeg.replaceChildren(
       h("button" + (!byRarity ? ".on" : ""), { onclick: () => { byRarity = false; ls.set("hangar_sort_rarity", false); render(); } }, "Plus récents"),
       h("button" + (byRarity ? ".on" : ""), { onclick: () => { byRarity = true; ls.set("hangar_sort_rarity", true); render(); } }, "★ Plus rares"));
     const rows = seenRows();
     empty.style.display = rows.length ? "none" : "";
-    list.replaceChildren(...rows.map(row));
+    // Par pages de 50 (1 300 avions en une fois = 28 000 éléments à l'écran et des centaines de photos à charger)
+    let shown = 0;
+    const more = h("button.btn.block.mt", { onclick: () => page() });
+    const page = () => {
+      const next = rows.slice(shown, shown + PAGE);
+      shown += next.length;
+      more.before(...next.map(row));
+      more.textContent = `Afficher plus (${rows.length - shown} autres)`;
+      more.style.display = shown < rows.length ? "" : "none";
+    };
+    list.replaceChildren(more);
+    page();
   }
   render();
 }

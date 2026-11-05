@@ -385,9 +385,12 @@ export async function exifDate(file) { return (await exifInfo(file)).date; }
 
 /** Stockage local tolérant aux erreurs (navigation privée…). */
 /** Décalage (ms) de l'heure de Paris par rapport à UTC à l'instant t (heure d'été comprise). */
+// Un seul formateur (en créer un à chaque appel coûtait ~0,15 ms : 200 ms et plus par recherche radar avec 1 300 passages)
+let parisFmt = null;
 function parisOffset(t) {
-  const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Paris", hourCycle: "h23", year: "numeric",
-    month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }).formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+  parisFmt ||= new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Paris", hourCycle: "h23", year: "numeric",
+    month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" });
+  const p = Object.fromEntries(parisFmt.formatToParts(new Date(t)).map((x) => [x.type, x.value]));
   return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second) - Math.floor(t / 1000) * 1000;
 }
 
@@ -395,7 +398,18 @@ function parisOffset(t) {
  * Début de la semaine du concours photo : lundi 0 h, heure de Paris (comme `private.week_of` côté serveur).
  * Les passages d'avions (Collection › Au-dessus) repartent à zéro à ce moment-là.
  */
-export function weekStart(now = Date.now()) {
+let weekCache = { at: 0, value: 0 };
+export function weekStart(now) {
+  // Appelée pour chaque passage d'avion (des milliers de fois) : résultat gardé une minute
+  if (now == null) {
+    const t = Date.now();
+    if (t - weekCache.at < 60e3) return weekCache.value;
+    weekCache = { at: t, value: weekStartAt(t) };
+    return weekCache.value;
+  }
+  return weekStartAt(now);
+}
+function weekStartAt(now) {
   try {
     const wall = new Date(now + parisOffset(now));                  // date et heure de Paris
     const monday = Date.UTC(wall.getUTCFullYear(), wall.getUTCMonth(), wall.getUTCDate() - ((wall.getUTCDay() + 6) % 7));
