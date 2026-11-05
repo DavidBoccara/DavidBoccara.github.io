@@ -2,7 +2,7 @@
 import { h, modal, toast, icon, pickImage, toJpeg, imageKind, exifDate, confirmBox, choose, dateTime, dateDay, dec, rarityMark } from "./util.js";
 import { Wiki, AdsbDb } from "./net.js";
 import { Supa } from "./supa.js";
-import { ensurePhotoRules } from "./photorules.js";
+import { ensurePhotoRules, requireAccount } from "./photorules.js";
 import { Collection, Sightings, createCatch, addAlbumPhoto, removeEntryPhoto, setMainEntryPhoto, entryPhotoItems, entryPhotos, ALBUM_MAX, catchMessage, entryPhoto, entryLabel, entryModel, entryRarity, Player } from "./store.js";
 import { Cloud, sync } from "./cloud.js";
 import { flagOf, distanceBonus, MAX_PHOTO_KM, computeXp, spottedRarity, prettyModel } from "./game.js";
@@ -238,6 +238,7 @@ const originalButton = (file, camera, model) => camera && !Native && file
  */
 export async function addPhoto(spotted, { camera, seenAt, files: given } = {}) {
   // given : photos déjà choisies (ex. reçues de l'appareil photo branché par câble, camera.js)
+  if (!requireAccount()) return null; // pas de photo en mode invité (photorules.js)
   if (!(await ensurePhotoRules())) return null; // engagement « lieux publics » obligatoire (photorules.js)
   const files = given || [].concat((await pickImage({ capture: !!camera, multiple: !camera })) || []).filter(Boolean);
   if (!files.length) return null;
@@ -372,6 +373,7 @@ export function sightingLabel(s) {
 
 /** « Ajouter une photo d'appareil photo » : choisir l'avion passé cette semaine, puis la photo. */
 export async function importFlow() {
+  if (!requireAccount()) return; // pas de photo en mode invité
   const caught = Collection.hexes();
   const list = Sightings.recent().sort((a, b) => caught.has(a.spotted.hex) - caught.has(b.spotted.hex));
   if (!list.length) {

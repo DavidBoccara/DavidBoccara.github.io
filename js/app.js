@@ -16,6 +16,7 @@ import { privacyPage } from "./screens/privacy.js";
 import { legalPage, termsPage } from "./screens/legal.js";
 import { checkAppUpdate } from "./update.js";
 import { watchDefaultLocation } from "./ui.js";
+import { askPhotoRulesAtStart, syncPhotoRules } from "./photorules.js";
 import { noticeRemovals } from "./report.js";
 import "./camera.js"; // photos de l'appareil branché par câble : bandeau « Nouvelle photo » sur tous les écrans
 
@@ -133,13 +134,14 @@ async function openEmailLink(l) {
 window.addEventListener("hashchange", route);
 Supa.onChange(async () => {
   Player.profile = null;
-  if (Supa.isLoggedIn) { await sync(); }
+  if (Supa.isLoggedIn) { syncPhotoRules(); await sync(); setTimeout(askPhotoRulesAtStart, 1500); }
   if (location.hash !== "#auth/reset") route(); // ne pas effacer le nouveau mot de passe en cours de saisie
 });
 route();
 if (emailLink) openEmailLink(emailLink);
 setTimeout(checkAppUpdate, 3000); // appli Android pas à jour ?
 watchDefaultLocation(); // position du téléphone introuvable → fenêtre « ce n'est pas normal »
+setTimeout(askPhotoRulesAtStart, 3500); // joueurs déjà inscrits : engagement « photos depuis des lieux publics »
 window.addEventListener("planego-synced", noticeRemovals); // une de mes publications supprimée après 5 signalements ?
 if (Supa.isLoggedIn) {
   Cloud.profile().then((p) => { Player.profile = p; renderHud(); }).catch(() => {});
