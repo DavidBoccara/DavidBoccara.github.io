@@ -1,7 +1,7 @@
 // Onglet Scanner : radar en direct, réglages de zone, filtre de notifications.
 import { h, icon, meters, modal, toast, rarityMark, cardinal, dec, dragSlider } from "../util.js";
 import { compassRose, nextMark } from "../compass.js";
-import { Radar, showAircraftNotification, approachOf, DEFAULT_LOCATION } from "../radar.js";
+import { Radar, showAircraftNotification, approachOf, DEFAULT_LOCATION, willBeVisible } from "../radar.js";
 import { Prefs, Collection } from "../store.js";
 import { Adsb, Wiki } from "../net.js";
 import { wikiQuery, locationBadge, defaultLocationAlert } from "../ui.js";
@@ -102,10 +102,12 @@ export function scanner(view) {
     status.style.whiteSpace = "pre-line";
 
     const loc = Radar.location, vis = Prefs.visibleM / 1000;
-    const all = listed();
+    const base = listed();
     // Trajectoire calculée une seule fois par avion et par mise à jour (avant : à chaque comparaison du tri, puis encore pour
     // chaque vignette et pour la rose)
-    const ap = new Map(loc ? all.map((ac) => [ac, approach(loc.lat, loc.lon, ac, vis)]) : []);
+    const ap = new Map(loc ? base.map((ac) => [ac, approach(loc.lat, loc.lon, ac, vis)]) : []);
+    // Option « Seulement les avions visibles » : déjà dans la zone visible ou qui vont y passer
+    const all = Prefs.listVisibleOnly && loc ? base.filter((ac) => willBeVisible(ap.get(ac))) : base;
     if (loc) all.sort((a, b) => approachSortKey(ap.get(a)) - approachSortKey(ap.get(b)) || (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9));
     // Les premiers seulement à l'écran (les plus intéressants : triés par heure de passage) ; tous restent sur la rose
     const shown = all.slice(0, showMax);
@@ -130,6 +132,7 @@ export function scanner(view) {
     empty.style.display = all.length ? "none" : "";
     empty.textContent = !Radar.running ? "Appuyez sur « Démarrer le radar » pour surveiller le ciel autour de vous."
       : !Radar.lastUpdate ? "Chargement…" : !Radar.aircraft.length ? "Aucun avion détecté dans le rayon."
+      : Prefs.listVisibleOnly && base.length ? `Aucun avion ne va passer dans la zone visible (${meters(Prefs.visibleM)}) pour l'instant. ${base.length} autre(s) avion(s) dans le rayon (bouton « Liste » pour tous les voir).`
       : "Aucun avion de ces types ou modèles dans le rayon pour l'instant (bouton « Liste » pour changer le filtre).";
   }
 
@@ -287,7 +290,7 @@ export function filterSummary(f = NOTIF) {
   if (k.length === KINDS.length) parts.push("tous les avions");
   else if (k.length) parts.push(KINDS.filter((x) => k.includes(x.key)).map((x) => x.label.split(" (")[0]).join(", "));
   if (m.length) parts.push(m.length === 1 ? m[0] : `${m.length} modèles`);
-  const vis = f === NOTIF && Prefs.notifyVisibleOnly && parts.length ? ", visibles à l'œil nu" : "";
+  const vis = (f === NOTIF ? Prefs.notifyVisibleOnly : Prefs.listVisibleOnly) && parts.length ? ", visibles à l'œil nu" : "";
   return `${f.prefix} : ` + (parts.length ? parts.join(" + ") + vis : "aucun");
 }
 
@@ -311,10 +314,11 @@ function allToggle(rows) {
 
 function editFilter(f, onChange) {
   const rows = checks(KINDS.map((k) => ({ key: k.key, label: k.label })), f.kinds);
-  const visible = h("input", { type: "checkbox", checked: Prefs.notifyVisibleOnly });
+  const visible = h("input", { type: "checkbox", checked: f === NOTIF ? Prefs.notifyVisibleOnly : Prefs.listVisibleOnly });
   const save = () => {
     f.kinds = rows.filter((r) => r.box.checked).map((r) => r.key);
     if (f === NOTIF) Prefs.notifyVisibleOnly = visible.checked;
+    else Prefs.listVisibleOnly = visible.checked;
     pushConfig(); onChange();
   };
   const body = f === NOTIF ? [
@@ -325,7 +329,9 @@ function editFilter(f, onChange) {
     h("p.small.dim.mt", (Native ? "Les notifications arrivent même appli fermée, tant que le radar est démarré. " : "Les notifications s'affichent tant que Plane GO est ouvert. ")
       + "Un avion est notifié s'il correspond à un type OU à un modèle coché."),
   ] : [
-    h("div.row.all-row", h("div.kicker.grow", "Types d'avion"), allToggle(rows)),
+    h("label.check", visible, h("span", h("b", "Seulement les avions susceptibles d'être visibles"), h("br"),
+      h("span.small.dim", `Avions déjà dans la zone visible (${meters(Prefs.visibleM)}) ou qui vont y passer. Les autres sont cachés de la liste et de la rose.`))),
+    h("div.row.mt.all-row", h("div.kicker.grow", "Types d'avion"), allToggle(rows)),
     ...rows.map((r) => r.el),
     h("p.small.dim.mt", "La liste et la rose des vents ne montrent que les avions qui correspondent à un type OU à un modèle coché. Tout cocher = tous les avions."),
   ];

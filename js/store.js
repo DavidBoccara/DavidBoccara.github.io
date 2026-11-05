@@ -305,6 +305,8 @@ export const Prefs = {
   // Ancien interrupteur « Afficher uniquement les militaires » repris tel quel.
   get listKinds() { return ls.get("list_kinds", ls.get("mil_only", false) ? ["MILITARY"] : null); }, set listKinds(v) { ls.set("list_kinds", v); },
   get listModels() { return ls.get("list_models", []); }, set listModels(v) { ls.set("list_models", v); },
+  /** Liste et rose du Scanner : seulement les avions qui vont passer dans la zone visible (ou y sont déjà). */
+  get listVisibleOnly() { return ls.get("list_visible_only", false); }, set listVisibleOnly(v) { ls.set("list_visible_only", v); },
   /** Notifier seulement les avions qui vont passer dans la zone visible à l'œil nu. */
   get notifyVisibleOnly() { return ls.get("notify_visible_only", false); }, set notifyVisibleOnly(v) { ls.set("notify_visible_only", v); },
   get notifyKinds() { return ls.get("notify_kinds", ["MILITARY"]); }, set notifyKinds(v) { ls.set("notify_kinds", v); },
