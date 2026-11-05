@@ -52,7 +52,7 @@ export function scanner(view) {
   const infoBtn = h("button.cam-btn", { type: "button", "aria-label": "Comment marche le radar", title: "Comment marche le radar",
     onclick: () => modal({ title: "Le radar", body: [
       Native
-        ? "Appli Android : le radar continue écran éteint et vous notifie même appli fermée. Une notification « radar actif » reste affichée ; « Arrêter le radar » l'éteint."
+        ? "Appli Android : le radar continue écran éteint ou quand vous passez à une autre appli, et vous notifie. Une notification « radar actif » reste affichée ; « Arrêter le radar » l'éteint. Fermer Plane GO depuis les applis récentes (en la faisant glisser vers le haut) arrête tout (appli 1.23+)."
         : "Le radar fonctionne tant que Plane GO est ouvert à l'écran (l'écran reste allumé). Pour qu'il continue écran éteint, installez l'appli Android Plane GO.",
       "Scan 1 s : une recherche par seconde pendant 10 min pour suivre un passage de près, puis retour au réglage choisi. Un peu plus de batterie et de données.",
       "Scan toutes les : temps entre deux recherches d'avions (15 s par défaut).",
