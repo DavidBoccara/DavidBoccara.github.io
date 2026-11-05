@@ -15,6 +15,9 @@ export function scanner(view) {
   const locBox = h("div", { style: { marginBottom: "4px" } });
   const list = h("div.list.mt");
   const empty = h("div.empty");
+  // 30 vignettes au plus à l'écran (avec 200 avions autour, la liste devenait lourde sur téléphone) ; « Afficher les autres »
+  let showMax = 30;
+  const moreBtn = h("button.btn.block.mt", { style: { display: "none" }, onclick: () => { showMax += 30; render(); } });
   const toggle = h("button.btn.primary.grow", { onclick: () => (Radar.running ? Radar.stop() : startRadar()) });
   // Scan rapide : une recherche par seconde pendant 10 min (appli Android), pour suivre un passage de près
   const fastBtn = h("button.btn.outline", { title: "Une recherche par seconde pendant 10 minutes, puis retour à la fréquence choisie",
@@ -73,7 +76,7 @@ export function scanner(view) {
       h("div.card.scan-box", h("div.kicker", "Avions de la liste"),
         h("div.row", listBtn, h("button.btn.outline", { onclick: () => findNearest(() => { listBtn.textContent = filterSummary(LIST); render(); }),
           title: "Trouver l'avion en vol le plus proche parmi les types et modèles de la liste" }, "Le plus proche"))),
-      empty, list)));
+      empty, list, moreBtn)));
 
   async function startRadar() {
     if ("Notification" in window && Notification.permission === "default") { try { await Notification.requestPermission(); } catch { /* refusé */ } }
@@ -99,26 +102,32 @@ export function scanner(view) {
     status.style.whiteSpace = "pre-line";
 
     const loc = Radar.location, vis = Prefs.visibleM / 1000;
-    const shown = listed();
-    if (loc) shown.sort((a, b) => approachSortKey(approach(loc.lat, loc.lon, a, vis)) - approachSortKey(approach(loc.lat, loc.lon, b, vis))
-      || (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9));
+    const all = listed();
+    // Trajectoire calculée une seule fois par avion et par mise à jour (avant : à chaque comparaison du tri, puis encore pour
+    // chaque vignette et pour la rose)
+    const ap = new Map(loc ? all.map((ac) => [ac, approach(loc.lat, loc.lon, ac, vis)]) : []);
+    if (loc) all.sort((a, b) => approachSortKey(ap.get(a)) - approachSortKey(ap.get(b)) || (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9));
+    // Les premiers seulement à l'écran (les plus intéressants : triés par heure de passage) ; tous restent sur la rose
+    const shown = all.slice(0, showMax);
+    moreBtn.style.display = all.length > showMax ? "" : "none";
+    moreBtn.textContent = `Afficher les ${all.length - showMax} autres avions`;
     const caught = Collection.hexes();
     // Vignettes gardées d'une mise à jour à l'autre (sinon la liste et les photos clignotent) : on met à jour
     // leur contenu, on ne déplace les cartes que si l'ordre change, et on retire celles des avions partis.
-    const els = shown.map((ac) => cardFor(ac).update(ac, caught, loc, vis));
+    const els = shown.map((ac) => cardFor(ac).update(ac, caught, loc, vis, ap.get(ac)));
     const keep = new Set(shown.map((ac) => ac.hex));
     for (const hex of cards.keys()) if (!keep.has(hex)) cards.delete(hex);
     if (els.length !== list.children.length || els.some((el, i) => list.children[i] !== el)) list.replaceChildren(...els);
     list.querySelectorAll(".pastille.next").forEach((p) => p.classList.remove("next"));
     // Sur la rose des vents : où regarder pour le prochain avion visible
-    const nextAc = loc && shown.map((ac) => [ac, approach(loc.lat, loc.lon, ac, vis)]).find(([, a]) => a && a.kind !== "AWAY" && a.kind !== "LANDS");
+    const nextAc = loc && all.map((ac) => [ac, ap.get(ac)]).find(([, a]) => a && a.kind !== "AWAY" && a.kind !== "LANDS");
     const R = Prefs.radiusM / 1000;
-    const dots = shown.filter(onRose).map((ac) => ({ deg: ac.bearingDeg, kind: "dot", r: ac.distanceKm / R, color: dotColor(ac) }));
+    const dots = all.filter(onRose).map((ac) => ({ deg: ac.bearingDeg, kind: "dot", r: ac.distanceKm / R, color: dotColor(ac) }));
     rose.setMarks([...dots, nextAc && nextMark(nextAc[0], nextAc[1], vis, R)],
       nextAc ? { label: acLabel(nextAc[0]), deg: nextAc[1].lookDeg } : null, { visible: vis / R });
     // Pastille cerclée sur la vignette de l'avion relié au petit cercle de la rose
     if (nextAc) list.querySelector(`[data-hex="${nextAc[0].hex}"] .pastille`)?.classList.add("next");
-    empty.style.display = shown.length ? "none" : "";
+    empty.style.display = all.length ? "none" : "";
     empty.textContent = !Radar.running ? "Appuyez sur « Démarrer le radar » pour surveiller le ciel autour de vous."
       : !Radar.lastUpdate ? "Chargement…" : !Radar.aircraft.length ? "Aucun avion détecté dans le rayon."
       : "Aucun avion de ces types ou modèles dans le rayon pour l'instant (bouton « Liste » pour changer le filtre).";
@@ -145,10 +154,10 @@ export function scanner(view) {
       thumb);
     const txt = (node, v) => { if (node.textContent !== v) node.textContent = v; };
     let rarKey = "", photoKey = null;
-    return { el, update(ac, caught, loc, vis) {
+    return { el, update(ac, caught, loc, vis, known) {
       const r = rarityOfAc(ac), extra = Radar.extras.get(ac.hex);
       const model = prettyModel(ac.description || (extra?.info ? `${extra.info.manufacturer} ${extra.info.model}`.trim() : "")) || acLabel(ac) || "Appareil non identifié";
-      const a = loc ? approach(loc.lat, loc.lon, ac, vis) : null;
+      const a = known !== undefined ? known : loc ? approach(loc.lat, loc.lon, ac, vis) : null;
       time._a = a; time._ground = !!ac.onGround; setTime(time);
       const coming = a && a.kind !== "AWAY" && a.kind !== "LANDS" && Number.isFinite(a.lookDeg);
       const deg = coming ? a.lookDeg : ac.bearingDeg;
@@ -181,7 +190,10 @@ export function scanner(view) {
     list.querySelectorAll(".ac-time").forEach(setTime);
     setFast();
   }, 1000);
-  const unsub = Radar.subscribe(render);
+  // Plusieurs mises à jour d'affilée (position GPS, avions, fiches) : un seul calcul par image
+  let pending = false;
+  const schedule = () => { if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; render(); }); } };
+  const unsub = Radar.subscribe(schedule);
   render();
   return () => { clearInterval(tick); unsub(); rose.stop(); camBtn?.cleanup?.(); };
 }
