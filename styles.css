@@ -686,6 +686,9 @@ img.cover { width: 100%; display: block; object-fit: cover; background: var(--ca
 .fly-model { font-weight: 600; font-size: 14px; }
 .fly-sub { font: 400 11px/1.4 var(--mono); color: var(--dim); }
 .fly-fate { font-size: 13px; margin-top: 3px; }
+.fly-route { font-size: 12px; color: var(--text); opacity: .8; margin-top: 2px; }
+.wmap-line.route { stroke: #4A5058; stroke-width: 1.2; }
+.wmap-line.route.on { stroke: var(--accent); stroke-width: 1.8; }
 .fly-row.ok .fly-fate { color: var(--green); }
 .fly-result { margin-top: 4px; }
 @media (min-width: 1000px) {

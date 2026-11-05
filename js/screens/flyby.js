@@ -158,6 +158,32 @@ const airport = (a) => { const c = countryFr(a); return [a.city || a.name, a.iat
 const hm = (min) => { const m = Math.max(5, Math.round(min / 5) * 5); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}` : `${m} min`; };
 const fact = (label, value) => h("div.dest-fact", h("span.k", label), h("span.v", value));
 
+// ---------- Trajets du défi Altitude ----------
+/** Trajet adsbdb gardé seulement si l'avion est à peu près dessus (indicatifs parfois réutilisés). */
+function onRoute(ac, route) {
+  const o = route?.origin, d = route?.destination;
+  if (!o || !d || o.lat == null || d.lat == null || ac.lat == null) return false;
+  const od = distanceKm(o.lat, o.lon, d.lat, d.lon);
+  return od >= 50 && distanceKm(o.lat, o.lon, ac.lat, ac.lon) + distanceKm(ac.lat, ac.lon, d.lat, d.lon) <= od * 1.25 + 120;
+}
+/** Ajoute p.route (et la distance parcourue / restante) aux avions qui ont un indicatif ; 6 s au plus. */
+async function addRoutes(planes) {
+  const one = async (p) => {
+    if (!p.ac.callsign) return;
+    const r = await AdsbDb.route(p.ac.callsign).catch(() => null);
+    if (onRoute(p.ac, r)) p.route = r;
+  };
+  await Promise.race([Promise.all(planes.map(one)), new Promise((ok) => setTimeout(ok, 6000))]);
+}
+const short = (a) => a.iata || a.icao || a.city || a.name;
+/** « Paris CDG → Madrid MAD · 120 km parcourus, 930 km restants » */
+function routeLabel(p) {
+  const o = p.route.origin, d = p.route.destination, ac = p.ac;
+  const done = Math.round(distanceKm(o.lat, o.lon, ac.lat, ac.lon)), left = Math.round(distanceKm(ac.lat, ac.lon, d.lat, d.lon));
+  const city = (a) => [a.city || a.name, short(a)].filter(Boolean).join(" ");
+  return `${city(o)} → ${city(d)} · ${done.toLocaleString("fr-FR")} km parcourus, ${left.toLocaleString("fr-FR")} km restants`;
+}
+
 // ---------- Alternance des défis ----------
 const KINDS = ["pass", "dest", "alt"];
 const KIND_LABEL = { pass: "Passage", dest: "Destination", alt: "Altitude" };
@@ -241,6 +267,8 @@ export function flybyGame(view) {
         if (!alive) return;
         if (found) break;
       }
+      // Altitude : trajet de chaque avion (départ → arrivée, adsbdb) pour deviner s'il monte, croise ou descend
+      if (found?.kind === "alt") { status.textContent = "Recherche des trajets…"; await addRoutes(found.planes); }
       const M = await mapP;
       if (!alive) return;
       if (!found) { status.textContent = "Pas assez d'avions autour de toi en ce moment. Réessaie dans quelques minutes."; return; }
@@ -273,6 +301,14 @@ export function flybyGame(view) {
 
     const marks = () => {
       const out = isPass && (lvl.ring || game.done) ? [{ type: "line", points: ring(loc.lat, loc.lon, Number(km)), cls: "ring" }] : [];
+      if (!isPass) {
+        // Trajet complet de chaque avion (départ → arrivée) : celui choisi en ambre, les autres en gris
+        for (const p of planes) if (p.route) {
+          const o = p.route.origin, d = p.route.destination, on = game.sel === p || (game.done && p === target);
+          out.push({ type: "line", points: arc(o.lat, o.lon, d.lat, d.lon), cls: "route" + (on ? " on" : "") });
+          if (on) out.push({ type: "dot", lon: o.lon, lat: o.lat, r: 4, cls: "origin" }, { type: "dot", lon: d.lon, lat: d.lat, r: 4, cls: "origin" });
+        }
+      }
       if (isPass && game.done) {
         for (const p of planes) {
           const t = p.a.kind === "AWAY" || p.a.kind === "LANDS" ? 10 * 60 : p.a.tClosest;
@@ -313,12 +349,14 @@ export function flybyGame(view) {
           ? [acLabel(ac), `${Math.round(ac.altitudeFt ?? 0).toLocaleString("fr-FR")} ft`, (lvl.speed || all) && fmtSpeed(ac),
             (lvl.cap || all) && `cap ${Math.round(ac.trackDeg)}° ${cardinal(ac.trackDeg)}`]
           : [acLabel(ac), fmtSpeed(ac)];
+        const routeTxt = isPass ? null : p.route ? routeLabel(p) : "Trajet inconnu";
         const fateTxt = !all ? null : isPass ? fate(p.a) : `${fmtAltitude(ac)}${p === target ? " : le plus haut" : ""}`;
         return h("button.fly-row" + state, { type: "button", onclick: () => select(p), disabled: game.done || game.wrong.has(p) },
           h("span.fly-letter", LETTERS[i]),
           h("span.fly-main",
             h("span.fly-model", prettyModel(ac.description) || ac.type || "Avion"),
             h("span.fly-sub", sub.filter(Boolean).join(" · ")),
+            routeTxt ? h("span.fly-route", routeTxt) : null,
             fateTxt ? h("span.fly-fate", fateTxt) : null));
       }));
     }
@@ -361,6 +399,18 @@ export function flybyGame(view) {
       redraw();
     }
 
+    // Altitude : voir les trajets en entier (départs et arrivées), puis revenir aux avions
+    let wide = false;
+    const withRoutes = planes.filter((p) => p.route);
+    const routesBtn = isPass || !withRoutes.length ? null : h("button.btn.block.mt", { type: "button", onclick: () => {
+      wide = !wide;
+      if (wide) {
+        const sel = game.sel?.route ? [game.sel] : withRoutes;
+        map.fit([[loc.lon, loc.lat], ...planes.map((p) => [p.ac.lon, p.ac.lat]),
+          ...sel.flatMap((p) => [[p.route.origin.lon, p.route.origin.lat], [p.route.destination.lon, p.route.destination.lat]])], 40);
+      } else fitPlanes();
+      routesBtn.textContent = wide ? "Revenir aux avions" : "Voir les trajets en entier";
+    } }, "Voir les trajets en entier");
     box.replaceChildren(
       isPass
         ? questionCard(`Passage · positions à ${time} · ${planes.length} avions`,
@@ -368,10 +418,11 @@ export function flybyGame(view) {
           lvl.ring ? `Le cercle pointillé fait ${km} km autour de toi.` : null)
         : questionCard(`Altitude · positions à ${time} · ${planes.length} avions`,
           ["Lequel de ces avions vole ", h("b", "le plus haut"), " ?"],
-          "Tu as le modèle et la vitesse de chacun : les avions de ligne rapides montent souvent plus haut que les petits avions et les avions en approche."),
-      h("div.fly-layout", h("div.fly-mapcol", map.el), h("div.fly-side", rows, validate, feedback)));
+          "Modèle, vitesse et trajet de chacun (sur la carte, en ambre pour l'avion choisi) : un avion loin de son départ et de son arrivée est sans doute en croisière, tout en haut ; près d'un aéroport, il monte ou descend."),
+      h("div.fly-layout", h("div.fly-mapcol", map.el, routesBtn), h("div.fly-side", rows, validate, feedback)));
     redraw();
-    requestAnimationFrame(() => map.fit([[loc.lon, loc.lat], ...planes.map((p) => [p.ac.lon, p.ac.lat])], 40));
+    const fitPlanes = () => map.fit([[loc.lon, loc.lat], ...planes.map((p) => [p.ac.lon, p.ac.lat])], 40);
+    requestAnimationFrame(fitPlanes);
   }
 
   // ----- Destination : toucher la carte là où l'avion va atterrir -----
