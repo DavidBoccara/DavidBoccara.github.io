@@ -128,9 +128,10 @@ export function buildAltitude(list, lvl = flyLevel(5)) {
 
 // ---------- Défi Destination ----------
 // Trajet : adsbdb (indicatif → aéroports), gardé seulement s'il est plausible (indicatifs parfois réutilisés).
-export const DEST_STEPS = [[50, 10], [150, 9], [300, 8], [600, 7], [1200, 6]];
-export const destXp = (km) => (DEST_STEPS.find(([max]) => km <= max) || [0, 5])[1];
-const DEST_OK_KM = 300; // à moins de 300 km : la série continue
+// Le cône aide beaucoup : barème serré, rien au-delà de 600 km ni en dehors du cône (sur 10, × gain du grade / 10)
+export const DEST_STEPS = [[25, 10], [50, 9], [100, 8], [150, 7], [250, 5], [400, 3], [600, 1]];
+export const destXp = (km) => (DEST_STEPS.find(([max]) => km <= max) || [0, 0])[1];
+const DEST_OK_KM = 150; // à moins de 150 km : la série continue
 function plausible(ac, route) {
   const o = route?.origin, d = route?.destination;
   if (!o || !d || o.lat == null || d.lat == null || ac.lat == null || ac.trackDeg == null) return false;
@@ -189,7 +190,7 @@ export function flybyGame(view) {
     const next = FLY_LEVELS[lvl.grade];
     intro.textContent = "Trois défis qui alternent avec les avions autour de toi : lequel va passer près de toi, où un avion va "
       + `atterrir, lequel vole le plus haut. Jusqu'à ${lvl.n} avions sur la carte. Premier essai : ${lvl.xp} XP, deuxième : la moitié ; `
-      + `destination : ${Math.round(lvl.xp / 2)} à ${lvl.xp} XP selon la précision. 3 bonnes réponses d'affilée = gains ×2, 6 = ×3…`
+      + `destination : jusqu'à ${lvl.xp} XP, de moins en moins en s'éloignant de l'aéroport. 3 bonnes réponses d'affilée = gains ×2, 6 = ×3…`
       + (next ? ` Au grade ${next.grade} : ${next.n} avions, moins d'aides, ${next.xp} XP.` : "");
   }
   renderStats();
@@ -399,11 +400,10 @@ export function flybyGame(view) {
     }).catch(() => {});
 
     // Aide : cône dans la direction de l'avion (assez large pour contenir l'arrivée, sans être centré dessus)
-    // et arc pointillé à la distance qu'il peut encore parcourir (d'après le vol restant)
     const off = Math.abs(((bearingDeg(ac.lat, ac.lon, d.lat, d.lon) - ac.trackDeg + 540) % 360) - 180);
     const half = Math.max(20, Math.ceil((off + 8) / 10) * 10);
     const help = cone(ac.lat, ac.lon, ac.trackDeg, half, leftKm * 1.35, leftKm);
-    const base = [{ type: "area", points: help.area, cls: "cone" }, { type: "line", points: help.reach, cls: "reach" },
+    const base = [{ type: "area", points: help.area, cls: "cone" },
       { type: "line", points: arc(o.lat, o.lon, ac.lat, ac.lon), cls: "flown" }, { type: "dot", lon: o.lon, lat: o.lat, r: 4, cls: "origin" },
       { type: "plane", lon: ac.lon, lat: ac.lat, deg: ac.trackDeg, cls: "sel" }];
     const validate = h("button.btn.primary.block.mt", { disabled: true, onclick: () => reveal() }, "Touche la carte pour répondre");
@@ -421,8 +421,11 @@ export function flybyGame(view) {
       if (!guess || game.done) return;
       game.done = true;
       const err = distanceKm(guess.lat, guess.lon, d.lat, d.lon);
-      const base10 = destXp(err), ok = err <= DEST_OK_KM;
-      const r = settle(ok, (base10 * lvl.xp) / 10, destTag(ac));
+      // Réponse en dehors du cône : rien (on connaît la direction de l'avion)
+      const gb = bearingDeg(ac.lat, ac.lon, guess.lat, guess.lon), gd = distanceKm(ac.lat, ac.lon, guess.lat, guess.lon);
+      const inCone = Math.abs(((gb - ac.trackDeg + 540) % 360) - 180) <= half && gd <= leftKm * 1.35;
+      const base10 = inCone ? destXp(err) : 0, ok = inCone && err <= DEST_OK_KM;
+      const r = settle(ok, base10 ? Math.max(1, Math.round((base10 * lvl.xp) / 10)) : 0, destTag(ac));
       map.setMarks([...base,
         { type: "line", points: arc(ac.lat, ac.lon, d.lat, d.lon), cls: "ahead" },
         { type: "line", points: [[guess.lon, guess.lat], [d.lon, d.lat]], cls: "miss" },
@@ -437,13 +440,14 @@ export function flybyGame(view) {
         d.name && d.name !== d.city ? h("div.small.dim", d.name) : null,
         h("div.dest-score", h("span.big", `${km} km`), h("span.small.dim", "entre ta réponse et l'aéroport")),
         h("div.dest-xp" + (r.xp ? "" : ".dim"), r.xpTxt),
+        !inCone ? h("div.small", "Ta réponse était en dehors du cône : l'avion ne va pas dans cette direction.") : null,
         h("div.small" + (ok ? "" : ".dim"), ok ? r.streakTxt : `${r.streakTxt} : il faut viser à moins de ${DEST_OK_KM} km.`),
-        h("div.small.dim.mt", `Gains selon l'écart : tout à moins de 50 km, puis un peu moins à 150, 300, 600 et 1 200 km ; la moitié au-delà. La série continue à moins de ${DEST_OK_KM} km.`),
+        h("div.small.dim.mt", `Gains selon l'écart (sur ${lvl.xp} XP) : tout à moins de 25 km, 90 % à 50 km, 80 % à 100 km, 70 % à 150 km, 50 % à 250 km, 30 % à 400 km, 10 % à 600 km, rien au-delà ni hors du cône. La série continue à moins de ${DEST_OK_KM} km.`),
         nextButtons(null)));
     }
     box.replaceChildren(
       questionCard(`Destination · ${acLabel(ac)}`, ["Où va ", h("b", "atterrir"), " cet avion ?"],
-        `Le cône montre la direction de l'avion, l'arc pointillé la distance qu'il peut encore parcourir (≈ ${Math.round(leftKm / 50) * 50 || 50} km) : l'aéroport est près de cet arc, dans le cône. Glisse, pince ou + / − pour zoomer, touche pour répondre.`),
+        "Le cône montre la direction de l'avion : l'aéroport est dedans. Aide-toi du vol restant et de la vitesse pour estimer la distance. Glisse, pince ou + / − pour zoomer, touche pour répondre."),
       h("div.fly-layout", h("div.fly-mapcol", map.el), h("div.fly-side", card, validate, feedback)));
     map.setMarks(base);
     // Cadrage : départ, avion et la distance qu'il peut encore parcourir (sans montrer l'arrivée)
