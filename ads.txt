@@ -1,0 +1,2 @@
+# Vendeurs d'espaces publicitaires autorisés pour plane-go.com (IAB ads.txt)
+google.com, pub-1156180900899170, DIRECT, f08c47fec0942fa0

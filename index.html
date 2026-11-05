@@ -1,25 +1,32 @@
 <!doctype html>
 <html lang="fr">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Plane GO</title>
-<meta name="description" content="Plane GO : repère les avions au-dessus de toi, photographie-les, gagne des XP et défie tes amis.">
-<meta name="theme-color" content="#0F1113">
-<link rel="canonical" href="https://plane-go.com/">
-<!-- Renvoi vers le jeu (en gardant la fin de l'adresse, ex. #scanner) -->
-<script>location.replace("https://plane-go.com/" + location.search + location.hash);</script>
-<meta http-equiv="refresh" content="1; url=https://plane-go.com/">
-<style>
-  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #0F1113; color: #E9EAEC;
-    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; text-align: center; padding: 16px; box-sizing: border-box; }
-  a { color: #F2A93B; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Plane GO</title>
+  <meta name="description" content="Repère les avions au-dessus de toi, photographie-les, gagne des XP et défie tes amis.">
+  <meta name="theme-color" content="#0F1113">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Plane GO">
+  <!-- Vérification du site par Google AdSense (sans charger de script : les pubs ne sont chargées que dans le feed, js/ads.js) -->
+  <meta name="google-adsense-account" content="ca-pub-1156180900899170">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/ibm-plex-mono-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <main>
-    <p>Ouverture de <strong>Plane GO</strong>…</p>
-    <p>Si rien ne se passe : <a href="https://plane-go.com/">plane-go.com</a></p>
-  </main>
+  <div id="app">
+    <header class="hud" id="hud"></header>
+    <main id="view"></main>
+    <nav class="tabbar" id="tabs" aria-label="Onglets"></nav>
+  </div>
+  <noscript><p style="padding:20px">Plane GO a besoin de JavaScript.</p></noscript>
+  <script type="module" src="js/app.js"></script>
 </body>
 </html>
