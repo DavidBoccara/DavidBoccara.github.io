@@ -1,6 +1,7 @@
 // Données gardées sur l'appareil : collection (photos dans IndexedDB), passages, quiz, réglages.
 import { ls, uuid, weekStart } from "./util.js";
 import { Supa } from "./supa.js";
+import { Sound } from "./sound.js";
 import { MAX_PHOTO_KM, rarityByName, prettyModel, levelOf, computeXp, modelKey, spottedRarity, describeXp } from "./game.js";
 
 // ---------- Photos (IndexedDB) ----------
@@ -267,7 +268,7 @@ export const QuizStore = {
   /** XP gagnés hors question en direct (quiz du jour…) ; tag = identifiant libre enregistré dans « hex ». */
   /** Gain déjà enregistré pour cette étiquette ? (ex. une seule partie « Destination » par vol et par jour) */
   hasAward: (tag) => q().awards.some((a) => a.hex === tag && (!a.ownerId || a.ownerId === uid())),
-  addAward(points, tag) { const v = q(); v.awards.push({ id: uuid(), points, hex: tag, at: Date.now(), ownerId: uid(), synced: false }); qsave(v); },
+  addAward(points, tag) { Sound.xp(points); const v = q(); v.awards.push({ id: uuid(), points, hex: tag, at: Date.now(), ownerId: uid(), synced: false }); qsave(v); },
   async sync(u) {
     let v = q();
     v.awards.forEach((a) => { if (!a.ownerId) a.ownerId = u; });

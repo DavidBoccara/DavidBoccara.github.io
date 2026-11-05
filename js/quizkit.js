@@ -7,6 +7,7 @@ import { quizName, buildQuestion, recognitionTip, familyTip, Quiz } from "./game
 import { wikiQuery } from "./ui.js";
 import { Supa } from "./supa.js";
 import { bonusQuestions, flagAiQuestion } from "./wikiquiz.js";
+import { Sound } from "./sound.js";
 
 // ---------- Rayon de jeu (selon le grade), porté par le bouton d'action du quiz ----------
 /** Cercles des 8 grades : le mien plein, les précédents en trait, les suivants en pointillés. */
@@ -240,6 +241,7 @@ export function tipCard(q, choice) {
 
 /** Marque les boutons de réponse (bonne en vert, mauvaise en rouge) et les désactive. */
 export function markOptions(opts, answer, choice) {
+  Sound.answer(choice === answer);
   opts.forEach((b) => {
     b.disabled = true;
     if (b.textContent === answer) { b.classList.add("good"); b.textContent = "✓ " + answer; }

@@ -9,6 +9,7 @@ import { h, toast, cardinal, bearingDeg, distanceKm, ls } from "../util.js";
 import { Radar } from "../radar.js";
 import { Adsb, AdsbDb, Wiki } from "../net.js";
 import { QuizStore, Player, Prefs, Hunts, HUNT_XP } from "../store.js";
+import { Sound } from "../sound.js";
 import { approach, acLabel, prettyModel, fmtSpeed, fmtAltitude, isHelicopter } from "../game.js";
 import { locationBadge, wikiQuery } from "../ui.js";
 import { renderHud } from "../app.js";
@@ -227,6 +228,7 @@ export function flybyGame(view) {
     const st = Stats.get(), mult = ok ? multiplier(st.streak) : 1, already = QuizStore.hasAward(tag);
     const xp = Math.round(base * mult);
     if (ok) { st.streak++; st.best = Math.max(st.best, st.streak); } else st.streak = 0;
+    Sound.answer(ok);
     Stats.set(st);
     if (xp && !already) { award(xp, tag); renderHud(); sync().catch(() => {}); toast(`+${xp} XP`); }
     const streakTxt = ok ? `Série : ${st.streak}${multiplier(st.streak) > mult ? ` — gains ×${multiplier(st.streak)} à la prochaine !` : ""}`
@@ -367,6 +369,7 @@ export function flybyGame(view) {
       if (p === target) return finish(true);
       game.wrong.add(p); game.sel = null;
       if (game.tries >= 2) return finish(false);
+      Sound.miss();
       validate.disabled = true; validate.textContent = "Touche un autre avion";
       feedback.replaceChildren(h("div.small", `Raté : ce n'est pas l'avion ${LETTERS[planes.indexOf(p)]}. Encore un essai, pour la moitié des XP.`));
       redraw();

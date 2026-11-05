@@ -13,6 +13,7 @@ import { deleteAccountFlow } from "./privacy.js";
 import { legalLinks } from "./legal.js";
 import { updateCard } from "../update.js";
 import { saveShareWorld } from "./feed.js";
+import { Sound } from "../sound.js";
 
 const VIEWS = [
   { id: "me", label: "Profil" },
@@ -36,12 +37,19 @@ export function profile(view, [sub]) {
   show(VIEWS.some((v) => v.id === sub) ? sub : ls.get("profile_view", "me"));
 }
 
+/** Interrupteur « Sons et vibrations » (sound.js). */
+function soundRow() {
+  return h("div.card.pad.mt", h("label.switch", h("span", "Sons et vibrations"),
+    h("input", { type: "checkbox", checked: Sound.on, onchange: (e) => { Sound.on = e.target.checked; } })),
+    h("div.small.dim", "Bonnes réponses en série, XP, avions attrapés, nouveau grade, avions qui deviennent visibles sur le radar."));
+}
+
 function me(view, show) {
   view.append(updateCard()); // appli Android pas à jour
   const ic = installCard();
   if (ic) view.append(ic);
   if (loginGate(view, "Connecte-toi pour personnaliser ton profil (pseudo, photo) et sauvegarder ta collection.")) {
-    view.append(legalLinks(), h("p.small.dim", { style: { textAlign: "center" } }, `Plane GO web ${VERSION}`));
+    view.append(soundRow(), legalLinks(), h("p.small.dim", { style: { textAlign: "center" } }, `Plane GO web ${VERSION}`));
     return;
   }
   const avatar = h("img.avatar.lg", { alt: "Ma photo de profil", src: "icons/avatar.svg", style: { cursor: "pointer" }, onclick: changeAvatar });
@@ -64,6 +72,7 @@ function me(view, show) {
     h("div.row.mt", { style: { justifyContent: "center", flexWrap: "wrap" } },
       h("button.btn.small.outline", { onclick: changeAvatar }, "Changer la photo"), h("button.btn.small.outline", { onclick: editName }, "Modifier le pseudo"))),
     level, bar, xpText, stats, shareRow,
+    soundRow(),
     h("div.row.mt2", h("button.btn.outline.grow", { onclick: () => show("friends") }, "Mes amis"), h("button.btn.outline.grow", { onclick: () => { ls.set("grades_mode", "grades"); show("ranking"); } }, "Grades")),
     h("button.btn.danger.block.mt2", { onclick: logout }, "Se déconnecter"),
     h("div.row.mt", h("button.btn.small.outline.grow", { onclick: () => go("privacy") }, "Confidentialité"),

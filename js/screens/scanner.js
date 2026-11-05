@@ -9,6 +9,7 @@ import { KINDS, MODELS, filterMatches, UNCERTAIN_TEXT, rarityOf, rarityOfAc, app
 import { go } from "../app.js";
 import { Native, pushConfig } from "../native.js";
 import { cameraButton } from "../camera.js";
+import { Sound } from "../sound.js";
 
 export function scanner(view) {
   const status = h("div.small.dim");
@@ -129,6 +130,7 @@ export function scanner(view) {
       nextAc ? { label: acLabel(nextAc[0]), deg: nextAc[1].lookDeg } : null, { visible: vis / R });
     // Pastille cerclée sur la vignette de l'avion relié au petit cercle de la rose
     if (nextAc) list.querySelector(`[data-hex="${nextAc[0].hex}"] .pastille`)?.classList.add("next");
+    if (Radar.running && Radar.lastUpdate && loc) radarSounds(all, ap);
     empty.style.display = all.length ? "none" : "";
     empty.textContent = !Radar.running ? "Appuyez sur « Démarrer le radar » pour surveiller le ciel autour de vous."
       : !Radar.lastUpdate ? "Chargement…" : !Radar.aircraft.length ? "Aucun avion détecté dans le rayon."
@@ -267,6 +269,24 @@ function slider(label, steps, current, save, fmt = meters) {
     onInput: (i) => { text.textContent = `${label} : ${fmt(steps[i])}`; },
     onChange: (i) => save(steps[i]) });
   return h("div", lab, input);
+}
+
+// ---------- Sons du radar ----------
+// Gardés d'une ouverture du Scanner à l'autre : rouvrir l'onglet ne refait pas sonner les mêmes avions.
+const heard = new Set(), heardVisible = new Set();
+let blipAt = 0, contactAt = 0;
+/** Écho de sonar quand de nouveaux avions entrent dans la liste, double bip quand l'un d'eux devient visible. */
+function radarSounds(all, ap) {
+  const now = Date.now();
+  let fresh = false, visible = false;
+  for (const ac of all) {
+    if (!heard.has(ac.hex)) { heard.add(ac.hex); fresh = true; }
+    if (ap.get(ac)?.kind === "NOW" && !heardVisible.has(ac.hex)) { heardVisible.add(ac.hex); visible = true; }
+  }
+  if (heard.size > 3000) heard.clear();
+  if (heardVisible.size > 500) heardVisible.clear();
+  if (visible && now - contactAt > 3000) { contactAt = now; Sound.contact(); }
+  else if (fresh && now - blipAt > 5000) { blipAt = now; Sound.blip(); }
 }
 
 // ---------- Filtres : notifications et liste du Scanner ----------

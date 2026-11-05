@@ -9,6 +9,7 @@ import { flagOf, distanceBonus, MAX_PHOTO_KM, computeXp, spottedRarity, prettyMo
 import { renderHud, install, isStandalone, isIos, isAndroid, go } from "./app.js";
 import { Native } from "./native.js";
 import { APK_HOME } from "./config.js";
+import { Sound } from "./sound.js";
 import { DEFAULT_LOCATION, Radar } from "./radar.js";
 import { verifyPhoto, checksText } from "./verify.js";
 
@@ -282,6 +283,8 @@ export async function addPhoto(spotted, { camera, seenAt, files: given } = {}) {
     modal({ title: "Aucune photo ajoutée", body: "Aucune des photos choisies n'a été validée :\n" + refused.map((r) => "· " + r).join("\n") });
     return null;
   }
+  // Avion attrapé : obturateur + cascade selon la rareté (photo d'album : petite cascade)
+  Sound.catch(outcome && outcome.xp.total > 0 ? outcome.xp.rarity.ordinal : 0);
   renderHud();
   const model = entryModel(entry) || entryLabel(entry), total = entryPhotoItems(entry).length, parts = [];
   if (outcome) parts.push(catchMessage(outcome));
@@ -331,6 +334,7 @@ async function rejectedPhoto(spotted, { camera, seenAt, file, blob, verdict, exi
   if (choice !== "keep") return null;
   const takenAt = camera ? Date.now() : (await exifDate(file)) || seenAt || Date.now();
   const outcome = await createCatch(spotted, blob, camera ? "live" : "import", takenAt, verdict);
+  if (outcome.xp.total > 0) Sound.catch(outcome.xp.rarity.ordinal);
   renderHud();
   modal({ title: "Photo enregistrée", body: catchMessage(outcome), buttons: [{ label: "Super", primary: true }] });
   afterSync();
