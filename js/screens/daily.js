@@ -5,7 +5,7 @@ import { h, ls, toast } from "../util.js";
 import { Radar } from "../radar.js";
 import { AdsbDb } from "../net.js";
 import { QuizStore, Sightings, Player } from "../store.js";
-import { Quiz, LEVELS, quizName, buildQuestion, MAX_PHOTO_KM } from "../game.js";
+import { Quiz, LEVELS, quizName, buildQuestion, MAX_PHOTO_KM, RARITIES, spottedRarity } from "../game.js";
 import { Supa } from "../supa.js";
 import { sync } from "../cloud.js";
 import { go, renderHud } from "../app.js";
@@ -179,9 +179,12 @@ export function dailyQuiz(box) {
   }
 
   function start() {
-    // Un avion par modèle, dans un ordre mélangé ; les modèles en trop servent de réserve si une photo manque
-    const all = dailyCandidates().sort(() => Math.random() - 0.5).map((s) => s.spotted.hex);
-    DailyStore.save({ date: todayKey(), hexes: all.slice(0, DAILY_MAX), spare: all.slice(DAILY_MAX), index: 0, correct: 0, points: 0, done: false });
+    // Un avion par modèle ; les plus rares d'abord (légendaire → commun, au hasard à rareté égale) pour choisir les 10 questions,
+    // puis ordre mélangé ; les modèles en trop (les moins rares) servent de réserve si une photo manque
+    const rank = (x) => RARITIES.findIndex((r) => r.key === spottedRarity(x.spotted).key);
+    const byRarity = dailyCandidates().map((x) => ({ x, k: rank(x) + Math.random() * 0.5 })).sort((p, q) => q.k - p.k).map((o) => o.x.spotted.hex);
+    const chosen = byRarity.slice(0, DAILY_MAX).sort(() => Math.random() - 0.5);
+    DailyStore.save({ date: todayKey(), hexes: chosen, spare: byRarity.slice(DAILY_MAX), index: 0, correct: 0, points: 0, done: false });
     render();
   }
 
