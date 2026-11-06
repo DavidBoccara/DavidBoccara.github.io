@@ -276,7 +276,7 @@ export const Wiki = {
 export const Places = {
   /** Lieux correspondant à « Lyon », « 92350 »… : [{ lat, lon, place, detail }] (5 au plus). */
   async search(q) {
-    const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6"
+    const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&layer=address&limit=8"
       + `&accept-language=${LANG}&q=${encodeURIComponent(q)}`;
     const r = await fetch(url);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
