@@ -129,23 +129,20 @@ export function dailyQuiz(box) {
     }
     const today = todayKey(), st = DailyStore.get(), seen = todaysSightings(), farther = allToday().length - seen.length;
     const lvl = Player.level(), next = LEVELS[lvl.number], r = dailyRadiusKm();
-    const nextText = next ? ` Au grade ${next.name}, ton rayon passera à ${Quiz.radiusLabel(next)}.` : "";
     const dateText = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
-    const intro = h("div.card.pad.week-intro",
-      h("div", { style: { fontWeight: 800, color: "var(--amber)", fontSize: "17px" } }, "Quiz du jour"),
-      h("div.small", `${dateText} · une seule partie par jour`),
-      reminderRow());
+    // Petit tableau à la place des longues phrases : avions du jour, modèles différents, questions, avions hors rayon
+    const models = dailyCandidates().length, n = Math.min(DAILY_MAX, models);
+    const table = (cells) => h("div.fly-stats.day-stats", ...cells.map(([k, v, hot]) => h("div.fly-stat" + (hot ? ".hot" : ""), h("span.k", k), h("span.v", String(v)))));
+    const dayTable = () => table([["Avions", seen.length], ["Modèles", models], ["Questions", n, n > 0], ["Plus loin", farther]]);
+    const intro = h("div.daily-head", h("div.small.dim", `${dateText[0].toUpperCase()}${dateText.slice(1)} · une partie par jour`), reminderRow());
     // Le rayon de jeu est porté par le bouton d'action (Commencer / Aller au Scanner), avec le rayon au grade suivant dessous
     const action = (label, sub, onClick) => h("div.mt", radiusButton({ km: r, lvl, label, sub, onClick }), radiusNext(lvl, next, Player.bestXp()));
     pushDailyQuiz();
 
     if (st?.done) {
-      body.replaceChildren(intro, h("div.card.pad.mt", { style: { borderColor: "var(--green)" } },
-        h("div", { style: { fontWeight: 800, color: "var(--green)", fontSize: "18px" } }, "Quiz du jour terminé"),
-        h("div", `${st.correct} bonne(s) réponse(s) sur ${st.hexes.length} · +${st.points} XP`),
-        st.bonus > 0 && h("div.small", `Questions bonus : +${st.bonus} XP`),
-        Supa.isLoggedIn && h("div.small", { style: { marginTop: "6px" } }, "Ton résultat apparaît dans le feed de tes amis : ils peuvent le liker."),
-        h("div.small.dim", { style: { marginTop: "6px" } }, "Reviens demain pour un nouveau quiz avec les avions de la journée.")));
+      body.replaceChildren(intro, h("div.kicker.mt", "Quiz du jour terminé"),
+        table([["Bonnes", `${st.correct}/${st.hexes.length}`, true], ["XP", `+${st.points}`, true], ["Bonus", `+${st.bonus || 0}`], ["Avions", seen.length]]),
+        h("div.small.dim", (Supa.isLoggedIn ? "Ton résultat est dans le feed de tes amis. " : "") + "Reviens demain pour un nouveau quiz."));
       return;
     }
     // Déjà joué aujourd'hui sur un autre appareil ? (XP du quiz du jour enregistrés sur le compte)
@@ -165,21 +162,14 @@ export function dailyQuiz(box) {
       } catch { /* hors ligne : on se fie au téléphone */ }
     }
     if (!st && !seen.length) {
-      body.replaceChildren(intro, h("div.empty.daily-wait", farther
-        ? `Aucun avion n'est encore passé ${radiusText(r)} de toi aujourd'hui.\n\n${farther} avion(s) sont passés plus loin, hors de ton rayon de jeu.${nextText}\n\nGarde le radar allumé dans l'onglet Scanner : chaque avion qui passe dans ton rayon s'ajoute à ton quiz du jour.`
-        : `Aucun avion n'est encore passé au-dessus de toi aujourd'hui.\n\nLance le radar dans l'onglet Scanner : chaque avion qui passe ${radiusText(r)} s'ajoute à ton quiz du jour.`),
+      body.replaceChildren(intro, dayTable(),
+        h("div.small.dim", `Garde le radar allumé : chaque avion qui passe ${radiusText(r)} s'ajoute à ton quiz.`),
         action("Aller au Scanner", "Lance le radar", () => go("scanner")));
       return;
     }
     if (!st) {
-      const models = dailyCandidates().length, n = Math.min(DAILY_MAX, models);
-      body.replaceChildren(intro, h("div.card.pad.mt",
-        h("div", { style: { fontWeight: 800 } }, `${seen.length} avion${seen.length > 1 ? "s" : ""} passé${seen.length > 1 ? "s" : ""} dans ton rayon de jeu aujourd'hui, `
-          + `soit ${models} modèle${models > 1 ? "s" : ""} différent${models > 1 ? "s" : ""}`),
-        h("div", { style: { marginTop: "4px" } }, `${n} question${n > 1 ? "s" : ""}, chacune sur un modèle d'avion différent`
-          + (models > DAILY_MAX ? ` (${DAILY_MAX} modèles tirés au hasard parmi les ${models})` : "") + "."),
-        farther > 0 && h("div.small.dim", `(${farther} autre(s) passé(s) plus loin, hors de ton rayon.${nextText})`),
-        h("div.small.dim", "Une fois commencé, le quiz ne pourra plus être recommencé aujourd'hui.")),
+      body.replaceChildren(intro, dayTable(),
+        h("div.small.dim", "Une fois commencé, le quiz ne se recommence pas aujourd'hui."),
         action("Commencer le quiz", `${n} question${n > 1 ? "s" : ""} · grade ${lvl.number}`, start));
       return;
     }

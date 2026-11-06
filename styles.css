@@ -681,6 +681,8 @@ img.cover { width: 100%; display: block; object-fit: cover; background: var(--ca
 .fly-stat .k { font: 500 10px/1.4 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
 .fly-stat .v { font: 500 15px/1.3 var(--mono); white-space: nowrap; }
 .fly-stat.hot .v { color: var(--accent); }
+.day-stats { grid-template-columns: repeat(4, 1fr); }
+.daily-head { margin-top: 2px; }
 .fly-hunt { margin-top: 12px; padding: 12px; border: 1px solid var(--accent); border-radius: var(--radius); font-size: 14px; line-height: 1.45; }
 .fly-statement { font-size: 17px; line-height: 1.4; margin: 4px 0 2px; }
 .fly-statement b { font-family: var(--mono); font-weight: 500; color: var(--accent); }
