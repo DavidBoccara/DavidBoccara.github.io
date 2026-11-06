@@ -3,6 +3,7 @@
 import { D } from "./data.js";
 import { MODELS } from "./game.js";
 import { Prefs } from "./store.js";
+import { LANG } from "./i18n.js";
 
 /** Objet fourni par l'appli Android, ou null dans un navigateur. */
 export const Native = typeof window !== "undefined" && window.PlaneGONative ? window.PlaneGONative : null;
@@ -25,6 +26,7 @@ export function nativeConfig() {
     sets: { helicopters: D.helicopters, business: D.business, widebody: D.widebody, light: D.light, airliners: D.airliners,
       legendary: D.legendary, epic: D.epic, rareCivil: D.rareCivil },
     militaryCallsign: D.militaryCallsign,
+    lang: LANG, // langue des notifications de l'appli (1.25+)
   });
 }
 
@@ -32,6 +34,9 @@ export function nativeConfig() {
 export function pushConfig() {
   try { Native?.setConfig(nativeConfig()); } catch { /* ancienne version de l'appli */ }
 }
+
+// Au lancement : l'appli reçoit la langue choisie (et les réglages à jour) même sans toucher au Scanner
+if (Native) setTimeout(pushConfig, 0);
 
 /** Avions vus par le radar de l'appli pendant qu'elle était en arrière-plan. */
 export function takeNativeSightings() {

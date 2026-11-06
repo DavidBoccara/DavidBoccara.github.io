@@ -2,6 +2,7 @@
 // jeu, contenus des joueurs, modération exigée par le règlement européen DSA art. 14, 16 et 17, publicité).
 // legalLinks() : rangée de liens vers ces pages, la Confidentialité et le réglage des cookies publicitaires.
 import { h } from "../util.js";
+import { LANG } from "../i18n.js";
 import { back } from "../app.js";
 import { CONTACT_EMAIL, LEGAL, SITE_URL, GITHUB_SITE_URL } from "../config.js";
 const SITES = `${SITE_URL.replace(/\/$/, "")}, sa copie ${GITHUB_SITE_URL.replace(/\/$/, "")}`;
@@ -21,9 +22,9 @@ const head = (title) => [
 /** Liens vers les pages légales (bas du Profil, pages légales, création de compte). */
 export function legalLinks() {
   return h("div.legal-links",
-    h("a", { href: "/guides/" }, "Guides"),
-    h("a", { href: "/a-propos/" }, "À propos"),
-    h("a", { href: "/contact/" }, "Contact"),
+    h("a", { href: LANG === "en" ? "/en/guides/" : "/guides/" }, "Guides"),
+    h("a", { href: LANG === "en" ? "/en/about/" : "/a-propos/" }, "À propos"),
+    h("a", { href: LANG === "en" ? "/en/contact/" : "/contact/" }, "Contact"),
     h("a", { href: "#terms" }, "Conditions d'utilisation"),
     h("a", { href: "#privacy" }, "Confidentialité"),
     h("a", { href: "#legal" }, "Mentions légales"),

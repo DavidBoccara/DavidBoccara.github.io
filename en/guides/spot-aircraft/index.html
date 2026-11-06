@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to know which plane is flying over your home | Plane GO</title>
+<meta name="description" content="How aircraft broadcast their position (ADS-B), where Plane GO&#x27;s data comes from and how to predict when a plane will pass overhead.">
+<link rel="canonical" href="https://plane-go.com/en/guides/spot-aircraft/">
+<link rel="alternate" hreflang="fr" href="https://plane-go.com/guides/reperer-les-avions/">
+<link rel="alternate" hreflang="en" href="https://plane-go.com/en/guides/spot-aircraft/">
+<link rel="alternate" hreflang="x-default" href="https://plane-go.com/guides/reperer-les-avions/">
+<meta property="og:type" content="article"><meta property="og:site_name" content="Plane GO">
+<meta property="og:title" content="How to know which plane is flying over your home"><meta property="og:description" content="How aircraft broadcast their position (ADS-B), where Plane GO&#x27;s data comes from and how to predict when a plane will pass overhead.">
+<meta property="og:url" content="https://plane-go.com/en/guides/spot-aircraft/"><meta property="og:image" content="https://plane-go.com/icons/icon-512.png">
+<meta name="theme-color" content="#0F1113">
+<meta name="google-adsense-account" content="ca-pub-1156180900899170">
+<link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+<link rel="stylesheet" href="/pages.css">
+</head>
+<body>
+<header class="top"><a class="brand" href="/"><img src="/icons/logo.svg" alt="" width="30" height="30">PLANE GO</a>
+<nav class="menu"><a href="/en/guides/">Guides</a><a href="/en/about/">About</a><a href="/en/contact/">Contact</a><a href="/guides/reperer-les-avions/" hreflang="fr" lang="fr">Français</a><a class="app" href="/">Open the app</a></nav></header>
+<main><nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a> › <a href="/en/guides/">Guides</a> › How to know which plane is flying over your home</nav>
+<article><h1>How to know which plane is flying over your home</h1>
+<p class="lead">An airliner crosses the sky, very high, leaving a white contrail. Where is it coming from? Where is it going? Which model is it? For a few years now, anyone can answer these questions from their phone. Here is how it works.</p>
+<h2>Aircraft announce their own position</h2>
+<p>Most modern aircraft carry an <b>ADS-B</b> transponder (<i>Automatic Dependent Surveillance – Broadcast</i>). Several times a second, it broadcasts a short radio message: the aircraft's unique identifier, its GPS position, altitude, speed, heading and often its flight callsign (for example AFR1234 for an Air France flight).</p>
+<p>These messages are not encrypted: they are meant to be heard by air traffic controllers and other aircraft. All over the world, enthusiasts have set up small antennas at home that pick up these messages and share them on the internet. Community networks such as <b>adsb.fi</b> and <b>adsb.lol</b> gather this data and make it freely available.</p>
+<h2>What Plane GO does with it</h2>
+<p>When you start Plane GO's radar, the app asks these networks for the list of aircraft around you (your position is rounded to about 1 km before being sent). It then completes each aircraft with its record: exact model, airline, registration and route, thanks to the free <b>adsbdb</b> database and Wikipedia.</p>
+<p>The most useful calculation happens on your phone: from the aircraft's position, speed and heading, Plane GO extends its path in a straight line and works out when it will pass closest to you, how far away, and which way to look. That is the “Visible in 2 min 35” countdown in the Scanner, and the notification that warns you even with your phone in your pocket.</p>
+<h2>Limits to keep in mind</h2>
+<ul>
+<li><b>Not every aircraft shows up.</b> Some military aircraft, older light aircraft or sensitive flights do not broadcast ADS-B, or hide part of their information.</li>
+<li><b>A forecast is only a forecast.</b> An aircraft can turn, climb or descend. The further away the pass, the less certain the estimate. Helicopters, which often change direction, are marked with “≈”.</li>
+<li><b>Seeing a plane with the naked eye depends on the sky.</b> An airliner at 11,000 m often stays visible up to about ten kilometres away in clear weather; behind clouds it disappears. Plane GO lets you set your “visible zone” to match your view.</li>
+<li><b>Landing aircraft</b> descend quickly: if they touch down before getting close to you, the app says so instead of counting down to a pass that will not happen.</li>
+</ul>
+<h2>Short glossary</h2>
+<dl>
+<dt>Hex code (24-bit ICAO address)</dt><dd>The aircraft's unique identifier, assigned when it is built or registered, for example 3C6444. It identifies one specific aircraft, even when its flight number changes.</dd>
+<dt>Callsign</dt><dd>The flight name used on the radio: three letters for the airline followed by a number (AFR, EZY, RYR…).</dd>
+<dt>Registration</dt><dd>The aircraft's “number plate” painted on the fuselage: F-GKXA in France, D-AIBA in Germany, G-EUPT in the United Kingdom…</dd>
+<dt>Altitude</dt><dd>Given in feet in aviation: 35,000 ft is about 10,700 m. Plane GO shows both.</dd>
+</dl>
+<p>To go further: <a href="/en/guides/read-flight-data/">reading flight data</a> and <a href="/en/guides/recognise-airliners/">recognising airliners</a>.</p>
+</article>
+</main>
+<footer class="foot">
+<p><a href="/">Plane GO</a> · <a href="/en/guides/">Guides</a> · <a href="/en/about/">About</a> · <a href="/en/contact/">Contact</a></p>
+<p><a href="/#legal">Legal notice</a> · <a href="/#terms">Terms of use</a> · <a href="/#privacy">Privacy</a></p>
+<p class="small">Updated on 6 November 2026.</p>
+</footer>
+</body>
+</html>
