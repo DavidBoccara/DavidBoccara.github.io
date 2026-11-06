@@ -11,7 +11,7 @@ import { renderHud, install, isStandalone, isIos, isAndroid, go } from "./app.js
 import { Native } from "./native.js";
 import { APK_HOME } from "./config.js";
 import { Sound } from "./sound.js";
-import { approxPlace, Radar } from "./radar.js";
+import { approxPlace, approxLabel, Radar } from "./radar.js";
 import { verifyPhoto, checksText } from "./verify.js";
 
 export const wikiQuery = {
@@ -113,7 +113,7 @@ export function locationBadge(loc) {
     body: `Plane GO utilise la position GPS de votre téléphone${loc.accuracy ? ` (précision ± ${Math.round(loc.accuracy)} m)` : ""}.` }) },
     "Position du téléphone");
   return h("button.loc-badge.default", { onclick: () => defaultLocationAlert() },
-    `Position approximative : ${approxPlace(loc)}`);
+    approxLabel(loc));
 }
 
 /** Où autoriser la position, selon l'appareil. */
@@ -146,7 +146,8 @@ export function defaultLocationAlert() {
     title: "Position du téléphone introuvable",
     body: [
       why && h("p", why + "."),
-      ...(loc ? [h("p", `Plane GO utilise à la place une position approximative, déduite de ta connexion internet : ${approxPlace(loc)}.`),
+      ...(loc?.fixed ? [h("p", `Plane GO utilise à la place une position par défaut : ${approxPlace(loc)}.`)]
+        : loc ? [h("p", `Plane GO utilise à la place une position approximative, déduite de ta connexion internet : ${approxPlace(loc)}.`),
         h("p", "Elle peut être fausse de plusieurs kilomètres, parfois beaucoup plus.")]
         : [h("p", "Plane GO ne connaît pas du tout ta position : le radar et les jeux ne peuvent pas fonctionner.")]),
       h("div.loc-warn-box", h("b", "Le jeu ne fonctionne donc pas à pleine capacité :"), h("ul",

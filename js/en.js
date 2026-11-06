@@ -1327,4 +1327,7 @@ export const EN = [
   ["Si la position du téléphone n'est pas disponible (localisation refusée, GPS éteint), Plane GO demande à Cloudflare, l'hébergeur du site, la ville approximative correspondant à ta connexion internet, pour te montrer quand même les avions de ta région. Rien n'est enregistré.", "If the phone's position is not available (location denied, GPS off), Plane GO asks Cloudflare, the site's host, for the approximate city matching your internet connection, so it can still show you the aircraft in your area. Nothing is stored."],
   ["Appli Android", "Android app"],
   ["site du", "website"],
+  ["Plane GO utilise à la place une position par défaut : {1}.", "Plane GO uses a default location instead: {1}."],
+  ["Le jeu utilise une position par défaut ({1}) : les avions et les comptes à rebours ne sont pas ceux de chez toi.", "The game is using a default location ({1}): the aircraft and countdowns are not the ones where you are."],
+  ["Distance mesurée depuis une position par défaut ({1}).", "Distance measured from a default location ({1})."],
 ];

@@ -4,7 +4,7 @@ import { Adsb, AdsbDb, Wiki } from "./net.js";
 import { Sightings, Prefs } from "./store.js";
 import { spottedFrom, filterMatches, approach, duration, lookLabel, UNCERTAIN_TEXT, acLabel, fmtDistance, fmtAltitude, fmtOrigin, prettyModel } from "./game.js";
 import { ls } from "./util.js";
-import { GEO_URL } from "./config.js";
+import { GEO_URL, onGithubPages } from "./config.js";
 import { Native, nativeConfig, takeNativeSightings } from "./native.js";
 import { noteUnknownTypes } from "./census.js";
 
@@ -17,7 +17,10 @@ const REARM_MS = 3600e3, GPS_WAIT_MS = 15000;
  * Introuvable elle aussi : pas de position du tout (aucune position inventée).
  */
 let approx = null, approxAt = 0;
+/** Copie GitHub seulement (choix du propriétaire) : position fixe au Plessis-Robinson au lieu de la ville approximative. */
+const GITHUB_DEFAULT = { lat: 48.7811, lon: 2.2633, place: "Le Plessis-Robinson" };
 async function approxLoc(why) {
+  if (onGithubPages()) return { ...GITHUB_DEFAULT, accuracy: null, time: Date.now(), isDefault: true, fixed: true, why };
   if (!approx || Date.now() - approxAt > 30 * 60e3) {
     try {
       const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
@@ -34,6 +37,8 @@ async function approxLoc(why) {
 }
 /** Ville de la position approximative, pour l'affichage. */
 export const approxPlace = (loc) => loc?.place || "lieu inconnu";
+/** « Position approximative : Lyon, France » ou, sur la copie GitHub, « Position par défaut : Le Plessis-Robinson ». */
+export const approxLabel = (loc) => `${loc?.fixed ? "Position par défaut" : "Position approximative"} : ${approxPlace(loc)}`;
 const phoneLoc = (p) => ({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy, time: p.timestamp, isDefault: false });
 const geoWhy = (e) => (e?.code === 1 ? "Localisation refusée" : "Position du téléphone introuvable (GPS désactivé ?)");
 const listeners = new Set();

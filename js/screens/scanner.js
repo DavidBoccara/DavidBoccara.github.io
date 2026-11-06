@@ -2,7 +2,7 @@
 import { LOCALE, LANG, t } from "../i18n.js";
 import { h, icon, meters, modal, toast, rarityMark, cardinal, dec, dragSlider } from "../util.js";
 import { compassRose, nextMark } from "../compass.js";
-import { Radar, showAircraftNotification, approachOf, approxPlace, willBeVisible } from "../radar.js";
+import { Radar, showAircraftNotification, approachOf, approxPlace, approxLabel, willBeVisible } from "../radar.js";
 import { Prefs, Collection } from "../store.js";
 import { Adsb, Wiki } from "../net.js";
 import { wikiQuery, locationBadge, defaultLocationAlert } from "../ui.js";
@@ -94,7 +94,7 @@ export function scanner(view) {
     else {
       const l = Radar.location;
       lines.push(!l ? (Radar.noLocation ? "Position inconnue : le radar ne peut pas chercher d'avions." : "Recherche de la position GPS…")
-        : l.isDefault ? `Position approximative : ${approxPlace(l)}`
+        : l.isDefault ? approxLabel(l)
         : `Position : ${l.lat.toFixed(4)}, ${l.lon.toFixed(4)} (± ${Math.round(l.accuracy)} m)`);
       if (Radar.lastUpdate) lines.push(`${Radar.aircraft.length} avion(s), dont ${Radar.aircraft.filter((a) => a.military).length} militaire(s)${listFiltered() ? `, ${listed().length} dans la liste` : ""} — mis à jour à ${new Date(Radar.lastUpdate).toLocaleTimeString(LOCALE)}${Adsb.lastSource ? ` (source : ${Adsb.lastSource})` : ""}`);
     }
@@ -103,7 +103,9 @@ export function scanner(view) {
     locBox.replaceChildren(Radar.running || Radar.location ? locationBadge(Radar.location) : "");
     const noGps = Radar.location?.isDefault || (!Radar.location && Radar.noLocation);
     warn.style.display = noGps ? "" : "none";
-    if (noGps) warn.querySelector(".loc-warn-txt").textContent = Radar.location
+    if (noGps) warn.querySelector(".loc-warn-txt").textContent = Radar.location?.fixed
+      ? `Le jeu utilise une position par défaut (${approxPlace(Radar.location)}) : les avions et les comptes à rebours ne sont pas ceux de chez toi.`
+      : Radar.location
       ? `Le jeu utilise une position approximative d'après ta connexion internet (${approxPlace(Radar.location)}) : les avions et les comptes à rebours peuvent être faux.`
       : "Sans position, le radar ne peut pas chercher les avions autour de toi.";
     status.style.whiteSpace = "pre-line";
@@ -437,7 +439,8 @@ async function showNearest(ac, loc) {
     `${r.stars} ${r.label}`,
     `À ${fmtDistance(ac)}`,
     `Altitude : ${fmtAltitude(ac)} · vitesse : ${fmtSpeed(ac)}`,
-    loc.isDefault ? `Distance mesurée depuis une position approximative (${approxPlace(loc)}).` : null,
+    loc.isDefault ? (loc.fixed ? `Distance mesurée depuis une position par défaut (${approxPlace(loc)}).`
+      : `Distance mesurée depuis une position approximative (${approxPlace(loc)}).`) : null,
   ].filter(Boolean);
   const buttons = [{ label: "Fermer" }];
   if (!Native && "Notification" in window) buttons.push({ label: "En notification", onClick: async () => {
