@@ -39,6 +39,8 @@ const ICONS = {
   // Manette (onglet Jeux)
   games: '<path d="M7.5 8h9a4.5 4.5 0 0 1 4.4 5.4l-.7 3.4a2.3 2.3 0 0 1-3.9 1.1L14 15.5h-4l-2.3 2.4a2.3 2.3 0 0 1-3.9-1.1l-.7-3.4A4.5 4.5 0 0 1 7.5 8z"/><path d="M8 10.5v3M6.5 12h3"/><path d="M15.5 11.5h.01M17.5 13h.01"/>',
   // Information (bouton « i » du Scanner)
+  calendar: '<rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>',
+  map: '<path d="M9 4.5 3.5 6.5v13l5.5-2 6 2 5.5-2v-13l-5.5 2z"/><path d="M9 4.5v13M15 6.5v13"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><path d="M12 7.5h.01"/>',
   // Prise USB (appareil photo branché par câble)
   usb: '<circle cx="12" cy="20" r="1.6"/><path d="M12 18.4V3.5"/><path d="M9.5 6 12 3.5 14.5 6"/><path d="M12 14.5l-4.5-3V9"/><circle cx="7.5" cy="8" r="1.1"/><path d="M12 12.5l4.5-3V7.5"/><path d="M15.4 6.4h2.2v2.2h-2.2z"/>',

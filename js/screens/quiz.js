@@ -2,7 +2,7 @@
 // Les trois modes du quiz : « En direct » (l'avion qui passe dans votre rayon de jeu en ce moment),
 // « Quiz du jour » (tous les avions passés au-dessus de vous aujourd'hui, une partie par jour, voir daily.js)
 // et « Entraînement » (autant d'avions proches que l'on veut, sans points, voir practice.js).
-import { h, meters, sleep } from "../util.js";
+import { h, meters, sleep, icon } from "../util.js";
 import { Radar } from "../radar.js";
 import { Adsb } from "../net.js";
 import { QuizStore, Player } from "../store.js";
@@ -17,11 +17,13 @@ import { dailyQuiz, DailyStore, dailyQuestionCount } from "./daily.js";
 import { practiceQuiz } from "./practice.js";
 import { flybyGame } from "./flyby.js";
 
+// Les 4 jeux, présentés en cartes (nom, ce qu'on y fait, ce que ça rapporte) pour qu'on comprenne d'un coup d'œil
 const MODES = [
-  { id: "live", label: "En direct" },
-  { id: "daily", label: "Du jour" },
-  { id: "practice", label: "Entraînement" },
-  { id: "pass", label: "Sur la carte" },
+  { id: "live", label: "Quiz en direct", icon: "plane", desc: "Devine le modèle d'un avion qui passe près de toi", gain: "XP · série",
+    how: "Un avion passe dans ton rayon de jeu : trouve son modèle parmi 4 propositions. Chaque bonne réponse rapporte des XP, et les réponses justes d'affilée multiplient les gains." },
+  { id: "daily", label: "Quiz du jour", icon: "calendar", desc: "Les avions passés au-dessus de toi aujourd'hui", gain: "1 partie / jour" },
+  { id: "pass", label: "Défis sur la carte", icon: "map", desc: "Qui va passer près de toi, où il va, qui vole le plus haut", gain: "XP · série" },
+  { id: "practice", label: "Entraînement", icon: "refresh", desc: "Révise les modèles sans pression", gain: "Sans points" },
 ];
 const RUN = { live: liveQuiz, daily: dailyQuiz, practice: practiceQuiz, pass: flybyGame };
 
@@ -29,21 +31,28 @@ export function quiz(view, [sub]) {
   // Depuis la barre d'onglets (#quiz sans précision) : toujours le quiz « En direct », jamais l'entraînement
   let current = sub === "test" ? "practice" : sub === "dest" ? "pass" : MODES.some((m) => m.id === sub) ? sub : "live", stop = null;
   if (!RUN[current]) current = "live";
-  const seg = h("div.seg.mt.quiz-seg");
+  const seg = h("div.game-pick.mt", { role: "tablist" });
+  const how = h("p.small.dim.game-how");
   const body = h("div.mt");
-  const title = h("h1.title");
-  view.append(h("div.kicker", "Jeux"), title, seg, body);
+  view.append(h("div.kicker", "Jeux"), h("h1.title", "Choisis ton jeu"), seg, how, body);
   /** Onglets ; pastille du quiz du jour : fait (✅) ou nombre de questions (un modèle différent par question, 10 au plus). */
   function renderSeg() {
     const st = DailyStore.get();
     const count = st?.done ? 0 : st ? st.hexes.length - st.index : dailyQuestionCount();
-    const badge = st?.done ? " " : count ? ` (${count})` : "";
-    seg.replaceChildren(...MODES.map((m) => h("button" + (m.id === current ? ".on" : ""), { onclick: () => show(m.id) }, m.label + (m.id === "daily" ? badge : ""))));
+    const dailyGain = st?.done ? "Fait aujourd'hui" : count ? `${count} question${count > 1 ? "s" : ""} aujourd'hui` : "1 partie / jour";
+    seg.replaceChildren(...MODES.map((m) => h("button.game-card" + (m.id === current ? ".on" : ""),
+      { role: "tab", "aria-selected": m.id === current ? "true" : "false", onclick: () => { if (m.id !== current) show(m.id); } },
+      h("span.game-ic", icon(m.icon, 18)),
+      h("span.game-txt", h("b", m.label), h("span.game-desc", m.desc),
+        h("span.game-gain" + (m.id === "daily" && count && !st?.done ? ".hot" : ""), m.id === "daily" ? dailyGain : m.gain)))));
   }
   function show(id) {
     stop?.(); stop = null;
     current = id;
-    title.textContent = id === "pass" ? "Joue avec les avions autour de toi" : "Reconnais les avions";
+    // Règle du jeu en une phrase pour le quiz en direct (les autres jeux s'expliquent dans leur propre encadré)
+    const mode = MODES.find((m) => m.id === id);
+    how.textContent = mode.how || "";
+    how.style.display = mode.how ? "" : "none";
     history.replaceState(null, "", "#quiz/" + id);
     renderSeg();
     body.replaceChildren();
