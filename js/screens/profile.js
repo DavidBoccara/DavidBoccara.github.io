@@ -1,5 +1,5 @@
 // Onglet Profil : mon profil (pseudo, photo, grade, statistiques), mes amis et le classement.
-import { h, ls, toast, prompt, pickImage, toJpeg, confirmBox, infoButton } from "../util.js";
+import { h, ls, toast, prompt, pickImage, toJpeg, confirmBox, infoButton, modal } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, sync } from "../cloud.js";
 import { Collection, Player, entryModel, entryRarity, QuizStore } from "../store.js";
@@ -98,6 +98,7 @@ function me(view, show) {
     level, bar, xpText, stats, shareRow,
     soundRow(), langRow(),
     h("div.row.mt2", h("button.btn.outline.grow", { onclick: () => show("friends") }, "Mes amis"), h("button.btn.outline.grow", { onclick: () => { ls.set("grades_mode", "grades"); show("ranking"); } }, "Grades")),
+    h("button.btn.outline.block.mt2", { onclick: changePasswordFlow }, "Changer le mot de passe"),
     h("button.btn.danger.block.mt2", { onclick: logout }, "Se déconnecter"),
     h("div.row.mt", h("button.btn.small.outline.grow", { onclick: () => go("privacy") }, "Confidentialité"),
       h("button.btn.small.outline.grow", { style: { color: "var(--red)", borderColor: "var(--red)" }, onclick: deleteAccountFlow }, "Supprimer mon compte")),
@@ -136,6 +137,37 @@ function me(view, show) {
     if (!/^[A-Za-z0-9_.-]{3,20}$/.test(n)) { toast("Pseudo invalide : 3 à 20 caractères, lettres, chiffres, . _ -"); return; }
     try { Player.profile = await Cloud.setUsername(n); render(); renderHud(); toast("Pseudo mis à jour"); } catch (e) { toast(e.message); }
   }
+  /** Changer le mot de passe : mot de passe actuel vérifié (nouvelle connexion), puis nouveau mot de passe. */
+  function changePasswordFlow() {
+    const field = (label, auto) => { const i = h("input.input", { type: "password", autocomplete: auto }); return [i, h("label.field", h("span", label), i)]; };
+    const [cur, curF] = field("Mot de passe actuel", "current-password");
+    const [pass, passF] = field("Nouveau mot de passe", "new-password");
+    const [again, againF] = field("Encore une fois", "new-password");
+    const showBox = h("input", { type: "checkbox", onchange: (e) => { cur.type = pass.type = again.type = e.target.checked ? "text" : "password"; } });
+    const forgot = h("button.btn.block.small", { type: "button", style: { background: "none", color: "var(--dim)" }, onclick: async () => {
+      try { await Supa.resetPassword(Supa.email); toast(`E-mail de réinitialisation envoyé à ${Supa.email}`, 4000); m.close(); }
+      catch (e) { toast(e.message); }
+    } }, "Mot de passe actuel oublié ? Recevoir un e-mail");
+    const m = modal({
+      title: "Changer le mot de passe",
+      body: [curF, passF, againF, h("label.switch", h("span.small", "Afficher les mots de passe"), showBox),
+        h("p.small.dim", "6 caractères au minimum."), forgot],
+      buttons: [{ label: "Annuler" }, { label: "Enregistrer", primary: true, onClick: async () => {
+        if (!cur.value) { toast("Indique ton mot de passe actuel"); cur.focus(); return false; }
+        if (pass.value.length < 6) { toast("Nouveau mot de passe : 6 caractères minimum"); pass.focus(); return false; }
+        if (pass.value !== again.value) { toast("Les deux nouveaux mots de passe ne sont pas identiques"); again.focus(); return false; }
+        if (pass.value === cur.value) { toast("Le nouveau mot de passe est identique à l'actuel"); return false; }
+        try { await Supa.signIn(Supa.email, cur.value); }
+        catch { toast("Mot de passe actuel incorrect"); cur.focus(); return false; }
+        try { await Supa.updatePassword(pass.value); }
+        catch (e) { toast(e.message); return false; }
+        toast("Mot de passe changé. Utilise-le désormais sur tes autres appareils.", 4500);
+        return true;
+      } }],
+    });
+    setTimeout(() => cur.focus(), 80);
+  }
+
   async function logout() {
     if (!(await confirmBox("Se déconnecter ? Vos photos restent sauvegardées sur votre compte.", "Se déconnecter", true))) return;
     await Supa.signOut();
