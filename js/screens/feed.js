@@ -8,7 +8,7 @@ import { Supa } from "../supa.js";
 import { Cloud, sync } from "../cloud.js";
 import { Player } from "../store.js";
 import { flagOf } from "../game.js";
-import { share, shareMessage, installCard, savePhoto, photoName, carousel } from "../ui.js";
+import { shareCatch, installCard, savePhoto, photoName, carousel } from "../ui.js";
 import { go, loginGate, renderHud } from "../app.js";
 import { contestFeed } from "./contest.js";
 import { todayKey } from "./daily.js";
@@ -245,8 +245,8 @@ function post(c) {
     details && h("div.det", details),
     // Commentaires réservés aux amis : pas de compteur sur la publication d'un joueur qui n'est pas mon ami
     h("div.acts", likeBtn, h("button", { onclick: open, "aria-label": "Commentaires" }, icon("comment", 18), c.isFriend ? ` ${c.commentCount}` : ""),
-      h("button", { onclick: () => share(shareMessage({ mine: c.userId === Supa.userId, player: c.user?.username, model: c.modelName,
-        rarity: c.rarity, xp: c.xp, route: c.route, military: c.military }), current()) }, icon("share", 18), " Partager"),
+      h("button", { onclick: () => shareCatch({ mine: c.userId === Supa.userId, player: c.user?.username, model: c.modelName,
+        rarity: c.rarity, xp: c.xp, route: c.route, military: c.military }, current()) }, icon("share", 18), " Partager"),
       h("button", { onclick: () => savePhoto(current(), photoName(c.modelName, c.takenAt)), "aria-label": "Enregistrer la photo sur le téléphone", title: "Enregistrer la photo" }, icon("download", 18))));
   return card;
 }

@@ -1,7 +1,8 @@
 // Éléments d'interface partagés : fiche Wikipédia, photos, captures, partage.
-import { LOCALE } from "./i18n.js";
+import { LOCALE, LANG } from "./i18n.js";
 import { h, modal, toast, icon, infoButton, pickImage, toJpeg, imageKind, exifDate, confirmBox, choose, dateTime, dateDay, dec, rarityMark } from "./util.js";
 import { Wiki, AdsbDb, Places } from "./net.js";
+import { shareCard } from "./sharecard.js";
 import { Supa } from "./supa.js";
 import { ensurePhotoRules, requireAccount } from "./photorules.js";
 import { Collection, Sightings, createCatch, addAlbumPhoto, removeEntryPhoto, setMainEntryPhoto, entryPhotoItems, entryPhotos, ALBUM_MAX, catchMessage, entryPhoto, entryLabel, entryModel, entryRarity, Player } from "./store.js";
@@ -9,7 +10,7 @@ import { Cloud, sync } from "./cloud.js";
 import { flagOf, distanceBonus, MAX_PHOTO_KM, computeXp, spottedRarity, prettyModel } from "./game.js";
 import { renderHud, install, isStandalone, isIos, isAndroid, go } from "./app.js";
 import { Native } from "./native.js";
-import { APK_HOME } from "./config.js";
+import { APK_HOME, SITE_URL } from "./config.js";
 import { Sound } from "./sound.js";
 import { approxPlace, approxLabel, Radar } from "./radar.js";
 import { verifyPhoto, checksText } from "./verify.js";
@@ -568,13 +569,27 @@ export async function showEntry(e, { onChange } = {}) {
 }
 
 // ---------- Partage ----------
+/** Texte qui accompagne le partage d'une capture : ce qui a été attrapé + l'accroche de l'appli + le lien. */
 export function shareMessage({ mine, player, model, rarity, xp, route, military }) {
-  const what = (model ? `un ${model}` : "un avion") + (military ? " militaire" : "");
-  let s = mine ? `Je viens d'attraper ${what} avec Plane GO !` : `Regarde : ${player || "un ami"} a attrapé ${what} sur Plane GO !`;
-  s += `\n${rarity.stars} ${rarity.label}${xp > 0 ? ` · +${xp} XP` : ""}`;
+  const en = LANG === "en";
+  const what = en ? `${military ? "a military " : "a "}${model || "plane"}` : (model ? `un ${model}` : "un avion") + (military ? " militaire" : "");
+  const rl = en ? ({ COMMUN: "Common", PEU_COMMUN: "Uncommon", RARE: "Rare", EPIQUE: "Epic", LEGENDAIRE: "Legendary" }[rarity?.key] || rarity?.label) : rarity?.label;
+  let s = mine ? (en ? `I just caught ${what} with Plane GO ✈️` : `Je viens d'attraper ${what} avec Plane GO ✈️`)
+    : (en ? `${player || "A friend"} caught ${what} with Plane GO ✈️` : `${player || "Un ami"} a attrapé ${what} avec Plane GO ✈️`);
+  s += `\n${rarity?.stars || ""} ${rl || ""}${xp > 0 ? ` · +${xp} XP` : ""}`;
   if (route) s += `\n${route}`;
-  s += `\n\nToi aussi, essaie d'attraper des avions ! Lève les yeux, scanne le ciel et viens me défier${mine && player ? ` (mon pseudo : ${player})` : ""} `;
-  return s + `\n${location.origin}${location.pathname}`;
+  s += en ? "\n\nThe app warns you before a plane flies over you and tells you where to look. Then snap it, collect it and challenge your friends"
+    : "\n\nL'appli te prévient avant qu'un avion passe au-dessus de toi et te dit où regarder. Ensuite tu le photographies, tu le collectionnes et tu défies tes amis";
+  if (mine && player) s += en ? ` (my username: ${player})` : ` (mon pseudo : ${player})`;
+  return s + `\n👉 ${SITE_URL}`;
+}
+
+/** Partage d'une capture : image Plane GO (photo + bandeau, sharecard.js) et texte ; photo seule si l'image échoue. */
+export async function shareCatch(info, photoUrl) {
+  toast(LANG === "en" ? "Preparing the image…" : "Préparation de l'image…", 2500);
+  const card = await shareCard(photoUrl, info);
+  await share(shareMessage(info), card || photoUrl);
+  if (card) setTimeout(() => URL.revokeObjectURL(card), 60000);
 }
 
 export async function share(text, photoUrl) {
@@ -603,8 +618,8 @@ export async function share(text, photoUrl) {
 }
 
 export async function shareEntry(e) {
-  share(shareMessage({ mine: true, player: Player.profile?.username, model: entryModel(e), rarity: entryRarity(e),
-    xp: e.xp, route: e.route, military: e.military }), await entryPhoto(e));
+  shareCatch({ mine: true, player: Player.profile?.username, model: entryModel(e), rarity: entryRarity(e),
+    xp: e.xp, route: e.route, military: e.military }, await entryPhoto(e));
 }
 
 // ---------- Installation ----------
