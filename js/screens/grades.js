@@ -1,4 +1,5 @@
 // Onglet Classement : amis, général, et liste des grades avec le barème.
+import { LOCALE } from "../i18n.js";
 import { h, ls, toast } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, otherOf } from "../cloud.js";
@@ -44,7 +45,7 @@ export function grades(view) {
           h("div", { style: { width: "38px", textAlign: "center", fontWeight: 800, fontSize: i < 3 ? "24px" : "15px" } }, `#${i + 1}`),
           av, h("div.grow", h("div", { style: { fontWeight: 700 } }, p.username + (p.id === Supa.userId ? "  (toi)" : "")),
             h("div.small.dim", `${p.level.emblem} Niv. ${p.level.number} · ${p.level.name}`)),
-          h("span.chip", `${p.xp.toLocaleString("fr-FR")} XP`));
+          h("span.chip", `${p.xp.toLocaleString(LOCALE)} XP`));
       }));
     } catch (e) { list.replaceChildren(); toast(e.message); }
   }

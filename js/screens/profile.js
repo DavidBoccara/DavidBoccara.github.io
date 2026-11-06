@@ -14,6 +14,7 @@ import { legalLinks } from "./legal.js";
 import { updateCard } from "../update.js";
 import { saveShareWorld } from "./feed.js";
 import { Sound } from "../sound.js";
+import { LANG, setLang } from "../i18n.js";
 
 const VIEWS = [
   { id: "me", label: "Profil" },
@@ -37,6 +38,12 @@ export function profile(view, [sub]) {
   show(VIEWS.some((v) => v.id === sub) ? sub : ls.get("profile_view", "me"));
 }
 
+/** Langue de l'interface (i18n.js) : la page se recharge. Libellés écrits dans leur propre langue (jamais traduits). */
+function langRow() {
+  const b = (code, label) => h("button" + (LANG === code ? ".on" : ""), { "data-notr": "", onclick: () => { if (LANG !== code) setLang(code); } }, label);
+  return h("div.card.pad.mt", h("div.row", h("span.grow", "Langue"), h("div.seg", { "data-notr": "", style: { marginTop: 0 } }, b("fr", "Français"), b("en", "English"))));
+}
+
 /** Interrupteur « Sons et vibrations » (sound.js). */
 function soundRow() {
   return h("div.card.pad.mt", h("label.switch", h("span.row", { style: { gap: "8px" } }, "Sons et vibrations",
@@ -49,7 +56,7 @@ function me(view, show) {
   const ic = installCard();
   if (ic) view.append(ic);
   if (loginGate(view, "Connecte-toi pour personnaliser ton profil (pseudo, photo) et sauvegarder ta collection.")) {
-    view.append(soundRow(), legalLinks(), h("p.small.dim", { style: { textAlign: "center" } }, `Plane GO web ${VERSION}`));
+    view.append(soundRow(), langRow(), legalLinks(), h("p.small.dim", { style: { textAlign: "center" } }, `Plane GO web ${VERSION}`));
     return;
   }
   const avatar = h("img.avatar.lg", { alt: "Ma photo de profil", src: "icons/avatar.svg", style: { cursor: "pointer" }, onclick: changeAvatar });
@@ -72,7 +79,7 @@ function me(view, show) {
     h("div.row.mt", { style: { justifyContent: "center", flexWrap: "wrap" } },
       h("button.btn.small.outline", { onclick: changeAvatar }, "Changer la photo"), h("button.btn.small.outline", { onclick: editName }, "Modifier le pseudo"))),
     level, bar, xpText, stats, shareRow,
-    soundRow(),
+    soundRow(), langRow(),
     h("div.row.mt2", h("button.btn.outline.grow", { onclick: () => show("friends") }, "Mes amis"), h("button.btn.outline.grow", { onclick: () => { ls.set("grades_mode", "grades"); show("ranking"); } }, "Grades")),
     h("button.btn.danger.block.mt2", { onclick: logout }, "Se déconnecter"),
     h("div.row.mt", h("button.btn.small.outline.grow", { onclick: () => go("privacy") }, "Confidentialité"),

@@ -1,4 +1,5 @@
 // Données en ligne : avions ADS-B (via le relais Supabase), adsbdb, Wikipédia.
+import { LANG } from "./i18n.js";
 import { Supa } from "./supa.js";
 import { distanceKm, bearingDeg, ls, sleep } from "./util.js";
 import { looksMilitary, modelQueries } from "./game.js";
@@ -147,12 +148,14 @@ function isRelevant(title, query) {
   const keys = withDigits.length ? withDigits : tokens.filter((x) => x.length >= 4 && x !== "aircraft");
   return keys.length > 0 && keys.some((k) => t.includes(k));
 }
+// Wikipédia dans la langue du joueur d'abord, l'autre ensuite
+const WIKI_ORDER = LANG === "en" ? ["en", "fr"] : ["fr", "en"];
 const safe = async (p) => { try { return await p; } catch { return null; } };
 
 async function findExact(queries) {
   for (const q of queries.slice(0, 3)) {
     if (q.endsWith(" aircraft")) continue;
-    for (const lang of ["fr", "en"]) {
+    for (const lang of WIKI_ORDER) {
       const r = await safe(summary(lang, q));
       if (r && isRelevant(r.s.title, q) && isAviation(r)) return r.s;
     }
@@ -160,7 +163,7 @@ async function findExact(queries) {
   return null;
 }
 async function findModel(queries) {
-  for (const lang of ["fr", "en"]) {
+  for (const lang of WIKI_ORDER) {
     for (const q of queries) {
       const titles = await safe(search(lang, q, 3));
       if (!titles) continue;
@@ -219,7 +222,7 @@ async function withPhoto(s) {
   return p ? { ...s, thumbnailUrl: p[0], imageUrl: p[1] } : s;
 }
 
-const WIKI_KEY = "wiki_cache_v3", RETRY_MS = 7 * 86400e3;
+const WIKI_KEY = "wiki_cache_v3" + (LANG === "en" ? "_en" : ""), RETRY_MS = 7 * 86400e3;
 const wikiMem = new Map(), inflight = new Map();
 let running = 0; const queue = [];
 const gate = () => new Promise((res) => { if (running < 3) { running++; res(); } else queue.push(res); });
@@ -253,7 +256,7 @@ export const Wiki = {
           const name = title || model || type;
           const photo = await safe(commonsPhoto(name));
           s = { title: name, extract: "Wikipédia n'a pas d'article consacré à ce modèle. Touchez « Chercher sur Wikipédia » pour lancer une recherche." + (photo ? "\n\nPhoto : Wikimedia Commons." : ""),
-            pageUrl: `https://fr.wikipedia.org/w/index.php?search=${enc(name)}`, thumbnailUrl: photo?.[0] || null, imageUrl: photo?.[1] || null, searchOnly: true };
+            pageUrl: `https://${WIKI_ORDER[0]}.wikipedia.org/w/index.php?search=${enc(name)}`, thumbnailUrl: photo?.[0] || null, imageUrl: photo?.[1] || null, searchOnly: true };
         }
         const complete = !s.searchOnly || s.thumbnailUrl;
         wikiMem.set(key, s);

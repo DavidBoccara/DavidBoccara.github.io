@@ -1,6 +1,7 @@
 // Quiz › Quiz du jour : une question par avion passé aujourd'hui dans votre rayon de jeu (le même que le quiz
 // « En direct », selon le grade ; radar actif, passages notés jusqu'à 30 km).
 // Une seule partie par jour : commencée, elle se reprend où on l'a laissée ; terminée, on revient le lendemain.
+import { LOCALE } from "../i18n.js";
 import { h, ls, toast } from "../util.js";
 import { Radar } from "../radar.js";
 import { AdsbDb } from "../net.js";
@@ -129,7 +130,7 @@ export function dailyQuiz(box) {
     }
     const today = todayKey(), st = DailyStore.get(), seen = todaysSightings(), farther = allToday().length - seen.length;
     const lvl = Player.level(), next = LEVELS[lvl.number], r = dailyRadiusKm();
-    const dateText = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+    const dateText = new Date().toLocaleDateString(LOCALE, { weekday: "long", day: "numeric", month: "long" });
     // Petit tableau à la place des longues phrases : avions du jour, modèles différents, questions, avions hors rayon
     const models = dailyCandidates().length, n = Math.min(DAILY_MAX, models);
     const table = (cells) => h("div.fly-stats.day-stats", ...cells.map(([k, v, hot]) => h("div.fly-stat" + (hot ? ".hot" : ""), h("span.k", k), h("span.v", String(v)))));
@@ -280,4 +281,4 @@ export function dailyQuiz(box) {
 }
 
 /** Heure de passage, « 14:32 ». */
-const hourOf = (ms) => new Date(ms).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+const hourOf = (ms) => new Date(ms).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit" });

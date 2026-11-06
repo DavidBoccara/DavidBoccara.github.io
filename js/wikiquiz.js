@@ -5,18 +5,19 @@
 // En priorité : questions écrites par une IA (OpenAI) d'après le texte de l'article, préparées une fois par article par
 // la fonction serveur ai-questions et gardées sur Supabase (table quiz_ai_questions) ; complétées par les questions
 // tirées de la fiche Wikidata si l'IA n'en a pas (assez) ou ne répond pas à temps.
+import { LOCALE, LANG } from "./i18n.js";
 import { ls, sleep } from "./util.js";
 import { Supa } from "./supa.js";
 import { CATALOG } from "./game.js";
 import { Wiki } from "./net.js";
 
-const CACHE_KEY = "wikifacts_v1", TTL = 30 * 86400e3;
+const CACHE_KEY = "wikifacts_v1" + (LANG === "en" ? "_en" : ""), TTL = 30 * 86400e3;
 const enc = encodeURIComponent;
 const shuffle = (a) => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 const firstWord = (s) => norm(s).split(" ")[0] || "";
-const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const MONTHS = LANG === "en" ? ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"] : ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 
 async function getJson(url, ms = 8000) {
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
@@ -69,8 +70,8 @@ export async function modelFacts(q) {
   const all = [...new Set([...refs.countries, ...refs.engines, ...refs.makers])].slice(0, 45);
   const labels = {};
   if (all.length) {
-    const lj = await getJson(`https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&origin=*&props=labels&languages=fr|en&ids=${all.join("|")}`);
-    for (const [id, e] of Object.entries(lj?.entities || {})) labels[id] = e.labels?.fr?.value || e.labels?.en?.value || null;
+    const lj = await getJson(`https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&origin=*&props=labels&languages=${LANG === "en" ? "en|fr" : "fr|en"}&ids=${all.join("|")}`);
+    for (const [id, e] of Object.entries(lj?.entities || {})) labels[id] = e.labels?.[LANG]?.value || e.labels?.fr?.value || e.labels?.en?.value || null;
   }
   const named = (list) => [...new Set(list.map((id) => labels[id]).filter(Boolean))];
   const earliest = (p) => values(claims, p).map(timeOf).filter(Boolean).sort((a, b) => a.y - b.y || a.m - b.m || a.d - b.d)[0] || null;
@@ -104,10 +105,10 @@ const ENGINES = ["CFM International CFM56", "CFM International LEAP", "Pratt & W
   "Safran Arriel", "Safran Makila", "Rolls-Royce BR700", "Honeywell TFE731", "Williams FJ44", "Lycoming O-360", "Continental O-200",
   "Snecma M88", "General Electric F404", "Pratt & Whitney F100", "Europrop TP400", "Rolls-Royce AE 2100", "Turbomeca Arrius"];
 
-const fmtDate = (t) => (t.precision >= 11 ? `${t.d === 1 ? "1er" : t.d} ${MONTHS[t.m - 1]} ${t.y}` : t.precision === 10 ? `${MONTHS[t.m - 1]} ${t.y}` : String(t.y));
+const fmtDate = (t) => (t.precision >= 11 ? (LANG === "en" ? `${MONTHS[t.m - 1]} ${t.d}, ${t.y}` : `${t.d === 1 ? "1er" : t.d} ${MONTHS[t.m - 1]} ${t.y}`) : t.precision === 10 ? `${MONTHS[t.m - 1]} ${t.y}` : String(t.y));
 const fmtMetres = (m) => `${m < 20 ? String(Math.round(m * 10) / 10).replace(".", ",") : Math.round(m)} m`; // 6,5 m · 13 m · 36 m
 const nice = (n) => { const p = 10 ** Math.max(0, Math.floor(Math.log10(n)) - 1); return Math.max(1, Math.round(n / p) * p); };
-const fmtCount = (n) => nice(n).toLocaleString("fr-FR");
+const fmtCount = (n) => nice(n).toLocaleString(LOCALE);
 
 /** Trois mauvaises réponses chiffrées, bien distinctes de la bonne (au moins 15 % d'écart) ; null si impossible. */
 function numbers(value, fmt, patterns) {
@@ -150,7 +151,7 @@ function candidates(f, q) {
   if (f.built >= 10) {
     add("construits", "Combien d'exemplaires ont été construits, environ ?",
       numbers(f.built, (n) => `environ ${fmtCount(n)}`, [[0.1, 0.3, 3], [0.3, 3, 10], [0.05, 0.25, 4], [0.2, 4, 12]]),
-      `${f.built.toLocaleString("fr-FR")} exemplaires construits.`);
+      `${f.built.toLocaleString(LOCALE)} exemplaires construits.`);
   }
   if (f.wingspan) {
     add("envergure", "Quelle est son envergure (d'un bout d'aile à l'autre) ?",
@@ -191,7 +192,7 @@ function aiRow(q) {
 }
 /** À appeler dès que la question s'affiche : l'article et les questions sont prêts quand le joueur a répondu. */
 export function prefetchBonus(q) {
-  aiRow(q);
+  if (LANG !== "en") aiRow(q);
   modelFacts(q).catch(() => null);
 }
 const fromAi = (row) => row.questions.map((x) => ({
@@ -205,7 +206,8 @@ const fromAi = (row) => row.questions.map((x) => ({
  * vues de préférence), puis celles de la fiche Wikidata. Moins de n si Wikipédia en sait moins. */
 export async function bonusQuestions(q, n) {
   if (!n) return [];
-  const row = await Promise.race([aiRow(q), sleep(AI_WAIT_MS).then(() => null)]);
+  // Questions de l'IA écrites en français : en anglais, seulement celles de la fiche Wikidata
+  const row = LANG === "en" ? null : await Promise.race([aiRow(q), sleep(AI_WAIT_MS).then(() => null)]);
   const seen = new Set(ls.get(AI_SEEN, []));
   const ai = row ? fromAi(row) : [];
   const picked = [...shuffle(ai.filter((x) => !seen.has(x.id))), ...shuffle(ai.filter((x) => seen.has(x.id)))].slice(0, n);

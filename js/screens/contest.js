@@ -3,6 +3,7 @@
 // La jauge d'exposition d'une photo (aiguille de 0 à 100) monte avec les votes que son auteur donne aux autres ;
 // la photo qui reçoit le plus de votes gagne.
 // Dimanche à minuit (heure de Paris), la photo la plus votée gagne et son auteur reçoit 200 XP.
+import { LOCALE } from "../i18n.js";
 import { h, modal, toast, confirmBox, timeAgo, rarityMark, infoButton } from "../util.js";
 import { Supa } from "../supa.js";
 import { Weekly, profileFrom, sync } from "../cloud.js";
@@ -14,7 +15,7 @@ import { Reported, reportButton } from "../report.js";
 
 export const WEEK_PRIZE_XP = 200;
 const photoUrl = (path) => (path ? Supa.publicUrl("photos", path) : "");
-const dayFmt = (ms) => new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+const dayFmt = (ms) => new Date(ms).toLocaleDateString(LOCALE, { day: "numeric", month: "short" });
 
 /** Petite jauge en demi-cercle avec une aiguille, de 0 à 100. */
 export function gauge(score, { size = 74, label = "Exposition" } = {}) {

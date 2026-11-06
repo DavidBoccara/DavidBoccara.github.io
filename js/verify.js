@@ -5,6 +5,7 @@
 //  4. Ciel : une bonne partie de l'image est du ciel, reconnu par une IA ultra-légère (U-Net, skynet.js) qui tourne
 //     sur le téléphone ; sinon (IA indisponible) par l'analyse des couleurs et des zones lisses.
 // Tout se passe sur l'appareil, sans envoyer la photo nulle part.
+import { LOCALE } from "./i18n.js";
 import { exifInfo, distanceKm } from "./util.js";
 import { AdsbDb, Wiki } from "./net.js";
 import { prettyModel } from "./game.js";
@@ -31,7 +32,7 @@ const NIGHT_LUMA = 50;            // image très sombre : l'IA connaît mal le c
 export async function verifyPhoto(file, blob, s, { camera = false, seenAt = Date.now(), own = [] } = {}) {
   const checks = [];
   const exif = await exifInfo(file);
-  const fmt = (t) => new Date(t).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const fmt = (t) => new Date(t).toLocaleString(LOCALE, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   const inWindow = (t) => t >= seenAt - BEFORE_MS && t <= seenAt + AFTER_MS;
 
   // 1. Date

@@ -1,3 +1,4 @@
+import { LOCALE } from "./i18n.js";
 // Petits outils partagés : DOM, formats, géographie, fenêtres et messages.
 
 export const $ = (sel, root = document) => root.querySelector(sel);
@@ -121,9 +122,9 @@ export function icon(name, size = 20) {
   return s;
 }
 
-const nf = new Intl.NumberFormat("fr-FR");
+const nf = new Intl.NumberFormat(LOCALE);
 export const num = (n) => nf.format(Math.round(n));
-export const dec = (n, d = 1) => n.toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d });
+export const dec = (n, d = 1) => n.toLocaleString(LOCALE, { minimumFractionDigits: d, maximumFractionDigits: d });
 
 export function timeAgo(ms) {
   const s = (Date.now() - ms) / 1000;
@@ -131,12 +132,12 @@ export function timeAgo(ms) {
   if (s < 3600) return `il y a ${Math.floor(s / 60)} min`;
   if (s < 86400) return `il y a ${Math.floor(s / 3600)} h`;
   if (s < 7 * 86400) return `il y a ${Math.floor(s / 86400)} j`;
-  return new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(ms).toLocaleDateString(LOCALE, { day: "numeric", month: "short", year: "numeric" });
 }
 
-export const dateTime = (ms) => new Date(ms).toLocaleString("fr-FR",
+export const dateTime = (ms) => new Date(ms).toLocaleString(LOCALE,
   { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-export const dateDay = (ms) => new Date(ms).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+export const dateDay = (ms) => new Date(ms).toLocaleDateString(LOCALE, { day: "numeric", month: "short", year: "numeric" });
 
 /** « 500 m », « 2 km », « 7,5 km » */
 export const meters = (m) => (m < 1000 ? `${m} m` : m % 1000 === 0 ? `${m / 1000} km` : `${dec(m / 1000)} km`);

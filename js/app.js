@@ -1,4 +1,5 @@
 // Plane GO (PWA) : navigation par onglets, HUD du joueur, installation.
+import { LOCALE } from "./i18n.js";
 import { $, h, ls, modal, toast, icon } from "./util.js";
 import { Supa, emailLink } from "./supa.js";
 import { Player } from "./store.js";
@@ -94,7 +95,7 @@ export function renderHud() {
     h("div.who", h("div.name", p?.username || (Supa.isLoggedIn ? "…" : "Invité")),
       h("div.lvl", `Niv. ${lvl.number} · ${lvl.name}`),
       h("div.xpbar", h("i", { style: { width: pct + "%" } }))),
-    h("span.chip", `${xp.toLocaleString("fr-FR")} XP`));
+    h("span.chip", `${xp.toLocaleString(LOCALE)} XP`));
   $("#hud").onclick = () => go("profile");
 }
 

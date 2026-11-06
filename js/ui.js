@@ -1,4 +1,5 @@
 // Éléments d'interface partagés : fiche Wikipédia, photos, captures, partage.
+import { LOCALE } from "./i18n.js";
 import { h, modal, toast, icon, pickImage, toJpeg, imageKind, exifDate, confirmBox, choose, dateTime, dateDay, dec, rarityMark } from "./util.js";
 import { Wiki, AdsbDb } from "./net.js";
 import { Supa } from "./supa.js";
@@ -71,7 +72,7 @@ export function aircraftInfoCard(c) {
     c.type && `Code type OACI : ${c.type}`, c.hex && `Code ICAO 24 bits : ${c.hex.toUpperCase()}`,
     c.operator && `Opérateur : ${c.operator}`, c.countryName && `Pays d'immatriculation : ${flagOf(c.countryIso)} ${c.countryName}`,
     c.route && `Trajet : ${c.route}`,
-    c.flightKm != null && `Distance du vol : ${Math.round(c.flightKm).toLocaleString("fr-FR")} km (${distanceBonus(c.flightKm).label})`,
+    c.flightKm != null && `Distance du vol : ${Math.round(c.flightKm).toLocaleString(LOCALE)} km (${distanceBonus(c.flightKm).label})`,
     c.distanceKm != null && `Distance au moment de la photo : ${dec(c.distanceKm)} km`,
     c.takenAt && `Photographié le ${dateTime(c.takenAt)}`, c.source === "import" && "Photo ajoutée après coup",
   ].filter(Boolean);
@@ -343,7 +344,7 @@ async function rejectedPhoto(spotted, { camera, seenAt, file, blob, verdict, exi
 
 /** La photo n'a pas pu être lue : explication selon la cause probable, et détails pour le dépannage. */
 async function unreadablePhoto(file, err, camera) {
-  const kind = await imageKind(file), mo = (file.size / 1e6).toLocaleString("fr-FR", { maximumFractionDigits: 1 });
+  const kind = await imageKind(file), mo = (file.size / 1e6).toLocaleString(LOCALE, { maximumFractionDigits: 1 });
   const why = file.size === 0 || kind === "vide"
     ? "Le téléphone n'a pas transmis la photo (fichier vide). C'est fréquent avec une photo restée seulement dans le cloud (Google Photos, iCloud) : ouvre-la d'abord dans la galerie pour qu'elle se télécharge, puis réessaie."
     : kind === "heic"
@@ -499,7 +500,7 @@ export async function showEntry(e, { onChange } = {}) {
     e.registration && `Immatriculation : ${e.registration}`, e.callsign && `Indicatif : ${e.callsign}`,
     e.operator && `Opérateur : ${e.operator}`, e.countryName && `Pays : ${flagOf(e.countryIso)} ${e.countryName}`,
     e.route && `Trajet : ${e.route}`,
-    e.flightKm != null && `Distance du vol : ${Math.round(e.flightKm).toLocaleString("fr-FR")} km (${distanceBonus(e.flightKm).label})`,
+    e.flightKm != null && `Distance du vol : ${Math.round(e.flightKm).toLocaleString(LOCALE)} km (${distanceBonus(e.flightKm).label})`,
     e.distanceKm != null && `Distance à la prise de vue : ${dec(e.distanceKm)} km`,
     e.source === "import" && "Photo ajoutée après coup",
     e.remoteId ? (e.albumPending ? "Sauvegardée sur le compte (dernières modifications de l'album en attente d'envoi)" : "Sauvegardée sur le compte") : "Sur cet appareil uniquement",

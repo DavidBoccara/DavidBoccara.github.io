@@ -1,5 +1,6 @@
 // Outils communs aux modes du Quiz du ciel : préparation d'une question (nom + photo), mémoire des avions
 // déjà proposés en entraînement, note « Comment le reconnaître » après une erreur.
+import { LOCALE } from "./i18n.js";
 import { h, ls, modal, toast, confirmBox } from "./util.js";
 import { Radar } from "./radar.js";
 import { Wiki } from "./net.js";
@@ -39,7 +40,7 @@ export function radiusButton({ km, lvl, label, sub, onClick }) {
 export function radiusNext(lvl, next, xp) {
   const bonus = next && Quiz.bonusLabel(next);
   return h("div.rb-next", next
-    ? `Au grade ${next.name} : ${Quiz.radiusLabel(next)}${bonus ? ` + ${bonus}` : ""}${xp != null && next.minXp > xp ? ` (encore ${(next.minXp - xp).toLocaleString("fr-FR")} XP)` : ""}`
+    ? `Au grade ${next.name} : ${Quiz.radiusLabel(next)}${bonus ? ` + ${bonus}` : ""}${xp != null && next.minXp > xp ? ` (encore ${(next.minXp - xp).toLocaleString(LOCALE)} XP)` : ""}`
     : "Grade maximum : radar infini");
 }
 

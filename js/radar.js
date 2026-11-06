@@ -1,4 +1,5 @@
 // Radar : position GPS, avions autour toutes les 15 s, journal des passages, notifications.
+import { LOCALE } from "./i18n.js";
 import { Adsb, AdsbDb, Wiki } from "./net.js";
 import { Sightings, Prefs } from "./store.js";
 import { spottedFrom, filterMatches, approach, duration, lookLabel, UNCERTAIN_TEXT, acLabel, fmtDistance, fmtAltitude, fmtOrigin, prettyModel } from "./game.js";
@@ -214,7 +215,7 @@ export function wantsNotification(ac, a) {
 /** Compte à rebours écrit dans la notification : « Visible dans 2 min 35 s (vers 08:52) » + où regarder. */
 export function countdownText(a) {
   if (!a) return "";
-  const at = (s) => new Date(Date.now() + s * 1000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const at = (s) => new Date(Date.now() + s * 1000).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit" });
   const look = lookLabel(a);
   const unsure = a.uncertain ? "\n" + UNCERTAIN_TEXT : "";
   switch (a.kind) {

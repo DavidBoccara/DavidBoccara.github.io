@@ -1,4 +1,5 @@
 // Onglet Scanner : radar en direct, réglages de zone, filtre de notifications.
+import { LOCALE } from "../i18n.js";
 import { h, icon, meters, modal, toast, rarityMark, cardinal, dec, dragSlider } from "../util.js";
 import { compassRose, nextMark } from "../compass.js";
 import { Radar, showAircraftNotification, approachOf, DEFAULT_LOCATION, willBeVisible } from "../radar.js";
@@ -94,7 +95,7 @@ export function scanner(view) {
       const l = Radar.location;
       lines.push(!l ? "Recherche de la position GPS…" : l.isDefault ? `Position : ${DEFAULT_LOCATION.name} (par défaut)`
         : `Position : ${l.lat.toFixed(4)}, ${l.lon.toFixed(4)} (± ${Math.round(l.accuracy)} m)`);
-      if (Radar.lastUpdate) lines.push(`${Radar.aircraft.length} avion(s), dont ${Radar.aircraft.filter((a) => a.military).length} militaire(s)${listFiltered() ? `, ${listed().length} dans la liste` : ""} — mis à jour à ${new Date(Radar.lastUpdate).toLocaleTimeString("fr-FR")}${Adsb.lastSource ? ` (source : ${Adsb.lastSource})` : ""}`);
+      if (Radar.lastUpdate) lines.push(`${Radar.aircraft.length} avion(s), dont ${Radar.aircraft.filter((a) => a.military).length} militaire(s)${listFiltered() ? `, ${listed().length} dans la liste` : ""} — mis à jour à ${new Date(Radar.lastUpdate).toLocaleTimeString(LOCALE)}${Adsb.lastSource ? ` (source : ${Adsb.lastSource})` : ""}`);
     }
     if (Radar.error) lines.push("" + Radar.error);
     status.textContent = lines.join("\n");

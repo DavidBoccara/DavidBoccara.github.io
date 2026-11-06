@@ -2,6 +2,7 @@
 // Les trois modes du quiz : « En direct » (l'avion qui passe dans votre rayon de jeu en ce moment),
 // « Quiz du jour » (tous les avions passés au-dessus de vous aujourd'hui, une partie par jour, voir daily.js)
 // et « Entraînement » (autant d'avions proches que l'on veut, sans points, voir practice.js).
+import { LOCALE } from "../i18n.js";
 import { h, meters, sleep, icon, modal } from "../util.js";
 import { Radar } from "../radar.js";
 import { Adsb } from "../net.js";
@@ -151,7 +152,7 @@ function liveQuiz(view) {
     const next = radiusButton({ km: Quiz.radiusKm(lvl), lvl, label: "Avion suivant", sub: "Dans votre rayon de jeu", onClick: () => search() });
     next.style.display = "none"; next.classList.add("mt");
     const hint = [q.distanceKm > 30 ? "Repéré par votre radar" : "Au-dessus de vous", q.distanceKm != null && `à ${q.distanceKm.toFixed(1).replace(".", ",")} km`,
-      q.altitudeM != null && `${q.altitudeM.toLocaleString("fr-FR")} m d'altitude`].filter(Boolean).join(" · ");
+      q.altitudeM != null && `${q.altitudeM.toLocaleString(LOCALE)} m d'altitude`].filter(Boolean).join(" · ");
     const opts = q.options.map((name) => h("button.opt", { onclick: () => answer(name) }, name));
     const tipBox = h("div"), bonusBox = h("div");
     if (Quiz.bonusCount(Player.level())) prefetchBonus(q); // questions bonus prêtes quand le joueur aura répondu

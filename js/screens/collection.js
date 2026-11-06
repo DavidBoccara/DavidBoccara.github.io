@@ -1,4 +1,5 @@
 // Onglet Collection : grade et XP, puis trois vues — mes photos, avions passés au-dessus, catalogue complet.
+import { LOCALE } from "../i18n.js";
 import { h, ls, rarityMark, infoButton } from "../util.js";
 import { Collection, Player, entryPhoto, entryPhotoItems, entryRarity, entryModel, entryLabel } from "../store.js";
 import { Supa } from "../supa.js";
@@ -42,7 +43,7 @@ export function collection(view, [sub]) {
     const xp = Player.bestXp(), lvl = Player.level();
     level.textContent = `Niveau ${lvl.number} — ${lvl.title}`;
     bar.firstChild.style.width = (lvl.nextXp ? ((xp - lvl.minXp) / (lvl.nextXp - lvl.minXp)) * 100 : 100) + "%";
-    xpText.textContent = lvl.nextXp ? `${xp.toLocaleString("fr-FR")} XP • grade suivant à ${lvl.nextXp.toLocaleString("fr-FR")} XP` : `${xp.toLocaleString("fr-FR")} XP • grade maximum !`;
+    xpText.textContent = lvl.nextXp ? `${xp.toLocaleString(LOCALE)} XP • grade suivant à ${lvl.nextXp.toLocaleString(LOCALE)} XP` : `${xp.toLocaleString(LOCALE)} XP • grade maximum !`;
     renderHud();
   }
 

@@ -5,6 +5,7 @@
 // Difficulté et gains selon le grade (FLY_LEVELS), série de bonnes réponses avec multiplicateur, et bonus
 // « Vérifié en vrai » si l'on photographie ensuite l'avion trouvé (Hunts, store.js). Une fois par avion et par jour.
 // Calcul : approach() de game.js (ligne droite à la vitesse sol, comme le Scanner), position exacte du téléphone.
+import { LOCALE, LANG } from "../i18n.js";
 import { h, toast, cardinal, bearingDeg, distanceKm, ls } from "../util.js";
 import { Radar } from "../radar.js";
 import { Adsb, AdsbDb, Wiki } from "../net.js";
@@ -153,7 +154,7 @@ async function buildDestination(list) {
   return null;
 }
 let regions = null;
-try { regions = new Intl.DisplayNames(["fr"], { type: "region" }); } catch { /* navigateur ancien */ }
+try { regions = new Intl.DisplayNames([LANG], { type: "region" }); } catch { /* navigateur ancien */ }
 const countryFr = (a) => { try { return (a.countryIso && regions?.of(a.countryIso.toUpperCase())) || a.countryName; } catch { return a.countryName; } };
 const airport = (a) => { const c = countryFr(a); return [a.city || a.name, a.iata || a.icao].filter(Boolean).join(" · ") + (c ? ` (${c})` : ""); };
 const hm = (min) => { const m = Math.max(5, Math.round(min / 5) * 5); return m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, "0")}` : `${m} min`; };
@@ -182,7 +183,7 @@ function routeLabel(p) {
   const o = p.route.origin, d = p.route.destination, ac = p.ac;
   const done = Math.round(distanceKm(o.lat, o.lon, ac.lat, ac.lon)), left = Math.round(distanceKm(ac.lat, ac.lon, d.lat, d.lon));
   const city = (a) => [a.city || a.name, short(a)].filter(Boolean).join(" ");
-  return `${city(o)} → ${city(d)} · ${done.toLocaleString("fr-FR")} km parcourus, ${left.toLocaleString("fr-FR")} km restants`;
+  return `${city(o)} → ${city(d)} · ${done.toLocaleString(LOCALE)} km parcourus, ${left.toLocaleString(LOCALE)} km restants`;
 }
 
 // ---------- Alternance des défis ----------
@@ -302,11 +303,11 @@ export function flybyGame(view) {
     const { target, planes, loc, lvl, kind } = game;
     const isPass = kind === "pass";
     const km = isPass ? kmText(target.a.closest) : "", min = isPass ? minText(target.a.tClosest) : "";
-    const time = new Date(game.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const time = new Date(game.at).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit" });
     const rows = h("div.fly-rows");
     const validate = h("button.btn.primary.block.mt", { disabled: true, onclick: () => answer() }, "Touche un avion");
     const feedback = h("div.mt");
-    const altOf = (p) => `${Math.round((p.ac.altitudeFt ?? 0) * 0.3048).toLocaleString("fr-FR")} m`;
+    const altOf = (p) => `${Math.round((p.ac.altitudeFt ?? 0) * 0.3048).toLocaleString(LOCALE)} m`;
 
     const marks = () => {
       const out = isPass && (lvl.ring || game.done) ? [{ type: "line", points: ring(loc.lat, loc.lon, Number(km)), cls: "ring" }] : [];
@@ -355,7 +356,7 @@ export function flybyGame(view) {
         const ac = p.ac, all = game.done;
         const state = game.done && p === target ? ".ok" : game.wrong.has(p) ? ".bad" : game.sel === p ? ".sel" : "";
         const sub = isPass
-          ? [acLabel(ac), `${Math.round(ac.altitudeFt ?? 0).toLocaleString("fr-FR")} ft`, (lvl.speed || all) && fmtSpeed(ac),
+          ? [acLabel(ac), `${Math.round(ac.altitudeFt ?? 0).toLocaleString(LOCALE)} ft`, (lvl.speed || all) && fmtSpeed(ac),
             (lvl.cap || all) && `cap ${Math.round(ac.trackDeg)}° ${cardinal(ac.trackDeg)}`]
           : [acLabel(ac), fmtSpeed(ac)];
         const routeTxt = isPass ? null : p.route ? routeLabel(p) : "Trajet inconnu";
@@ -401,7 +402,7 @@ export function flybyGame(view) {
         h("div.small" + (ok ? "" : ".dim"), r.streakTxt),
         hunt ? h("div.fly-hunt",
           h("div.kicker", "Vérifié en vrai"),
-          h("div", `Il va passer à ${kmText(target.a.closest)} km de toi vers ${new Date(game.at + target.a.tClosest * 1000).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}. `
+          h("div", `Il va passer à ${kmText(target.a.closest)} km de toi vers ${new Date(game.at + target.a.tClosest * 1000).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit" })}. `
             + `Photographie-le pendant son passage : +${HUNT_XP} XP en plus de la capture.`),
           h("button.btn.primary.block.mt", { onclick: open }, "Ouvrir sa fiche pour le photographier")) : null,
         h("div.small.dim.mt", isPass ? "Le trait vert montre où il va passer. Sous la liste, ce que fait chaque avion." : "Sous la liste, l'altitude de chaque avion."),
@@ -493,7 +494,7 @@ export function flybyGame(view) {
         { type: "dot", lon: guess.lon, lat: guess.lat, r: 7, cls: "guess" },
         { type: "dot", lon: d.lon, lat: d.lat, r: 7, cls: "dest" }]);
       map.fit([[guess.lon, guess.lat], [d.lon, d.lat], [ac.lon, ac.lat]], 300);
-      const km = err < 10 ? err.toFixed(1).replace(".", ",") : Math.round(err).toLocaleString("fr-FR");
+      const km = err < 10 ? err.toFixed(1).replace(".", ",") : Math.round(err).toLocaleString(LOCALE);
       validate.remove();
       feedback.replaceChildren(h("div.card.pad.fly-result",
         h("div.kicker", ok ? "Bien vu" : "Réponse"),

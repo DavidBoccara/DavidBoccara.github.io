@@ -1,5 +1,6 @@
 // Vue « Passés au-dessus » de l'onglet Collection (ex-onglet Hangar) : les avions passés cette semaine.
 // La liste repart à zéro le lundi à 0 h (heure de Paris), avec le concours photo ; les photos attrapées restent dans la vue Photos.
+import { LOCALE } from "../i18n.js";
 import { h, ls, dateTime, dateDay, weekStart, icon, rarityMark, infoButton } from "../util.js";
 import { Collection, Sightings, entryPhoto, entryRarity, entryModel, entryLabel } from "../store.js";
 import { computeXp, spottedRarity, flagOf, prettyModel, MAX_PHOTO_KM } from "../game.js";
@@ -12,8 +13,8 @@ import { askPhotoSource, showEntry, showWiki, wikiDot, wikiImg, wikiQuery } from
 // Jour d'un passage (heure du téléphone) : « AAAA-MM-JJ », et son nom court (« Ven. 6 ») ou long (« Aujourd'hui », « Vendredi 6 novembre »)
 const pad = (n) => String(n).padStart(2, "0");
 const dayKey = (ms) => { const d = new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
-const SHORT = new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "numeric" });
-const LONG = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+const SHORT = new Intl.DateTimeFormat(LOCALE, { weekday: "short", day: "numeric" });
+const LONG = new Intl.DateTimeFormat(LOCALE, { weekday: "long", day: "numeric", month: "long" });
 function dayLabel(key, long = false) {
   const [y, m, d] = key.split("-").map(Number), date = new Date(y, m - 1, d);
   const today = dayKey(Date.now()), yesterday = dayKey(Date.now() - 864e5);

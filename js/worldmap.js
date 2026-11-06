@@ -1,4 +1,5 @@
 // Carte du monde des jeux (projection de Mercator, terres et frontières Natural Earth, domaine public : worldmap-data.js).
+import { LOCALE } from "./i18n.js";
 import { h } from "./util.js";
 let mapData = null;
 /** Données de la carte (≈ 190 Ko), chargées seulement quand un jeu en a besoin. */
@@ -49,7 +50,7 @@ export function worldMap(M, { onTap, label = "Carte du monde" } = {}) {
     const max = kmPerPx * 90, p = 10 ** Math.floor(Math.log10(max));
     const km = [5, 2, 1].map((k) => k * p).find((v) => v <= max) || p;
     scaleBar.style.width = `${Math.round(km / kmPerPx)}px`;
-    scaleTxt.textContent = `${km >= 1 ? km.toLocaleString("fr-FR") : km.toFixed(1).replace(".", ",")} km`;
+    scaleTxt.textContent = `${km >= 1 ? km.toLocaleString(LOCALE) : km.toFixed(1).replace(".", ",")} km`;
   }
   const unitsPerPx = () => view.w / (box.clientWidth || 360);
   function zoomBy(f, cx = view.x + view.w / 2, cy = view.y + view.h / 2) {
