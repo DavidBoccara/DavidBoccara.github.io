@@ -1,10 +1,10 @@
 // Image de partage d'une capture (réseaux sociaux) : la photo du joueur en grand + un bandeau Plane GO (style
-// « Instrument ») avec le modèle, la rareté, les XP, le trajet et l'accroche de l'appli + plane-go.com, au format
+// « Instrument ») avec le modèle, la rareté, les XP, le trajet, le logo et plane-go.com, au format
 // 1080 × 1350 (portrait 4:5, celui d'Instagram et de Facebook). Si l'image ne peut pas être fabriquée (photo
 // illisible…), le partage se fait avec la photo seule.
 import { LANG } from "./i18n.js";
 
-const W = 1080, H = 1350, BAND = 600, PAD = 64;
+const W = 1080, H = 1350, BAND = 480, PAD = 64;
 const C = { bg: "#0F1113", line: "#2A2E33", text: "#F2F3F5", dim: "#9AA1A9", soft: "#C9CDD2", accent: "#F2A93B", mil: "#E5484D", empty: "#2A2E33" };
 const SANS = '"IBM Plex Sans", system-ui, sans-serif', MONO = '"IBM Plex Mono", ui-monospace, monospace';
 const EN = LANG === "en";
@@ -30,19 +30,6 @@ function fit(ctx, s, max) {
   while (s.length > 1 && ctx.measureText(s + "…").width > max) s = s.slice(0, -1);
   return s.trimEnd() + "…";
 }
-/** Lignes d'un paragraphe (au plus `lines`). */
-function wrap(ctx, s, max, lines = 2) {
-  const out = [];
-  let cur = "";
-  for (const w of s.split(" ")) {
-    const t = cur ? cur + " " + w : w;
-    if (ctx.measureText(t).width <= max || !cur) cur = t; else { out.push(cur); cur = w; }
-  }
-  if (cur) out.push(cur);
-  if (out.length > lines) { out.length = lines; out[lines - 1] = fit(ctx, out[lines - 1] + "…", max); }
-  return out;
-}
-
 /**
  * Fabrique l'image de partage. info = { mine, player, model, rarity, xp, route, military }.
  * Renvoie une adresse blob: (JPEG) ou null si impossible.
@@ -102,13 +89,8 @@ export async function shareCard(photoUrl, info) {
       y += 50;
     }
 
-    // Pied : accroche + logo + adresse
+    // Pied : logo + adresse
     const footY = H - PAD - 64;
-    ctx.font = `400 30px ${SANS}`; ctx.fillStyle = C.soft;
-    const hook = EN ? "My phone warns me before a plane flies over me, and tells me where to look."
-      : "Mon téléphone me prévient avant qu'un avion passe au-dessus de moi, et me dit où regarder.";
-    const lines = wrap(ctx, hook, W - 2 * PAD, 2);
-    lines.forEach((l, i) => ctx.fillText(l, PAD, footY - 34 - (lines.length - i) * 42));
     if (logo) ctx.drawImage(logo, PAD, footY, 64, 64);
     ctx.font = `600 40px ${SANS}`; ctx.fillStyle = C.text; ctx.fillText("Plane GO", PAD + 84, footY + 10);
     ctx.font = `500 32px ${MONO}`; ctx.fillStyle = C.accent; ctx.textAlign = "right";
