@@ -1,5 +1,5 @@
 // Onglet Scanner : radar en direct, réglages de zone, filtre de notifications.
-import { LOCALE } from "../i18n.js";
+import { LOCALE, LANG, t } from "../i18n.js";
 import { h, icon, meters, modal, toast, rarityMark, cardinal, dec, dragSlider } from "../util.js";
 import { compassRose, nextMark } from "../compass.js";
 import { Radar, showAircraftNotification, approachOf, DEFAULT_LOCATION, willBeVisible } from "../radar.js";
@@ -307,12 +307,13 @@ const listFiltered = () => !(LIST.kinds.length === KINDS.length && !LIST.models.
 const listed = () => (listFiltered() ? Radar.aircraft.filter((ac) => filterMatches(ac, LIST.kinds, LIST.models)) : [...Radar.aircraft]);
 
 export function filterSummary(f = NOTIF) {
+  // Texte assemblé de morceaux : chacun traduit à part (t), sinon l'anglais ne reconnaîtrait pas la phrase entière
   const k = f.kinds, m = f.models, parts = [];
-  if (k.length === KINDS.length) parts.push("tous les avions");
-  else if (k.length) parts.push(KINDS.filter((x) => k.includes(x.key)).map((x) => x.label.split(" (")[0]).join(", "));
-  if (m.length) parts.push(m.length === 1 ? m[0] : `${m.length} modèles`);
-  const vis = (f === NOTIF ? Prefs.notifyVisibleOnly : Prefs.listVisibleOnly) && parts.length ? ", visibles à l'œil nu" : "";
-  return `${f.prefix} : ` + (parts.length ? parts.join(" + ") + vis : "aucun");
+  if (k.length === KINDS.length) parts.push(t("tous les avions"));
+  else if (k.length) parts.push(KINDS.filter((x) => k.includes(x.key)).map((x) => t(x.label.split(" (")[0])).join(", "));
+  if (m.length) parts.push(m.length === 1 ? m[0] : t(`${m.length} modèles`));
+  const vis = (f === NOTIF ? Prefs.notifyVisibleOnly : Prefs.listVisibleOnly) && parts.length ? t(", visibles à l'œil nu") : "";
+  return `${t(f.prefix)}${LANG === "en" ? ":" : " :"} ` + (parts.length ? parts.join(" + ") + vis : t("aucun"));
 }
 
 function checks(items, selected) {
