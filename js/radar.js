@@ -238,8 +238,23 @@ export function shouldNotify(ac) {
 export function approachOf(ac, loc = Radar.location) {
   return loc ? approach(loc.lat, loc.lon, ac, Prefs.visibleM / 1000) : null;
 }
-/** Va-t-il être (ou est-il déjà) visible à l'œil nu ? */
+/** Va-t-il être (ou est-il déjà) visible à l'œil nu ? (trajectoire en ligne droite) */
 export const willBeVisible = (a) => a?.kind === "NOW" || a?.kind === "SOON";
+
+/**
+ * Susceptible d'être vu (filtre « Liste ») : plus large que `willBeVisible`, pour montrer les avions assez tôt.
+ * Un avion encore loin corrige souvent un peu son cap : on accepte qu'il passe à côté de la zone visible d'un écart qui
+ * grandit avec le chemin qui lui reste (10° de marge, soit ≈ 9 km pour 50 km de route), dans les 20 prochaines minutes.
+ * Aussi : un avion déjà dans la zone visible sans trajectoire calculable (hélicoptère sur place, cap inconnu).
+ */
+export const VISIBLE_MARGIN_DEG = 10;
+export function mayBeVisible(ac, a, visKm) {
+  if (willBeVisible(a)) return true;
+  if (!a) return !ac.onGround && (ac.distanceKm ?? 1e9) <= visKm;
+  if (a.kind !== "FAR" || a.tClosest > 20 * 60) return false;
+  const routeKm = ((ac.speedKt || 0) * 1.852 / 3600) * a.tClosest;
+  return a.closest <= visKm + routeKm * Math.sin((VISIBLE_MARGIN_DEG * Math.PI) / 180);
+}
 
 /** À notifier maintenant ? Type ou modèle choisi, et visible à l'œil nu si l'option est cochée. */
 export function wantsNotification(ac, a) {

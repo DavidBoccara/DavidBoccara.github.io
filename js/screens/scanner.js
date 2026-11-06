@@ -2,7 +2,7 @@
 import { LOCALE, LANG, t } from "../i18n.js";
 import { h, icon, meters, modal, toast, rarityMark, cardinal, dec, dragSlider } from "../util.js";
 import { compassRose, nextMark } from "../compass.js";
-import { Radar, showAircraftNotification, approachOf, approxPlace, approxLabel, willBeVisible } from "../radar.js";
+import { Radar, showAircraftNotification, approachOf, approxPlace, approxLabel, mayBeVisible } from "../radar.js";
 import { Prefs, Collection } from "../store.js";
 import { Adsb, Wiki } from "../net.js";
 import { wikiQuery, locationBadge, defaultLocationAlert } from "../ui.js";
@@ -113,8 +113,9 @@ export function scanner(view) {
     // Trajectoire calculée une seule fois par avion et par mise à jour (avant : à chaque comparaison du tri, puis encore pour
     // chaque vignette et pour la rose)
     const ap = new Map(loc ? base.map((ac) => [ac, approach(loc.lat, loc.lon, ac, vis)]) : []);
-    // Option « Seulement les avions visibles » : déjà dans la zone visible ou qui vont y passer
-    const all = Prefs.listVisibleOnly && loc ? base.filter((ac) => willBeVisible(ap.get(ac))) : base;
+    // Option « Seulement les avions susceptibles d'être visibles » : déjà dans la zone visible, qui vont y passer, ou qui
+    // passeront tout près (marge pour les avions encore loin, qui corrigent leur cap : mayBeVisible de radar.js)
+    const all = Prefs.listVisibleOnly && loc ? base.filter((ac) => mayBeVisible(ac, ap.get(ac), vis)) : base;
     if (loc) all.sort((a, b) => approachSortKey(ap.get(a)) - approachSortKey(ap.get(b)) || (a.distanceKm ?? 1e9) - (b.distanceKm ?? 1e9));
     // Les premiers seulement à l'écran (les plus intéressants : triés par heure de passage) ; tous restent sur la rose
     const shown = all.slice(0, showMax);
