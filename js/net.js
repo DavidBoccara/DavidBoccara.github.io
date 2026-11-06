@@ -281,7 +281,10 @@ export const Places = {
     const r = await fetch(url);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const seen = new Set();
-    return (await r.json()).map((x) => {
+    // Lieux du pays du joueur d'abord (« 92350 » existe en France, en Finlande, aux États-Unis…)
+    const mine = (String(navigator.language || "").split("-")[1] || (LANG === "fr" ? "fr" : "")).toLowerCase();
+    const list = (await r.json()).sort((a, b) => (b.address?.country_code === mine) - (a.address?.country_code === mine));
+    return list.map((x) => {
       const a = x.address || {};
       const name = a.city || a.town || a.village || a.municipality || a.hamlet || a.suburb || x.name || String(x.display_name).split(",")[0];
       const detail = [a.postcode, a.county || a.state_district, a.state, a.country].filter((v, i, l) => v && v !== name && l.indexOf(v) === i).join(", ");
