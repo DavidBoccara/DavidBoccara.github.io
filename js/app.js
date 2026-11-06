@@ -142,12 +142,13 @@ Supa.onChange(async () => {
   if (location.hash !== "#auth/reset") route(); // ne pas effacer le nouveau mot de passe en cours de saisie
 });
 route();
+window.dispatchEvent(new Event("planego-ready")); // premier écran affiché : fin de l'animation d'ouverture (index.html)
 if (emailLink) openEmailLink(emailLink);
 setTimeout(checkAppUpdate, 3000); // appli Android pas à jour ?
 watchDefaultLocation(); // position du téléphone introuvable → fenêtre « ce n'est pas normal »
 setTimeout(askPhotoRulesAtStart, 3500); // joueurs déjà inscrits : engagement « photos depuis des lieux publics »
-window.addEventListener("planego-synced", noticeRemovals);
-window.addEventListener("planego-synced", syncBlocks); // joueurs bloqués (blocks.js) // une de mes publications supprimée après 5 signalements ?
+window.addEventListener("planego-synced", noticeRemovals); // une de mes publications supprimée après 5 signalements ?
+window.addEventListener("planego-synced", syncBlocks); // joueurs bloqués (blocks.js)
 if (Supa.isLoggedIn) {
   Cloud.profile().then((p) => { Player.profile = p; renderHud(); }).catch(() => {});
   sync().then(renderHud);
