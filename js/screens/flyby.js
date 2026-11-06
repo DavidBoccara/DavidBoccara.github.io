@@ -12,7 +12,7 @@ import { Adsb, AdsbDb, Wiki } from "../net.js";
 import { QuizStore, Player, Prefs, Hunts, HUNT_XP } from "../store.js";
 import { Sound } from "../sound.js";
 import { approach, acLabel, prettyModel, fmtSpeed, fmtAltitude, isHelicopter } from "../game.js";
-import { locationBadge, wikiQuery } from "../ui.js";
+import { locationBadge, wikiQuery, defaultLocationAlert } from "../ui.js";
 import { renderHud } from "../app.js";
 import { sync } from "../cloud.js";
 import { loadMap, worldMap, ring, ahead, arc, cone } from "../worldmap.js";
@@ -252,7 +252,7 @@ export function flybyGame(view) {
     const lvl = myLevel(), lists = new Map();
     try {
       const loc = Radar.location || (await Radar.locate());
-      if (!loc) throw new Error("position inconnue");
+      if (!loc) { defaultLocationAlert(); throw new Error("position inconnue : indique ta ville"); }
       const around = (r) => {
         if (!lists.has(r)) { status.textContent = `Recherche des avions à moins de ${r} km…`; lists.set(r, Adsb.around(loc.lat, loc.lon, r).catch(() => [])); }
         return lists.get(r);

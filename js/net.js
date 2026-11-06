@@ -270,3 +270,22 @@ export const Wiki = {
     return p;
   },
 };
+
+// ---------- Recherche d'un lieu (position indiquée à la main quand le GPS ne marche pas) ----------
+// OpenStreetMap (Nominatim, accepte les appels directs) : reçoit seulement le texte tapé par le joueur.
+export const Places = {
+  /** Lieux correspondant à « Lyon », « 92350 »… : [{ lat, lon, place, detail }] (5 au plus). */
+  async search(q) {
+    const url = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6"
+      + `&accept-language=${LANG}&q=${encodeURIComponent(q)}`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const seen = new Set();
+    return (await r.json()).map((x) => {
+      const a = x.address || {};
+      const name = a.city || a.town || a.village || a.municipality || a.hamlet || a.suburb || x.name || String(x.display_name).split(",")[0];
+      const detail = [a.postcode, a.county || a.state_district, a.state, a.country].filter((v, i, l) => v && v !== name && l.indexOf(v) === i).join(", ");
+      return { lat: parseFloat(x.lat), lon: parseFloat(x.lon), place: name, detail };
+    }).filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon) && !seen.has(p.place + p.detail) && seen.add(p.place + p.detail)).slice(0, 5);
+  },
+};

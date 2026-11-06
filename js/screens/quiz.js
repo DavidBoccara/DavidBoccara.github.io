@@ -11,7 +11,7 @@ import { Quiz, LEVELS } from "../game.js";
 import { Supa } from "../supa.js";
 import { sync } from "../cloud.js";
 import { go, renderHud } from "../app.js";
-import { locationBadge } from "../ui.js";
+import { locationBadge, defaultLocationAlert } from "../ui.js";
 import { pickQuestion, tipCard, markOptions, quizPhoto, radiusButton, radiusNext, bonusBlock } from "../quizkit.js";
 import { prefetchBonus } from "../wikiquiz.js";
 import { dailyQuiz, DailyStore, dailyQuestionCount, dailyRules } from "./daily.js";
@@ -122,8 +122,9 @@ function liveQuiz(view) {
       const loc = await Radar.locate();
       if (!alive || id !== searchId) return;
       if (!loc) {
-        showHunt(null, "Position inconnue. Autorisez la localisation (ou démarrez le radar dans l'onglet Scanner) : le quiz utilise votre position pour trouver les avions au-dessus de vous.",
-          h("button.btn.outline", { onclick: () => go("scanner") }, "Aller au Scanner"));
+        showHunt(null, "Position inconnue : le quiz utilise ta position pour trouver les avions au-dessus de toi.",
+          h("button.btn.primary", { onclick: () => defaultLocationAlert() }, "Indiquer ma position"));
+        defaultLocationAlert();
         return;
       }
       const r = Quiz.radiusKm(Player.level());

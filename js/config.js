@@ -28,11 +28,9 @@ export const SITE_URL = "https://plane-go.com/";
 export const GITHUB_SITE_URL = "https://davidboccara.github.io/";
 /** Vrai sur la copie GitHub Pages (pas de publicité, hébergeur GitHub dans les mentions légales). */
 export const onGithubPages = () => /\.github\.io$/i.test(location.hostname);
-/** Position approximative du visiteur d'après sa connexion (worker/index.js sur Cloudflare) : sur plane-go.com la même
- *  adresse, ailleurs (copie GitHub, essais en local) celle de plane-go.com. */
-export const GEO_URL = /(^|\.)plane-go\.com$/i.test(location.hostname) ? "/__geo" : SITE_URL + "__geo";
-/** Version publiée du site (identifiant + date), même principe. */
-export const VERSION_URL = GEO_URL.replace("__geo", "__version");
+/** Version publiée du site (identifiant + date, worker/index.js sur Cloudflare) : sur plane-go.com la même adresse,
+ *  ailleurs (copie GitHub, essais en local) celle de plane-go.com. */
+export const VERSION_URL = /(^|\.)plane-go\.com$/i.test(location.hostname) ? "/__version" : SITE_URL + "__version";
 /**
  * Appli Android hors Play Store (fichier .apk) : téléchargée depuis la copie GitHub du site, avec son numéro de version
  * (apk-version.json, lu par update.js). plane-go.com renvoie vers le Play Store.

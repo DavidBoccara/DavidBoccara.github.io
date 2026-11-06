@@ -4,7 +4,7 @@ import { LOCALE, DEC } from "../i18n.js";
 import { h } from "../util.js";
 import { Radar } from "../radar.js";
 import { Adsb } from "../net.js";
-import { locationBadge } from "../ui.js";
+import { locationBadge, defaultLocationAlert } from "../ui.js";
 import { Player } from "../store.js";
 import { Quiz } from "../game.js";
 import { pickQuestion, PracticeSeen, tipCard, markOptions, quizPhoto, bonusBlock } from "../quizkit.js";
@@ -49,7 +49,12 @@ export function practiceQuiz(box) {
     const loc = await Radar.locate();
     showLoc();
     if (!alive || id !== searchId) return;
-    if (!loc) { body.replaceChildren(h("div.empty", "Position inconnue : autorise la localisation pour trouver les avions autour de toi.")); return; }
+    if (!loc) {
+      body.replaceChildren(h("div.empty", "Position inconnue : indique ta ville pour trouver les avions autour de toi.",
+        h("div.mt", h("button.btn.primary", { onclick: () => defaultLocationAlert() }, "Indiquer ma position"))));
+      defaultLocationAlert();
+      return;
+    }
     const order = PracticeSeen.order(), recent = PracticeSeen.recentAnswers(3), tried = new Set();
     const fail = (hex) => unusable.add(hex);
     let fallback = null, list = [];

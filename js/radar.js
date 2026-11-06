@@ -4,7 +4,6 @@ import { Adsb, AdsbDb, Wiki } from "./net.js";
 import { Sightings, Prefs } from "./store.js";
 import { spottedFrom, filterMatches, approach, duration, lookLabel, UNCERTAIN_TEXT, acLabel, fmtDistance, fmtAltitude, fmtOrigin, prettyModel } from "./game.js";
 import { ls } from "./util.js";
-import { GEO_URL, onGithubPages } from "./config.js";
 import { Native, nativeConfig, takeNativeSightings } from "./native.js";
 import { noteUnknownTypes } from "./census.js";
 
@@ -12,33 +11,20 @@ const REARM_MS = 3600e3, GPS_WAIT_MS = 15000;
 
 /**
  * Position de secours quand celle du téléphone est inaccessible (refusée, GPS éteint, navigateur sans GPS) :
- * position approximative d'après la connexion internet (ville, à quelques kilomètres près, parfois plus), donnée par
- * Cloudflare (worker/index.js, adresse GEO_URL). `isDefault: true` = pas la position du téléphone ; `place` = ville.
- * Introuvable elle aussi : pas de position du tout (aucune position inventée).
+ * le joueur l'indique à la main (ville ou code postal, fenêtre `askLocation` de ui.js), gardée sur le téléphone
+ * (clé `manual_location`) pour les fois suivantes. `isDefault: true` = pas la position du téléphone ; `manual`, `place`.
+ * Sans position choisie : pas de position du tout (aucune position inventée), le jeu la demande.
  */
-let approx = null, approxAt = 0;
-/** Copie GitHub seulement (choix du propriétaire) : position fixe au Plessis-Robinson au lieu de la ville approximative. */
-const GITHUB_DEFAULT = { lat: 48.7811, lon: 2.2633, place: "Le Plessis-Robinson" };
-async function approxLoc(why) {
-  if (onGithubPages()) return { ...GITHUB_DEFAULT, accuracy: null, time: Date.now(), isDefault: true, fixed: true, why };
-  if (!approx || Date.now() - approxAt > 30 * 60e3) {
-    try {
-      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
-      const r = await fetch(GEO_URL, { cache: "no-store", signal: ctl.signal }).finally(() => clearTimeout(t));
-      const g = r.ok ? await r.json() : null;
-      if (g && Number.isFinite(g.lat) && Number.isFinite(g.lon)) {
-        let country = g.country;
-        try { if (country) country = new Intl.DisplayNames([LANG], { type: "region" }).of(country) || country; } catch { /* ancien navigateur */ }
-        approx = { lat: g.lat, lon: g.lon, place: [g.city, country].filter(Boolean).join(", ") || null }; approxAt = Date.now();
-      }
-    } catch { /* hors ligne ou service injoignable */ }
-  }
-  return approx ? { lat: approx.lat, lon: approx.lon, accuracy: null, time: Date.now(), isDefault: true, approx: true, place: approx.place, why } : null;
-}
-/** Ville de la position approximative, pour l'affichage. */
+const MANUAL_KEY = "manual_location";
+const manualLoc = (why) => {
+  const m = ls.get(MANUAL_KEY);
+  return m && Number.isFinite(m.lat) && Number.isFinite(m.lon)
+    ? { lat: m.lat, lon: m.lon, place: m.place || null, accuracy: null, time: Date.now(), isDefault: true, manual: true, why } : null;
+};
+/** Nom du lieu choisi, pour l'affichage. */
 export const approxPlace = (loc) => loc?.place || "lieu inconnu";
-/** « Position approximative : Lyon, France » ou, sur la copie GitHub, « Position par défaut : Le Plessis-Robinson ». */
-export const approxLabel = (loc) => `${loc?.fixed ? "Position par défaut" : "Position approximative"} : ${approxPlace(loc)}`;
+/** « Position choisie : Lyon » */
+export const approxLabel = (loc) => `Position choisie : ${approxPlace(loc)}`;
 const phoneLoc = (p) => ({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy, time: p.timestamp, isDefault: false });
 const geoWhy = (e) => (e?.code === 1 ? "Localisation refusée" : "Position du téléphone introuvable (GPS désactivé ?)");
 const listeners = new Set();
@@ -47,8 +33,18 @@ let watchId = null, timer = null, wakeLock = null, gpsWait = null;
 
 export const Radar = {
   running: false,
-  location: null, // {lat, lon, accuracy, time, isDefault, approx?, place?, why?}
-  noLocation: null, // raison quand aucune position n'est connue (ni téléphone, ni approximative)
+  location: null, // {lat, lon, accuracy, time, isDefault, manual?, place?, why?}
+  noLocation: null, // raison quand aucune position n'est connue (ni téléphone, ni choisie) : le jeu la demande
+  /** Position choisie à la main par le joueur (GPS indisponible) : gardée et utilisée tout de suite si le GPS ne répond pas. */
+  setManual({ lat, lon, place }) {
+    ls.set(MANUAL_KEY, { lat, lon, place, at: Date.now() });
+    if (Radar.location && !Radar.location.isDefault) return; // le GPS marche : il reste prioritaire
+    const why = Radar.location?.why || Radar.noLocation;
+    Radar.location = manualLoc(why); Radar.noLocation = null;
+    Radar.emit();
+    if (Radar.running) poll();
+  },
+  manualPlace: () => ls.get(MANUAL_KEY)?.place || null,
   aircraft: [],
   extras: new Map(),
   lastUpdate: 0,
@@ -125,7 +121,7 @@ export const Radar = {
     Radar.extras.set(ac.hex, x);
     return x;
   },
-  /** Position actuelle ou demandée une fois (quiz sans radar) ; sinon la position approximative ; null si aucune. */
+  /** Position actuelle ou demandée une fois (quiz sans radar) ; sinon la position choisie à la main ; null si aucune. */
   async locate() {
     if (Radar.location && Date.now() - Radar.location.time < 120000) return Radar.location;
     const useApprox = async (why) => {
@@ -153,16 +149,16 @@ export const Radar = {
   },
 };
 
-/** Position approximative (ou aucune) à la place de celle du téléphone ; true si une position est connue. */
+/** Position choisie à la main (ou aucune : le jeu la demandera) à la place de celle du téléphone ; true si une position est connue. */
 async function setApprox(why) {
-  const loc = await approxLoc(why);
+  const loc = manualLoc(why);
   if (Radar.location && !Radar.location.isDefault) return true; // le GPS a répondu entre-temps
   Radar.location = loc;
   Radar.noLocation = loc ? null : why;
   Radar.emit();
   return !!loc;
 }
-/** Sans position du téléphone (refusée, introuvable, ou trop longue à venir) : position approximative. */
+/** Sans position du téléphone (refusée, introuvable, ou trop longue à venir) : position choisie à la main. */
 async function fallback(why) {
   if (Radar.running && (!Radar.location || Radar.location.isDefault) && (await setApprox(why)) && Radar.running) poll();
 }
@@ -222,8 +218,8 @@ async function poll() {
     noteUnknownTypes(list); // modèles inconnus du jeu, pour compléter le catalogue
     // Infos complémentaires des nouveaux avions (les plus proches d'abord)
     for (const ac of list.filter((a) => !Radar.extras.has(a.hex)).slice(0, 10)) await Radar.extra(ac);
-    // Passages enregistrés seulement avec la vraie position du téléphone (sinon ils ne seraient pas ceux de chez toi)
-    if (!loc.isDefault) Sightings.record(list, Radar.extras, (ac, x) => spottedFrom(ac, x, loc.lat, loc.lon));
+    // Passages enregistrés avec la position du téléphone ou celle indiquée par le joueur
+    Sightings.record(list, Radar.extras, (ac, x) => spottedFrom(ac, x, loc.lat, loc.lon));
     Radar.emit();
     notify(list);
   } catch (e) {

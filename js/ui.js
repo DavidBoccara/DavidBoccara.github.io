@@ -1,7 +1,7 @@
 // Éléments d'interface partagés : fiche Wikipédia, photos, captures, partage.
 import { LOCALE } from "./i18n.js";
-import { h, modal, toast, icon, pickImage, toJpeg, imageKind, exifDate, confirmBox, choose, dateTime, dateDay, dec, rarityMark } from "./util.js";
-import { Wiki, AdsbDb } from "./net.js";
+import { h, modal, toast, icon, infoButton, pickImage, toJpeg, imageKind, exifDate, confirmBox, choose, dateTime, dateDay, dec, rarityMark } from "./util.js";
+import { Wiki, AdsbDb, Places } from "./net.js";
 import { Supa } from "./supa.js";
 import { ensurePhotoRules, requireAccount } from "./photorules.js";
 import { Collection, Sightings, createCatch, addAlbumPhoto, removeEntryPhoto, setMainEntryPhoto, entryPhotoItems, entryPhotos, ALBUM_MAX, catchMessage, entryPhoto, entryLabel, entryModel, entryRarity, Player } from "./store.js";
@@ -105,15 +105,14 @@ export function aircraftInfoCard(c) {
 
 // ---------- Position (téléphone ou par défaut) ----------
 
-/** Petit badge : position du téléphone, position approximative (d'après la connexion) ou aucune. Touchez pour l'explication. */
+/** Petit badge : position du téléphone, position choisie à la main ou aucune. Touchez pour l'explication / changer. */
 export function locationBadge(loc) {
   if (!loc && Radar.noLocation) return h("button.loc-badge.default", { onclick: () => defaultLocationAlert() }, "Position inconnue");
   if (!loc) return h("span.loc-badge.none", "Position en attente…");
   if (!loc.isDefault) return h("button.loc-badge.phone", { onclick: () => modal({ title: "Position du téléphone",
     body: `Plane GO utilise la position GPS de votre téléphone${loc.accuracy ? ` (précision ± ${Math.round(loc.accuracy)} m)` : ""}.` }) },
     "Position du téléphone");
-  return h("button.loc-badge.default", { onclick: () => defaultLocationAlert() },
-    approxLabel(loc));
+  return h("button.loc-badge.default", { onclick: () => defaultLocationAlert() }, approxLabel(loc));
 }
 
 /** Où autoriser la position, selon l'appareil. */
@@ -133,43 +132,60 @@ function locationFixSteps() {
 }
 
 /**
- * Fenêtre « Position du téléphone introuvable » : le jeu tourne sur une position approximative (d'après la connexion
- * internet), ou sans position du tout. Explique ce qui ne marche pas et comment corriger ; « Réessayer » redemande la
- * position. Se ferme seule dès que la position du téléphone est trouvée.
+ * Fenêtre « Où es-tu ? » quand le GPS ne marche pas (refusé, éteint, sans réponse) : le joueur tape sa ville ou son code
+ * postal (recherche OpenStreetMap, `Places.search` de net.js) et choisit dans la liste → `Radar.setManual` (gardée pour les
+ * fois suivantes). « Réessayer le GPS » redemande la position du téléphone ; comment l'autoriser derrière le bouton « i ».
+ * Se ferme seule dès que la position du téléphone est trouvée.
  */
 let alertOpen = null;
 export function defaultLocationAlert() {
   if (alertOpen) return;
   const loc = Radar.location, why = loc?.why || Radar.noLocation;
   let unsub = null;
+  const input = h("input.input", { type: "search", placeholder: "Ville ou code postal", autocomplete: "off", enterkeyhint: "search",
+    onkeydown: (e) => { if (e.key === "Enter") { e.preventDefault(); search(); } } });
+  const results = h("div.place-list");
+  const searchBtn = h("button.btn.primary", { type: "button", onclick: () => search() }, "Chercher");
+  async function search() {
+    const q = input.value.trim();
+    if (q.length < 2) { input.focus(); return; }
+    searchBtn.disabled = true;
+    results.replaceChildren(h("div.small.dim", "Recherche…"));
+    try {
+      const list = await Places.search(q);
+      results.replaceChildren(...(list.length ? list.map((p) => h("button.place", { type: "button", onclick: () => {
+        Radar.setManual(p); m.close();
+        toast(`Position choisie : ${p.place}`, 3500);
+      } }, h("b", p.place), p.detail && h("span.small.dim", p.detail))) : [h("div.small.dim", "Aucun lieu trouvé : essaie un autre nom ou le code postal.")]));
+    } catch {
+      results.replaceChildren(h("div.small.dim", "Recherche impossible pour l'instant (connexion ?). Réessaie dans un moment."));
+    } finally { searchBtn.disabled = false; }
+  }
   const m = modal({
-    title: "Position du téléphone introuvable",
+    title: "Où es-tu ?",
     body: [
-      why && h("p", why + "."),
-      ...(loc?.fixed ? [h("p", `Plane GO utilise à la place une position par défaut : ${approxPlace(loc)}.`)]
-        : loc ? [h("p", `Plane GO utilise à la place une position approximative, déduite de ta connexion internet : ${approxPlace(loc)}.`),
-        h("p", "Elle peut être fausse de plusieurs kilomètres, parfois beaucoup plus.")]
-        : [h("p", "Plane GO ne connaît pas du tout ta position : le radar et les jeux ne peuvent pas fonctionner.")]),
-      h("div.loc-warn-box", h("b", "Le jeu ne fonctionne donc pas à pleine capacité :"), h("ul",
-        h("li", "le radar, les distances, les comptes à rebours et les notifications sont approximatifs ;"),
-        h("li", "les avions qui passent ne sont pas enregistrés (Au-dessus, Quiz du jour) ;"),
-        h("li", "tes photos d'avions risquent d'être refusées (lieu de la photo trop loin)."))),
-      h("div.loc-warn-box.fix", h("b", "Pour corriger :"), h("ul",
-        ...locationFixSteps().map((s) => h("li", s)),
-        h("li", "Vérifie aussi que la localisation (GPS) du téléphone est activée."))),
+      why && h("p.small.dim", why + "."),
+      h("p", "Plane GO n'a pas la position de ton téléphone : indique où tu te trouves pour voir les avions au-dessus de toi."),
+      loc?.manual && h("p.small", `Position actuelle : ${approxPlace(loc)}`),
+      h("div.row", { style: { gap: "8px" } }, h("div.grow", input), searchBtn),
+      results,
+      h("div.row.mt", { style: { alignItems: "center", gap: "8px" } },
+        h("span.small.dim", "Pour utiliser le GPS à la place"),
+        infoButton("Autoriser la position", [...locationFixSteps(), "Vérifie aussi que la localisation (GPS) du téléphone est activée."], { small: true })),
     ].filter(Boolean),
     onClose: () => { alertOpen = null; unsub?.(); },
-    buttons: [{ label: "J'ai compris" }, { label: "Réessayer", primary: true, onClick: async () => {
-      const btn = m.el.querySelector(".modal-actions .btn.primary");
+    buttons: [{ label: "Plus tard" }, { label: "Réessayer le GPS", onClick: async () => {
+      const btn = [...m.el.querySelectorAll(".modal-actions .btn")].pop();
       btn.disabled = true; btn.textContent = "Recherche…";
       const ok = await Radar.retry();
       if (ok) return true; // la fenêtre se ferme (message affiché par l'abonnement ci-dessous)
-      btn.disabled = false; btn.textContent = "Réessayer";
-      toast("Position toujours introuvable : vérifie l'autorisation et le GPS, puis réessaie", 4000);
+      btn.disabled = false; btn.textContent = "Réessayer le GPS";
+      toast("GPS toujours introuvable : indique ta ville, ou vérifie l'autorisation (bouton i)", 4000);
       return false;
     } }],
   });
   alertOpen = m;
+  setTimeout(() => input.focus(), 50);
   // Position du téléphone trouvée (autorisation donnée, GPS revenu) : la fenêtre se ferme toute seule
   unsub = Radar.subscribe((r) => {
     if (r.location && !r.location.isDefault) { m.close(); toast("Position du téléphone trouvée : le jeu fonctionne normalement", 4000); }
@@ -177,13 +193,13 @@ export function defaultLocationAlert() {
 }
 
 /**
- * Au lancement : surveille la position ; si le jeu passe sur la position par défaut, la fenêtre d'alerte s'ouvre
+ * Au lancement : surveille la position ; sans GPS ni position choisie, la fenêtre « Où es-tu ? » s'ouvre
  * une fois par lancement (après quelques secondes, au cas où le GPS arrive entre-temps).
  */
 export function watchDefaultLocation() {
   let shown = false, timer = null;
   Radar.subscribe((r) => {
-    const bad = (x) => x.location?.isDefault || (!x.location && x.noLocation);
+    const bad = (x) => !x.location && x.noLocation; // GPS indisponible et aucune position choisie : on la demande
     if (shown || timer || !bad(r)) return;
     timer = setTimeout(() => {
       timer = null;

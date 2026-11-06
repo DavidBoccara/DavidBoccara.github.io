@@ -40,17 +40,17 @@ export function scanner(view) {
   const notifBtn = h("button.btn.outline.block", { style: { textAlign: "left" }, onclick: () => editFilter(NOTIF, () => { notifBtn.textContent = filterSummary(); }) }, filterSummary());
   const listBtn = h("button.btn.outline.grow", { style: { textAlign: "left" }, onclick: () => editFilter(LIST, () => { listBtn.textContent = filterSummary(LIST); render(); }) }, filterSummary(LIST));
 
-  // Position du téléphone introuvable (position approximative ou aucune) : avertissement bien visible
+  // Position du téléphone introuvable (position choisie à la main, ou aucune) : avertissement bien visible
   const retryBtn = h("button.btn.outline", { onclick: async () => {
     retryBtn.disabled = true; retryBtn.textContent = "Recherche…";
     const ok = await Radar.retry();
     retryBtn.disabled = false; retryBtn.textContent = "Réessayer";
-    toast(ok ? "Position du téléphone trouvée : le jeu fonctionne normalement" : "Position toujours introuvable : touche « Comment corriger »", 4000);
+    toast(ok ? "Position du téléphone trouvée : le jeu fonctionne normalement" : "Position toujours introuvable : touche « Choisir ma position »", 4000);
   } }, "Réessayer");
   const warn = h("div.loc-warn", { style: { display: "none" } },
     h("b", "Position du téléphone introuvable"),
     h("p.loc-warn-txt"),
-    h("div.row", h("button.btn.primary.grow", { onclick: () => defaultLocationAlert() }, "Comment corriger"), retryBtn));
+    h("div.row", h("button.btn.primary.grow", { onclick: () => defaultLocationAlert() }, "Choisir ma position"), retryBtn));
 
   const camBtn = cameraButton(); // petit bouton USB en haut à droite (appli Android)
   // Bouton « i » à côté : comment marchent le radar et le scan 1 s (textes retirés de l'écran pour l'alléger)
@@ -93,7 +93,7 @@ export function scanner(view) {
     if (!Radar.running) lines.push("Radar arrêté.");
     else {
       const l = Radar.location;
-      lines.push(!l ? (Radar.noLocation ? "Position inconnue : le radar ne peut pas chercher d'avions." : "Recherche de la position GPS…")
+      lines.push(!l ? (Radar.noLocation ? "Position inconnue : indique ta ville pour que le radar cherche les avions." : "Recherche de la position GPS…")
         : l.isDefault ? approxLabel(l)
         : `Position : ${l.lat.toFixed(4)}, ${l.lon.toFixed(4)} (± ${Math.round(l.accuracy)} m)`);
       if (Radar.lastUpdate) lines.push(`${Radar.aircraft.length} avion(s), dont ${Radar.aircraft.filter((a) => a.military).length} militaire(s)${listFiltered() ? `, ${listed().length} dans la liste` : ""} — mis à jour à ${new Date(Radar.lastUpdate).toLocaleTimeString(LOCALE)}${Adsb.lastSource ? ` (source : ${Adsb.lastSource})` : ""}`);
@@ -103,11 +103,9 @@ export function scanner(view) {
     locBox.replaceChildren(Radar.running || Radar.location ? locationBadge(Radar.location) : "");
     const noGps = Radar.location?.isDefault || (!Radar.location && Radar.noLocation);
     warn.style.display = noGps ? "" : "none";
-    if (noGps) warn.querySelector(".loc-warn-txt").textContent = Radar.location?.fixed
-      ? `Le jeu utilise une position par défaut (${approxPlace(Radar.location)}) : les avions et les comptes à rebours ne sont pas ceux de chez toi.`
-      : Radar.location
-      ? `Le jeu utilise une position approximative d'après ta connexion internet (${approxPlace(Radar.location)}) : les avions et les comptes à rebours peuvent être faux.`
-      : "Sans position, le radar ne peut pas chercher les avions autour de toi.";
+    if (noGps) warn.querySelector(".loc-warn-txt").textContent = Radar.location
+      ? `Le GPS ne répond pas : le jeu utilise la position que tu as choisie (${approxPlace(Radar.location)}).`
+      : "Sans position, le radar ne peut pas chercher les avions autour de toi : indique ta ville.";
     status.style.whiteSpace = "pre-line";
 
     const loc = Radar.location, vis = Prefs.visibleM / 1000;
@@ -439,8 +437,7 @@ async function showNearest(ac, loc) {
     `${r.stars} ${r.label}`,
     `À ${fmtDistance(ac)}`,
     `Altitude : ${fmtAltitude(ac)} · vitesse : ${fmtSpeed(ac)}`,
-    loc.isDefault ? (loc.fixed ? `Distance mesurée depuis une position par défaut (${approxPlace(loc)}).`
-      : `Distance mesurée depuis une position approximative (${approxPlace(loc)}).`) : null,
+    loc.isDefault ? `Distance mesurée depuis la position que tu as choisie (${approxPlace(loc)}).` : null,
   ].filter(Boolean);
   const buttons = [{ label: "Fermer" }];
   if (!Native && "Notification" in window) buttons.push({ label: "En notification", onClick: async () => {
