@@ -85,9 +85,21 @@ if (nativeReminder()) {
 let onNotificationsChange = null;
 window.addEventListener("planego-notifications", () => onNotificationsChange?.());
 
+/** Règle du Quiz du jour (bouton « i » de l'onglet Jeux). */
+export function dailyRules() {
+  const lvl = Player.level();
+  return [
+    `Une question par modèle d'avion passé aujourd'hui dans ton rayon de jeu (le même que le quiz en direct, radar actif), jamais deux fois le même modèle, 10 au plus : les plus rares d'abord.`,
+    `${Quiz.BASE_XP} XP par bonne réponse, +${DAILY_PERFECT} XP si tout est juste`
+      + (Quiz.bonusCount(lvl) ? `, et ${Quiz.bonusLabel(lvl)} sur chaque avion (+${Quiz.BONUS_XP} XP chacune)` : "") + ".",
+    "Une seule partie par jour : plus tu attends dans la journée, plus il y a d'avions ! Tes amis voient ton score dans le feed.",
+    Native ? "Le rappel de 18 h te prévient avec le nombre d'avions de ton quiz." : "Avec l'appli Android, un rappel arrive chaque jour à 18 h avec le nombre d'avions de ton quiz.",
+  ];
+}
+
 /** Interrupteur « Me rappeler le quiz chaque jour à 18 h » (appli Android). */
 function reminderRow() {
-  if (!Native) return h("div.small.dim", { style: { marginTop: "8px" } }, "Avec l'appli Android, un rappel arrive chaque jour à 18 h avec le nombre d'avions de ton quiz.");
+  if (!Native) return null; // expliqué dans la règle du jeu (bouton « i »)
   if (!nativeReminder()) return h("div.small", { style: { marginTop: "8px", color: "var(--amber)" } }, "Mets à jour l'appli Android (lien « Télécharger » du site) pour recevoir le rappel du quiz chaque jour à 18 h.");
   const warn = h("div.small", { style: { color: "var(--amber)", display: "none" } },
     "Les notifications de Plane GO sont bloquées sur ce téléphone. ", h("button.btn.small.outline", { onclick: () => Native.askNotifications?.() }, "Autoriser"));
@@ -122,10 +134,6 @@ export function dailyQuiz(box) {
     const intro = h("div.card.pad.week-intro",
       h("div", { style: { fontWeight: 800, color: "var(--amber)", fontSize: "17px" } }, "Quiz du jour"),
       h("div.small", `${dateText} · une seule partie par jour`),
-      h("div.small.dim", { style: { marginTop: "6px" } },
-        `Une question par modèle d'avion passé aujourd'hui dans ton rayon de jeu (le même que le quiz en direct, radar actif), jamais deux fois le même modèle : ${Quiz.BASE_XP} XP par bonne réponse, +${DAILY_PERFECT} XP si tout est juste`
-        + (Quiz.bonusCount(lvl) ? `, et ${Quiz.bonusLabel(lvl)} sur chaque avion (+${Quiz.BONUS_XP} XP chacune)` : "")
-        + ". Plus tu attends dans la journée, plus il y a d'avions !"),
       reminderRow());
     // Le rayon de jeu est porté par le bouton d'action (Commencer / Aller au Scanner), avec le rayon au grade suivant dessous
     const action = (label, sub, onClick) => h("div.mt", radiusButton({ km: r, lvl, label, sub, onClick }), radiusNext(lvl, next, Player.bestXp()));

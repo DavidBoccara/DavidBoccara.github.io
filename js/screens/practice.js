@@ -9,18 +9,23 @@ import { Quiz } from "../game.js";
 import { pickQuestion, PracticeSeen, tipCard, markOptions, quizPhoto, bonusBlock } from "../quizkit.js";
 import { prefetchBonus } from "../wikiquiz.js";
 
+/** Règle de l'Entraînement (bouton « i » de l'onglet Jeux). */
+export function practiceRules() {
+  const lvl = Player.level();
+  return [
+    "Autant d'avions que tu veux, pris autour de toi en ce moment, même loin : de quoi t'entraîner à les reconnaître"
+      + (Quiz.bonusCount(lvl) ? `, avec ${Quiz.bonusLabel(lvl)} sur chaque avion` : "") + ".",
+    "Rien ne compte : ni XP, ni série, ni statistiques. Seul le compteur de la séance garde tes bonnes réponses.",
+  ];
+}
+
 export function practiceQuiz(box) {
   let alive = true, searchId = 0, good = 0, total = 0;
   const locBox = h("div", { style: { marginTop: "6px" } });
   const score = h("div", { style: { fontWeight: 800, color: "var(--cyan)" } });
   const body = h("div.mt");
   box.replaceChildren(
-    h("div.card.pad", { style: { borderColor: "var(--cyan)" } },
-      h("div", { style: { fontWeight: 800, color: "var(--cyan)", fontSize: "17px" } }, "Entraînement"),
-      h("div.small.dim", { style: { marginTop: "4px" } },
-        "Autant d'avions que tu veux, pris autour de toi en ce moment, même loin : de quoi t'entraîner à les reconnaître"
-        + (Quiz.bonusCount(Player.level()) ? `, avec ${Quiz.bonusLabel(Player.level())} sur chaque avion` : "") + ". Ne rapporte aucun point."),
-      locBox, h("div.mt", score)),
+    h("div.card.pad", locBox, h("div.mt", score)),
     body);
 
   const showLoc = () => locBox.replaceChildren(Radar.location ? locationBadge(Radar.location) : "");

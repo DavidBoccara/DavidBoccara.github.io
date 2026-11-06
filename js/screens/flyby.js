@@ -194,15 +194,26 @@ const Turn = {
 };
 
 // ---------- Écran ----------
+/** Règle des Défis sur la carte (bouton « i » de l'onglet Jeux), selon le grade. */
+export function flybyRules() {
+  const lvl = myLevel(), next = FLY_LEVELS[lvl.grade];
+  return [
+    "Trois défis qui alternent avec les avions autour de toi : lequel va passer près de toi, où un avion va atterrir, lequel vole le plus haut.",
+    `Jusqu'à ${lvl.n} avions sur la carte. Premier essai : ${lvl.xp} XP, deuxième : la moitié. Destination : jusqu'à ${lvl.xp} XP, de moins en moins en s'éloignant de l'aéroport.`,
+    "3 bonnes réponses d'affilée = gains ×2, 6 = ×3… jusqu'à ×5. Une erreur remet la série à zéro.",
+    `Vérifié en vrai : si l'avion trouvé passe près de toi, photographie-le pendant son passage pour +${HUNT_XP} XP.`,
+    next ? `Au grade ${next.grade} : ${next.n} avions, moins d'aides, ${next.xp} XP.` : "",
+  ].filter(Boolean);
+}
+
 export function flybyGame(view) {
   let alive = true, map = null, game = null;
   const locBox = h("div", { style: { marginTop: "6px" } });
   const statsBox = h("div.fly-stats");
-  const intro = h("p.small.dim");
   const findBtn = h("button.btn.primary.block", { onclick: () => start() }, "Commencer");
   const status = h("div.small.dim.mt");
   const box = h("div");
-  view.append(locBox, statsBox, intro, findBtn, status, box);
+  view.append(locBox, statsBox, findBtn, status, box);
   const showLoc = () => locBox.replaceChildren(Radar.location ? locationBadge(Radar.location) : "");
   const unsub = Radar.subscribe(showLoc);
   showLoc();
@@ -214,11 +225,6 @@ export function flybyGame(view) {
     statsBox.replaceChildren(
       cell("Grade", String(lvl.grade)), cell("Série", String(st.streak)),
       cell("Gain", `${lvl.xp} XP${m > 1 ? ` ×${m}` : ""}`, m > 1 ? ".hot" : ""), cell("Record", String(st.best)));
-    const next = FLY_LEVELS[lvl.grade];
-    intro.textContent = "Trois défis qui alternent avec les avions autour de toi : lequel va passer près de toi, où un avion va "
-      + `atterrir, lequel vole le plus haut. Jusqu'à ${lvl.n} avions sur la carte. Premier essai : ${lvl.xp} XP, deuxième : la moitié ; `
-      + `destination : jusqu'à ${lvl.xp} XP, de moins en moins en s'éloignant de l'aéroport. 3 bonnes réponses d'affilée = gains ×2, 6 = ×3…`
-      + (next ? ` Au grade ${next.grade} : ${next.n} avions, moins d'aides, ${next.xp} XP.` : "");
   }
   renderStats();
   window.addEventListener("planego-synced", renderStats);
