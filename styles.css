@@ -567,6 +567,8 @@ img.cover { width: 100%; display: block; object-fit: cover; background: var(--ca
   .cat-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 8px; }
   .cat-body.list > * + * { margin-top: 0; }
   .list:has(> .hrow) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .list > .day-head { grid-column: 1 / -1; margin-bottom: 0; }
+  .list > .day-head + .hrow, .list > .hrow + .day-head { margin-top: 0; }
   .list:has(> .hrow) > * + * { margin-top: 0; }
 
   /* Fenêtres : un peu plus larges */
@@ -682,6 +684,9 @@ img.cover { width: 100%; display: block; object-fit: cover; background: var(--ca
 .fly-stat .v { font: 500 15px/1.3 var(--mono); white-space: nowrap; }
 .fly-stat.hot .v { color: var(--accent); }
 .day-stats { grid-template-columns: repeat(4, 1fr); }
+.day-seg { gap: 16px; }
+.day-head { margin: 14px 2px 2px; }
+.day-head:first-child { margin-top: 2px; }
 .daily-head { margin-top: 2px; }
 .fly-hunt { margin-top: 12px; padding: 12px; border: 1px solid var(--accent); border-radius: var(--radius); font-size: 14px; line-height: 1.45; }
 .fly-statement { font-size: 17px; line-height: 1.4; margin: 4px 0 2px; }
