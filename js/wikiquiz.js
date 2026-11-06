@@ -182,23 +182,24 @@ function aiRow(q) {
   if (!aiMem.has(key)) aiMem.set(key, (async () => {
     const art = await articleOf(q);
     if (!art) return null;
-    const id = `${art.lang}:${art.title}`;
+    // Joueur anglophone : questions écrites en anglais (clé « en-q:… »)
+    const id = (LANG === "en" ? "en-q:" : "") + `${art.lang}:${art.title}`;
     const rows = await Supa.select(`quiz_ai_questions?article=eq.${Supa.enc(id)}&select=article,title,page_url,questions`).catch(() => []);
     if (rows?.[0]?.questions?.length) return rows[0];
-    const made = await Supa.aiQuestions(art.lang, art.title).catch(() => null);
+    const made = await Supa.aiQuestions(art.lang, art.title, LANG).catch(() => null);
     return made?.questions?.length ? made : null;
   })().catch(() => null));
   return aiMem.get(key);
 }
 /** À appeler dès que la question s'affiche : l'article et les questions sont prêts quand le joueur a répondu. */
 export function prefetchBonus(q) {
-  if (LANG !== "en") aiRow(q);
+  aiRow(q);
   modelFacts(q).catch(() => null);
 }
 const fromAi = (row) => row.questions.map((x) => ({
   id: `ai:${x.id}`, qid: x.id, article: row.article, ai: true, text: x.question,
   options: shuffle(x.options), answer: x.options[x.answer],
-  explain: [x.explanation, x.quote && `Wikipédia : « ${x.quote} »`].filter(Boolean).join(" — "),
+  explain: [x.explanation, x.quote && (LANG === "en" ? `Wikipedia: « ${x.quote} »` : `Wikipédia : « ${x.quote} »`)].filter(Boolean).join(" — "),
   pageUrl: row.page_url, title: row.title,
 }));
 
@@ -206,8 +207,7 @@ const fromAi = (row) => row.questions.map((x) => ({
  * vues de préférence), puis celles de la fiche Wikidata. Moins de n si Wikipédia en sait moins. */
 export async function bonusQuestions(q, n) {
   if (!n) return [];
-  // Questions de l'IA écrites en français : en anglais, seulement celles de la fiche Wikidata
-  const row = LANG === "en" ? null : await Promise.race([aiRow(q), sleep(AI_WAIT_MS).then(() => null)]);
+  const row = await Promise.race([aiRow(q), sleep(AI_WAIT_MS).then(() => null)]);
   const seen = new Set(ls.get(AI_SEEN, []));
   const ai = row ? fromAi(row) : [];
   const picked = [...shuffle(ai.filter((x) => !seen.has(x.id))), ...shuffle(ai.filter((x) => seen.has(x.id)))].slice(0, n);

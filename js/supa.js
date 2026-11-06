@@ -81,7 +81,7 @@ export const Supa = {
   /** Signalement d'une publication (fonction serveur report-catch, avec le jeton du joueur). */
   reportCatch: (catchId, reason) => call("POST", "/functions/v1/report-catch", { catch_id: catchId, reason }),
   /** Questions bonus d'un avion écrites par l'IA d'après son article Wikipédia (fonction serveur ai-questions). */
-  aiQuestions: (lang, title) => call("POST", "/functions/v1/ai-questions", { lang, title }),
+  aiQuestions: (lang, title, qlang = "fr") => call("POST", "/functions/v1/ai-questions", { lang, title, qlang }),
 
   /** Appel d'une fonction serveur (relais ADS-B). */
   async fn(name, query) {
