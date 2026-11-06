@@ -11,7 +11,7 @@ import { renderHud, install, isStandalone, isIos, isAndroid, go } from "./app.js
 import { Native } from "./native.js";
 import { APK_HOME } from "./config.js";
 import { Sound } from "./sound.js";
-import { DEFAULT_LOCATION, Radar } from "./radar.js";
+import { approxPlace, Radar } from "./radar.js";
 import { verifyPhoto, checksText } from "./verify.js";
 
 export const wikiQuery = {
@@ -105,14 +105,15 @@ export function aircraftInfoCard(c) {
 
 // ---------- Position (téléphone ou par défaut) ----------
 
-/** Petit badge : 📱 position du téléphone ou 📌 position par défaut (Le Plessis-Robinson). Touchez pour l'explication. */
+/** Petit badge : position du téléphone, position approximative (d'après la connexion) ou aucune. Touchez pour l'explication. */
 export function locationBadge(loc) {
+  if (!loc && Radar.noLocation) return h("button.loc-badge.default", { onclick: () => defaultLocationAlert() }, "Position inconnue");
   if (!loc) return h("span.loc-badge.none", "Position en attente…");
   if (!loc.isDefault) return h("button.loc-badge.phone", { onclick: () => modal({ title: "Position du téléphone",
     body: `Plane GO utilise la position GPS de votre téléphone${loc.accuracy ? ` (précision ± ${Math.round(loc.accuracy)} m)` : ""}.` }) },
     "Position du téléphone");
   return h("button.loc-badge.default", { onclick: () => defaultLocationAlert() },
-    `Position par défaut : ${DEFAULT_LOCATION.name}`);
+    `Position approximative : ${approxPlace(loc)}`);
 }
 
 /** Où autoriser la position, selon l'appareil. */
@@ -132,28 +133,30 @@ function locationFixSteps() {
 }
 
 /**
- * Fenêtre « ⚠️ Position introuvable » : le jeu tourne sur la position par défaut (Le Plessis-Robinson), ce n'est pas
- * normal. Explique ce qui ne marche pas et comment corriger ; « Réessayer » redemande la position. Se ferme seule
- * dès que la position du téléphone est trouvée.
+ * Fenêtre « Position du téléphone introuvable » : le jeu tourne sur une position approximative (d'après la connexion
+ * internet), ou sans position du tout. Explique ce qui ne marche pas et comment corriger ; « Réessayer » redemande la
+ * position. Se ferme seule dès que la position du téléphone est trouvée.
  */
 let alertOpen = null;
 export function defaultLocationAlert() {
   if (alertOpen) return;
-  const why = Radar.location?.why;
+  const loc = Radar.location, why = loc?.why || Radar.noLocation;
   let unsub = null;
   const m = modal({
-    title: "Position introuvable",
+    title: "Position du téléphone introuvable",
     body: [
-      `${why ? why + ". " : ""}Ce n'est pas normal : Plane GO ne connaît pas ta position et utilise à la place une position par défaut, ${DEFAULT_LOCATION.name} (Hauts-de-Seine).`,
+      why && h("p", why + "."),
+      ...(loc ? [h("p", `Plane GO utilise à la place une position approximative, déduite de ta connexion internet : ${approxPlace(loc)}.`),
+        h("p", "Elle peut être fausse de plusieurs kilomètres, parfois beaucoup plus.")]
+        : [h("p", "Plane GO ne connaît pas du tout ta position : le radar et les jeux ne peuvent pas fonctionner.")]),
       h("div.loc-warn-box", h("b", "Le jeu ne fonctionne donc pas à pleine capacité :"), h("ul",
-        h("li", `le radar, les distances et les notifications concernent le ciel ${DEFAULT_LOCATION.of}, pas le tien ;`),
-        h("li", "le quiz te montre des avions qui ne passent pas au-dessus de toi ;"),
-        h("li", "les passages enregistrés (Au-dessus, Quiz du jour) ne sont pas ceux de chez toi ;"),
+        h("li", "le radar, les distances, les comptes à rebours et les notifications sont approximatifs ;"),
+        h("li", "les avions qui passent ne sont pas enregistrés (Au-dessus, Quiz du jour) ;"),
         h("li", "tes photos d'avions risquent d'être refusées (lieu de la photo trop loin)."))),
       h("div.loc-warn-box.fix", h("b", "Pour corriger :"), h("ul",
         ...locationFixSteps().map((s) => h("li", s)),
         h("li", "Vérifie aussi que la localisation (GPS) du téléphone est activée."))),
-    ],
+    ].filter(Boolean),
     onClose: () => { alertOpen = null; unsub?.(); },
     buttons: [{ label: "J'ai compris" }, { label: "Réessayer", primary: true, onClick: async () => {
       const btn = m.el.querySelector(".modal-actions .btn.primary");
@@ -179,10 +182,11 @@ export function defaultLocationAlert() {
 export function watchDefaultLocation() {
   let shown = false, timer = null;
   Radar.subscribe((r) => {
-    if (shown || timer || !r.location?.isDefault) return;
+    const bad = (x) => x.location?.isDefault || (!x.location && x.noLocation);
+    if (shown || timer || !bad(r)) return;
     timer = setTimeout(() => {
       timer = null;
-      if (shown || !Radar.location?.isDefault) return;
+      if (shown || !bad(Radar)) return;
       shown = true; defaultLocationAlert();
     }, 5000);
   });

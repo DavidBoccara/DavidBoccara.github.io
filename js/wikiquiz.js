@@ -5,7 +5,7 @@
 // En priorité : questions écrites par une IA (OpenAI) d'après le texte de l'article, préparées une fois par article par
 // la fonction serveur ai-questions et gardées sur Supabase (table quiz_ai_questions) ; complétées par les questions
 // tirées de la fiche Wikidata si l'IA n'en a pas (assez) ou ne répond pas à temps.
-import { LOCALE, LANG } from "./i18n.js";
+import { LOCALE, LANG, DEC } from "./i18n.js";
 import { ls, sleep } from "./util.js";
 import { Supa } from "./supa.js";
 import { CATALOG } from "./game.js";
@@ -106,7 +106,7 @@ const ENGINES = ["CFM International CFM56", "CFM International LEAP", "Pratt & W
   "Snecma M88", "General Electric F404", "Pratt & Whitney F100", "Europrop TP400", "Rolls-Royce AE 2100", "Turbomeca Arrius"];
 
 const fmtDate = (t) => (t.precision >= 11 ? (LANG === "en" ? `${MONTHS[t.m - 1]} ${t.d}, ${t.y}` : `${t.d === 1 ? "1er" : t.d} ${MONTHS[t.m - 1]} ${t.y}`) : t.precision === 10 ? `${MONTHS[t.m - 1]} ${t.y}` : String(t.y));
-const fmtMetres = (m) => `${m < 20 ? String(Math.round(m * 10) / 10).replace(".", ",") : Math.round(m)} m`; // 6,5 m · 13 m · 36 m
+const fmtMetres = (m) => `${m < 20 ? String(Math.round(m * 10) / 10).replace(".", DEC) : Math.round(m)} m`; // 6,5 m · 13 m · 36 m
 const nice = (n) => { const p = 10 ** Math.max(0, Math.floor(Math.log10(n)) - 1); return Math.max(1, Math.round(n / p) * p); };
 const fmtCount = (n) => nice(n).toLocaleString(LOCALE);
 

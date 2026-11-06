@@ -2,7 +2,8 @@
 // nature : la sécurité repose sur les règles du serveur (supabase/schema.sql).
 export const SUPABASE_URL = "https://fuducmhhnrzmprqxfjdh.supabase.co";
 export const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ1ZHVjbWhobnJ6bXBycXhmamRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMTcxNDMsImV4cCI6MjEwODc5MzE0M30.11UA7PfC_va6bYz8RVDQfplKPx1nVkX04MePhIqSoyU";
-export const VERSION = "1.0.0";
+/** Version de la partie site (ancien numéro fixe) : la vraie version publiée est lue sur VERSION_URL (worker/index.js). */
+export const VERSION = "web";
 // Adresse de contact affichée sur les pages « Confidentialité », « Conditions » et « Mentions légales » (vide = ligne masquée).
 export const CONTACT_EMAIL = "";
 
@@ -27,6 +28,11 @@ export const SITE_URL = "https://plane-go.com/";
 export const GITHUB_SITE_URL = "https://davidboccara.github.io/";
 /** Vrai sur la copie GitHub Pages (pas de publicité, hébergeur GitHub dans les mentions légales). */
 export const onGithubPages = () => /\.github\.io$/i.test(location.hostname);
+/** Position approximative du visiteur d'après sa connexion (worker/index.js sur Cloudflare) : sur plane-go.com la même
+ *  adresse, ailleurs (copie GitHub, essais en local) celle de plane-go.com. */
+export const GEO_URL = /(^|\.)plane-go\.com$/i.test(location.hostname) ? "/__geo" : SITE_URL + "__geo";
+/** Version publiée du site (identifiant + date), même principe. */
+export const VERSION_URL = GEO_URL.replace("__geo", "__version");
 /**
  * Appli Android hors Play Store (fichier .apk) : téléchargée depuis la copie GitHub du site, avec son numéro de version
  * (apk-version.json, lu par update.js). plane-go.com renvoie vers le Play Store.

@@ -1,4 +1,4 @@
-import { LOCALE } from "./i18n.js";
+import { LOCALE, LANG } from "./i18n.js";
 // Petits outils partagés : DOM, formats, géographie, fenêtres et messages.
 
 export const $ = (sel, root = document) => root.querySelector(sel);
@@ -158,7 +158,7 @@ export function bearingDeg(lat1, lon1, lat2, lon2) {
   const x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
   return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
 }
-const DIRS = ["N", "NE", "E", "SE", "S", "SO", "O", "NO"];
+const DIRS = LANG === "en" ? ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] : ["N", "NE", "E", "SE", "S", "SO", "O", "NO"];
 export const cardinal = (deg) => DIRS[Math.round(deg / 45) % 8];
 const DIR_NAMES = ["au nord", "au nord-est", "à l'est", "au sud-est", "au sud", "au sud-ouest", "à l'ouest", "au nord-ouest"];
 /** « au nord-est », « à l'ouest »… pour un cap en degrés (0 = nord, 90 = est). */

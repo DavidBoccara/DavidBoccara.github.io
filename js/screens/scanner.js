@@ -2,7 +2,7 @@
 import { LOCALE, LANG, t } from "../i18n.js";
 import { h, icon, meters, modal, toast, rarityMark, cardinal, dec, dragSlider } from "../util.js";
 import { compassRose, nextMark } from "../compass.js";
-import { Radar, showAircraftNotification, approachOf, DEFAULT_LOCATION, willBeVisible } from "../radar.js";
+import { Radar, showAircraftNotification, approachOf, approxPlace, willBeVisible } from "../radar.js";
 import { Prefs, Collection } from "../store.js";
 import { Adsb, Wiki } from "../net.js";
 import { wikiQuery, locationBadge, defaultLocationAlert } from "../ui.js";
@@ -40,7 +40,7 @@ export function scanner(view) {
   const notifBtn = h("button.btn.outline.block", { style: { textAlign: "left" }, onclick: () => editFilter(NOTIF, () => { notifBtn.textContent = filterSummary(); }) }, filterSummary());
   const listBtn = h("button.btn.outline.grow", { style: { textAlign: "left" }, onclick: () => editFilter(LIST, () => { listBtn.textContent = filterSummary(LIST); render(); }) }, filterSummary(LIST));
 
-  // Position par défaut (position du téléphone introuvable) : avertissement bien visible, ce n'est pas normal
+  // Position du téléphone introuvable (position approximative ou aucune) : avertissement bien visible
   const retryBtn = h("button.btn.outline", { onclick: async () => {
     retryBtn.disabled = true; retryBtn.textContent = "Recherche…";
     const ok = await Radar.retry();
@@ -49,7 +49,7 @@ export function scanner(view) {
   } }, "Réessayer");
   const warn = h("div.loc-warn", { style: { display: "none" } },
     h("b", "Position du téléphone introuvable"),
-    h("p", `Ce n'est pas normal : le jeu utilise une position par défaut (${DEFAULT_LOCATION.name}) et ne fonctionne pas à pleine capacité. Les avions affichés sont ceux ${DEFAULT_LOCATION.of}, pas ceux au-dessus de toi.`),
+    h("p.loc-warn-txt"),
     h("div.row", h("button.btn.primary.grow", { onclick: () => defaultLocationAlert() }, "Comment corriger"), retryBtn));
 
   const camBtn = cameraButton(); // petit bouton USB en haut à droite (appli Android)
@@ -93,14 +93,19 @@ export function scanner(view) {
     if (!Radar.running) lines.push("Radar arrêté.");
     else {
       const l = Radar.location;
-      lines.push(!l ? "Recherche de la position GPS…" : l.isDefault ? `Position : ${DEFAULT_LOCATION.name} (par défaut)`
+      lines.push(!l ? (Radar.noLocation ? "Position inconnue : le radar ne peut pas chercher d'avions." : "Recherche de la position GPS…")
+        : l.isDefault ? `Position approximative : ${approxPlace(l)}`
         : `Position : ${l.lat.toFixed(4)}, ${l.lon.toFixed(4)} (± ${Math.round(l.accuracy)} m)`);
       if (Radar.lastUpdate) lines.push(`${Radar.aircraft.length} avion(s), dont ${Radar.aircraft.filter((a) => a.military).length} militaire(s)${listFiltered() ? `, ${listed().length} dans la liste` : ""} — mis à jour à ${new Date(Radar.lastUpdate).toLocaleTimeString(LOCALE)}${Adsb.lastSource ? ` (source : ${Adsb.lastSource})` : ""}`);
     }
     if (Radar.error) lines.push("" + Radar.error);
     status.textContent = lines.join("\n");
     locBox.replaceChildren(Radar.running || Radar.location ? locationBadge(Radar.location) : "");
-    warn.style.display = Radar.location?.isDefault ? "" : "none";
+    const noGps = Radar.location?.isDefault || (!Radar.location && Radar.noLocation);
+    warn.style.display = noGps ? "" : "none";
+    if (noGps) warn.querySelector(".loc-warn-txt").textContent = Radar.location
+      ? `Le jeu utilise une position approximative d'après ta connexion internet (${approxPlace(Radar.location)}) : les avions et les comptes à rebours peuvent être faux.`
+      : "Sans position, le radar ne peut pas chercher les avions autour de toi.";
     status.style.whiteSpace = "pre-line";
 
     const loc = Radar.location, vis = Prefs.visibleM / 1000;
@@ -391,7 +396,8 @@ async function findNearest(onFilterChange) {
   const progress = h("p.small.dim", "Position…");
   wait.content.append(progress);
   try {
-    const loc = Radar.location || (await Radar.locate()) || DEFAULT_LOCATION;
+    const loc = Radar.location || (await Radar.locate());
+    if (!loc) { wait.close(); defaultLocationAlert(); return; }
     const zone = Prefs.radiusM / 1000;
     const radii = [...new Set([zone, 50, 150, 460].filter((r) => r >= zone))];
     let ac = null, failed = null;
@@ -431,7 +437,7 @@ async function showNearest(ac, loc) {
     `${r.stars} ${r.label}`,
     `À ${fmtDistance(ac)}`,
     `Altitude : ${fmtAltitude(ac)} · vitesse : ${fmtSpeed(ac)}`,
-    loc.isDefault ? `Distance mesurée depuis ${DEFAULT_LOCATION.name} (position par défaut).` : null,
+    loc.isDefault ? `Distance mesurée depuis une position approximative (${approxPlace(loc)}).` : null,
   ].filter(Boolean);
   const buttons = [{ label: "Fermer" }];
   if (!Native && "Notification" in window) buttons.push({ label: "En notification", onClick: async () => {

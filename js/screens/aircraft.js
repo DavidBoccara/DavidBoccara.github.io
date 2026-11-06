@@ -1,4 +1,5 @@
 // Fiche d'un avion du radar : photo, provenance, vol en direct, approche, capture, Wikipédia.
+import { DEC } from "../i18n.js";
 import { h, meters, cardinal, direction, dec, rarityMark } from "../util.js";
 import { compassRose, nextMark } from "../compass.js";
 import { Radar } from "../radar.js";
@@ -122,7 +123,7 @@ export function aircraftPage(view, [hex]) {
     appr.textContent = approachLabel(a, (Date.now() - (ac.fetchedAt || Radar.lastUpdate)) / 1000);
     apprSub.textContent = (a.kind === "AWAY" ? "Il ne passera pas plus près de vous."
       : a.kind === "LANDS" ? "Il est en descente vers une piste : il n'entrera pas dans votre zone visible."
-      : `Passage au plus près : ${a.closest.toFixed(1).replace(".", ",")} km de vous. Zone visible : ${meters(Prefs.visibleM)}. Prévision d'après sa route actuelle.`)
+      : `Passage au plus près : ${a.closest.toFixed(1).replace(".", DEC)} km de vous. Zone visible : ${meters(Prefs.visibleM)}. Prévision d'après sa route actuelle.`)
       + (a.uncertain ? "\n" + UNCERTAIN_TEXT : "");
   }
 

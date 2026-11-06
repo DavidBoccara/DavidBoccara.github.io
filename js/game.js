@@ -1,5 +1,5 @@
 // Règles du jeu : rareté, grades, XP, pays, approche, quiz.
-import { LOCALE } from "./i18n.js";
+import { LOCALE, DEC } from "./i18n.js";
 import { D } from "./data.js";
 import { CATALOG_ROWS } from "./catalog-data.js";
 import { distanceKm, meters, dec, direction } from "./util.js";
@@ -246,7 +246,7 @@ export function computeXp(s, { hasModel, countForHex }) {
 export function describeXp(r) {
   let s = `${r.rarity.stars} ${r.rarity.label} : ${r.base} XP`;
   if (r.distance.mult !== 1 && r.flightKm != null)
-    s += `\n${r.distance.label} (${Math.round(r.flightKm).toLocaleString(LOCALE)} km) : ×${String(r.distance.mult).replace(".", ",")}`;
+    s += `\n${r.distance.label} (${Math.round(r.flightKm).toLocaleString(LOCALE)} km) : ×${String(r.distance.mult).replace(".", DEC)}`;
   if (r.newModelBonus > 0) s += `\n🆕 Nouveau modèle : +${r.newModelBonus} XP`;
   return s;
 }

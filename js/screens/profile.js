@@ -7,14 +7,15 @@ import { levelOf, modelKey } from "../game.js";
 import { loginGate, renderHud, go } from "../app.js";
 import { friends } from "./friends.js";
 import { grades } from "./grades.js";
-import { VERSION } from "../config.js";
+import { VERSION_URL } from "../config.js";
+import { Native } from "../native.js";
 import { installCard } from "../ui.js";
 import { deleteAccountFlow } from "./privacy.js";
 import { legalLinks } from "./legal.js";
 import { updateCard } from "../update.js";
 import { saveShareWorld } from "./feed.js";
 import { Sound } from "../sound.js";
-import { LANG, setLang } from "../i18n.js";
+import { LANG, LOCALE, setLang, t } from "../i18n.js";
 
 const VIEWS = [
   { id: "me", label: "Profil" },
@@ -51,12 +52,28 @@ function soundRow() {
     h("input", { type: "checkbox", checked: Sound.on, onchange: (e) => { Sound.on = e.target.checked; } })));
 }
 
+// Version utilisée par ce joueur : appli Android (numéro de l'appli installée) + site (date de la version publiée
+// chargée à l'ouverture, lue sur /__version, worker/index.js). À demander au joueur en cas de problème.
+const siteBuild = fetch(VERSION_URL, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+function versionLine() {
+  const el = h("p.small.dim.version-line", { "data-notr": "", style: { textAlign: "center" } }, "Plane GO");
+  let app = null;
+  try { app = Native?.version?.() || null; } catch { /* ancienne appli */ }
+  siteBuild.then((v) => {
+    const parts = [];
+    if (app) parts.push(`${t("Appli Android")} ${app}`);
+    if (v?.date) parts.push(`${t("site du")} ${new Date(v.date).toLocaleString(LOCALE, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}${v.id ? ` (${v.id})` : ""}`);
+    el.textContent = ["Plane GO", ...parts].join(" · ");
+  });
+  return el;
+}
+
 function me(view, show) {
   view.append(updateCard()); // appli Android pas à jour
   const ic = installCard();
   if (ic) view.append(ic);
   if (loginGate(view, "Connecte-toi pour personnaliser ton profil (pseudo, photo) et sauvegarder ta collection.")) {
-    view.append(soundRow(), langRow(), legalLinks(), h("p.small.dim", { style: { textAlign: "center" } }, `Plane GO web ${VERSION}`));
+    view.append(soundRow(), langRow(), legalLinks(), versionLine());
     return;
   }
   const avatar = h("img.avatar.lg", { alt: "Ma photo de profil", src: "icons/avatar.svg", style: { cursor: "pointer" }, onclick: changeAvatar });
@@ -84,7 +101,7 @@ function me(view, show) {
     h("button.btn.danger.block.mt2", { onclick: logout }, "Se déconnecter"),
     h("div.row.mt", h("button.btn.small.outline.grow", { onclick: () => go("privacy") }, "Confidentialité"),
       h("button.btn.small.outline.grow", { style: { color: "var(--red)", borderColor: "var(--red)" }, onclick: deleteAccountFlow }, "Supprimer mon compte")),
-    legalLinks(), h("p.small.dim", { style: { textAlign: "center" } }, `Plane GO web ${VERSION}`));
+    legalLinks(), versionLine());
 
   function render() {
     const p = Player.profile, xp = Player.bestXp(), lvl = levelOf(xp);

@@ -5,7 +5,7 @@
 // Difficulté et gains selon le grade (FLY_LEVELS), série de bonnes réponses avec multiplicateur, et bonus
 // « Vérifié en vrai » si l'on photographie ensuite l'avion trouvé (Hunts, store.js). Une fois par avion et par jour.
 // Calcul : approach() de game.js (ligne droite à la vitesse sol, comme le Scanner), position exacte du téléphone.
-import { LOCALE, LANG } from "../i18n.js";
+import { LOCALE, LANG, DEC } from "../i18n.js";
 import { h, toast, cardinal, bearingDeg, distanceKm, ls } from "../util.js";
 import { Radar } from "../radar.js";
 import { Adsb, AdsbDb, Wiki } from "../net.js";
@@ -494,7 +494,7 @@ export function flybyGame(view) {
         { type: "dot", lon: guess.lon, lat: guess.lat, r: 7, cls: "guess" },
         { type: "dot", lon: d.lon, lat: d.lat, r: 7, cls: "dest" }]);
       map.fit([[guess.lon, guess.lat], [d.lon, d.lat], [ac.lon, ac.lat]], 300);
-      const km = err < 10 ? err.toFixed(1).replace(".", ",") : Math.round(err).toLocaleString(LOCALE);
+      const km = err < 10 ? err.toFixed(1).replace(".", DEC) : Math.round(err).toLocaleString(LOCALE);
       validate.remove();
       feedback.replaceChildren(h("div.card.pad.fly-result",
         h("div.kicker", ok ? "Bien vu" : "Réponse"),

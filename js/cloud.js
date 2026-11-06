@@ -193,6 +193,8 @@ export const Weekly = {
   submit: (catchId) => Supa.rpc("weekly_submit", { p_catch_id: catchId }),
   withdraw: () => Supa.rpc("weekly_withdraw", {}),
   vote: (entryId, on = true) => Supa.rpc("weekly_vote", { p_entry_id: entryId, p_on: on }),
+  /** Photos gagnantes des semaines passées, la plus récente d'abord (avec le pseudo et l'avatar de l'auteur). */
+  winners: (limit = 60) => Supa.select(`weekly_winners?select=week,user_id,catch_id,photo_path,model,type,rarity,votes,profiles(username,avatar_path,xp)&order=week.desc&limit=${limit}`),
 };
 
 export const otherOf = (f, meId) => (f.requester.id === meId ? f.addressee : f.requester);

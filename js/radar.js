@@ -1,17 +1,39 @@
 // Radar : position GPS, avions autour toutes les 15 s, journal des passages, notifications.
-import { LOCALE } from "./i18n.js";
+import { LOCALE, LANG } from "./i18n.js";
 import { Adsb, AdsbDb, Wiki } from "./net.js";
 import { Sightings, Prefs } from "./store.js";
 import { spottedFrom, filterMatches, approach, duration, lookLabel, UNCERTAIN_TEXT, acLabel, fmtDistance, fmtAltitude, fmtOrigin, prettyModel } from "./game.js";
 import { ls } from "./util.js";
+import { GEO_URL } from "./config.js";
 import { Native, nativeConfig, takeNativeSightings } from "./native.js";
 import { noteUnknownTypes } from "./census.js";
 
 const REARM_MS = 3600e3, GPS_WAIT_MS = 15000;
 
-/** Position par défaut quand celle du téléphone est inaccessible (refusée, GPS éteint, navigateur sans GPS). */
-export const DEFAULT_LOCATION = { lat: 48.7811, lon: 2.2633, name: "Le Plessis-Robinson", of: "du Plessis-Robinson" };
-const defaultLoc = (why) => ({ lat: DEFAULT_LOCATION.lat, lon: DEFAULT_LOCATION.lon, accuracy: null, time: Date.now(), isDefault: true, why });
+/**
+ * Position de secours quand celle du téléphone est inaccessible (refusée, GPS éteint, navigateur sans GPS) :
+ * position approximative d'après la connexion internet (ville, à quelques kilomètres près, parfois plus), donnée par
+ * Cloudflare (worker/index.js, adresse GEO_URL). `isDefault: true` = pas la position du téléphone ; `place` = ville.
+ * Introuvable elle aussi : pas de position du tout (aucune position inventée).
+ */
+let approx = null, approxAt = 0;
+async function approxLoc(why) {
+  if (!approx || Date.now() - approxAt > 30 * 60e3) {
+    try {
+      const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 8000);
+      const r = await fetch(GEO_URL, { cache: "no-store", signal: ctl.signal }).finally(() => clearTimeout(t));
+      const g = r.ok ? await r.json() : null;
+      if (g && Number.isFinite(g.lat) && Number.isFinite(g.lon)) {
+        let country = g.country;
+        try { if (country) country = new Intl.DisplayNames([LANG], { type: "region" }).of(country) || country; } catch { /* ancien navigateur */ }
+        approx = { lat: g.lat, lon: g.lon, place: [g.city, country].filter(Boolean).join(", ") || null }; approxAt = Date.now();
+      }
+    } catch { /* hors ligne ou service injoignable */ }
+  }
+  return approx ? { lat: approx.lat, lon: approx.lon, accuracy: null, time: Date.now(), isDefault: true, approx: true, place: approx.place, why } : null;
+}
+/** Ville de la position approximative, pour l'affichage. */
+export const approxPlace = (loc) => loc?.place || "lieu inconnu";
 const phoneLoc = (p) => ({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy, time: p.timestamp, isDefault: false });
 const geoWhy = (e) => (e?.code === 1 ? "Localisation refusée" : "Position du téléphone introuvable (GPS désactivé ?)");
 const listeners = new Set();
@@ -20,7 +42,8 @@ let watchId = null, timer = null, wakeLock = null, gpsWait = null;
 
 export const Radar = {
   running: false,
-  location: null, // {lat, lon, accuracy, time, isDefault, why?}
+  location: null, // {lat, lon, accuracy, time, isDefault, approx?, place?, why?}
+  noLocation: null, // raison quand aucune position n'est connue (ni téléphone, ni approximative)
   aircraft: [],
   extras: new Map(),
   lastUpdate: 0,
@@ -97,37 +120,46 @@ export const Radar = {
     Radar.extras.set(ac.hex, x);
     return x;
   },
-  /** Position actuelle ou demandée une fois (quiz sans radar) ; sinon la position par défaut. */
+  /** Position actuelle ou demandée une fois (quiz sans radar) ; sinon la position approximative ; null si aucune. */
   async locate() {
     if (Radar.location && Date.now() - Radar.location.time < 120000) return Radar.location;
-    const useDefault = (why) => {
-      if (!Radar.location || Radar.location.isDefault) { Radar.location = defaultLoc(why); Radar.emit(); }
+    const useApprox = async (why) => {
+      if (!Radar.location || Radar.location.isDefault) await setApprox(why);
       return Radar.location;
     };
-    if (!navigator.geolocation) return useDefault("Ce navigateur ne donne pas accès à la position");
+    if (!navigator.geolocation) return useApprox("Ce navigateur ne donne pas accès à la position");
     return new Promise((res) => navigator.geolocation.getCurrentPosition(
-      (p) => { Radar.location = phoneLoc(p); Radar.emit(); res(Radar.location); },
-      (e) => res(useDefault(geoWhy(e))), { enableHighAccuracy: true, maximumAge: 60000, timeout: 15000 }));
+      (p) => { Radar.location = phoneLoc(p); Radar.noLocation = null; Radar.emit(); res(Radar.location); },
+      (e) => useApprox(geoWhy(e)).then(res), { enableHighAccuracy: true, maximumAge: 60000, timeout: 15000 }));
   },
   /** Nouvel essai pour avoir la position du téléphone (bouton « Réessayer ») ; true si elle est trouvée. */
   retry() {
     if (!navigator.geolocation) return Promise.resolve(false);
     return new Promise((res) => navigator.geolocation.getCurrentPosition((p) => {
       const first = !Radar.location || Radar.location.isDefault;
-      Radar.location = phoneLoc(p); Radar.error = null;
+      Radar.location = phoneLoc(p); Radar.error = null; Radar.noLocation = null;
       Radar.emit();
       if (Radar.running) { watchGps(); if (first) poll(); } // le suivi GPS avait pu s'arrêter (autorisation refusée)
       res(true);
-    }, (e) => {
-      if (!Radar.location || Radar.location.isDefault) { Radar.location = defaultLoc(geoWhy(e)); Radar.emit(); }
+    }, async (e) => {
+      if (!Radar.location || Radar.location.isDefault) await setApprox(geoWhy(e));
       res(false);
     }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }));
   },
 };
 
-/** Sans position du téléphone (refusée, introuvable, ou trop longue à venir) : position par défaut. */
-function fallback(why) {
-  if (Radar.running && (!Radar.location || Radar.location.isDefault)) { Radar.location = defaultLoc(why); poll(); Radar.emit(); }
+/** Position approximative (ou aucune) à la place de celle du téléphone ; true si une position est connue. */
+async function setApprox(why) {
+  const loc = await approxLoc(why);
+  if (Radar.location && !Radar.location.isDefault) return true; // le GPS a répondu entre-temps
+  Radar.location = loc;
+  Radar.noLocation = loc ? null : why;
+  Radar.emit();
+  return !!loc;
+}
+/** Sans position du téléphone (refusée, introuvable, ou trop longue à venir) : position approximative. */
+async function fallback(why) {
+  if (Radar.running && (!Radar.location || Radar.location.isDefault) && (await setApprox(why)) && Radar.running) poll();
 }
 
 /** Suivi de la position du téléphone tant que le radar tourne. */
@@ -136,7 +168,7 @@ function watchGps() {
   watchId = navigator.geolocation.watchPosition((p) => {
     const first = !Radar.location || Radar.location.isDefault;
     Radar.location = phoneLoc(p);
-    Radar.error = null;
+    Radar.error = null; Radar.noLocation = null;
     if (first) { Radar.emit(); poll(); } else Radar.emit();
   }, (e) => fallback(geoWhy(e)), { enableHighAccuracy: true, maximumAge: 10000, timeout: 30000 });
 }
@@ -185,7 +217,8 @@ async function poll() {
     noteUnknownTypes(list); // modèles inconnus du jeu, pour compléter le catalogue
     // Infos complémentaires des nouveaux avions (les plus proches d'abord)
     for (const ac of list.filter((a) => !Radar.extras.has(a.hex)).slice(0, 10)) await Radar.extra(ac);
-    Sightings.record(list, Radar.extras, (ac, x) => spottedFrom(ac, x, loc.lat, loc.lon));
+    // Passages enregistrés seulement avec la vraie position du téléphone (sinon ils ne seraient pas ceux de chez toi)
+    if (!loc.isDefault) Sightings.record(list, Radar.extras, (ac, x) => spottedFrom(ac, x, loc.lat, loc.lon));
     Radar.emit();
     notify(list);
   } catch (e) {

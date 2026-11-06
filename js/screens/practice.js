@@ -1,6 +1,6 @@
 // Quiz › Entraînement : autant de questions que l'on veut sur les avions autour de soi en ce moment,
 // quelle que soit la distance. Ne rapporte aucun point : série et statistiques du quiz ne bougent pas.
-import { LOCALE } from "../i18n.js";
+import { LOCALE, DEC } from "../i18n.js";
 import { h } from "../util.js";
 import { Radar } from "../radar.js";
 import { Adsb } from "../net.js";
@@ -49,6 +49,7 @@ export function practiceQuiz(box) {
     const loc = await Radar.locate();
     showLoc();
     if (!alive || id !== searchId) return;
+    if (!loc) { body.replaceChildren(h("div.empty", "Position inconnue : autorise la localisation pour trouver les avions autour de toi.")); return; }
     const order = PracticeSeen.order(), recent = PracticeSeen.recentAnswers(3), tried = new Set();
     const fail = (hex) => unusable.add(hex);
     let fallback = null, list = [];
@@ -83,7 +84,7 @@ export function practiceQuiz(box) {
     const nextBtn = h("button.btn.primary.block.mt", { style: { display: "none" }, onclick: next }, "Avion suivant ");
     const nb = Quiz.bonusCount(Player.level());
     if (nb) prefetchBonus(q); // questions bonus prêtes quand le joueur aura répondu
-    const hint = ["Autour de toi", q.distanceKm != null && `à ${q.distanceKm.toFixed(1).replace(".", ",")} km`,
+    const hint = ["Autour de toi", q.distanceKm != null && `à ${q.distanceKm.toFixed(1).replace(".", DEC)} km`,
       q.altitudeM != null && `${q.altitudeM.toLocaleString(LOCALE)} m d'altitude`].filter(Boolean).join(" · ");
     const opts = q.options.map((name) => h("button.opt", { onclick: () => answer(name) }, name));
     const photo = quizPhoto(q);

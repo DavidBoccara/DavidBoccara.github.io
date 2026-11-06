@@ -1,6 +1,6 @@
 // Vue « Passés au-dessus » de l'onglet Collection (ex-onglet Hangar) : les avions passés cette semaine.
 // La liste repart à zéro le lundi à 0 h (heure de Paris), avec le concours photo ; les photos attrapées restent dans la vue Photos.
-import { LOCALE } from "../i18n.js";
+import { LOCALE, DEC } from "../i18n.js";
 import { h, ls, dateTime, dateDay, weekStart, icon, rarityMark, infoButton } from "../util.js";
 import { Collection, Sightings, entryPhoto, entryRarity, entryModel, entryLabel } from "../store.js";
 import { computeXp, spottedRarity, flagOf, prettyModel, MAX_PHOTO_KM } from "../game.js";
@@ -58,7 +58,7 @@ Lance le radar dans l'onglet Scanner : les avions qui passent près de toi appar
       const xpValue = e ? e.xp : computeXp(sp, { hasModel: Collection.hasModel, countForHex: Collection.countForHex }).total;
       rows.push({
         title: (sp.countryIso.length === 2 ? flagOf(sp.countryIso) + " " : "") + (model || ident),
-        sub: [model ? ident + " · " : "", dateTime(s.seenAt), sp.distanceKm != null ? ` · ${sp.distanceKm.toFixed(1).replace(".", ",")} km` : "",
+        sub: [model ? ident + " · " : "", dateTime(s.seenAt), sp.distanceKm != null ? ` · ${sp.distanceKm.toFixed(1).replace(".", DEC)} km` : "",
           sp.military ? "\nMilitaire" : ""].join(""),
         rarity: e ? entryRarity(e) : spottedRarity(sp), xpText: e ? `+${xpValue} XP` : `${xpValue} XP`, xpValue, at: s.seenAt, entry: e,
         wiki: wikiQuery.spotted(sp),

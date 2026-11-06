@@ -16,6 +16,8 @@ export const LANG = (() => {
 
 /** Langue pour les dates et les nombres (Intl, toLocaleString…). */
 export const LOCALE = LANG === "en" ? "en-GB" : "fr-FR";
+/** Séparateur décimal (virgule en français, point en anglais). */
+export const DEC = LANG === "en" ? "." : ",";
 /** Langue de Wikipédia et de Wikidata. */
 export const WIKI_LANG = LANG;
 

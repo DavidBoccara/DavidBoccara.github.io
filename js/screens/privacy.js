@@ -60,7 +60,8 @@ export function privacyPage(view) {
 
     sec("Ta position",
       "Pour trouver les avions autour de toi, l'appli envoie une position arrondie à environ 1 km aux services publics de données d'avions (adsb.fi, adsb.lol), en passant par notre serveur : ils ne reçoivent ni ton nom, ni ton e-mail, ni ton adresse internet. Avec l'appli Android, le radar écran éteint les interroge directement depuis le téléphone, toujours avec une position arrondie.",
-      "Le calcul de la distance et de la direction des avions se fait sur ton téléphone."),
+      "Le calcul de la distance et de la direction des avions se fait sur ton téléphone.",
+      "Si la position du téléphone n'est pas disponible (localisation refusée, GPS éteint), Plane GO demande à Cloudflare, l'hébergeur du site, la ville approximative correspondant à ta connexion internet, pour te montrer quand même les avions de ta région. Rien n'est enregistré."),
 
     sec("Services utilisés",
       list(

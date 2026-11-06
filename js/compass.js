@@ -4,6 +4,7 @@
 // Repères : points de couleur = avions (plus près du centre = plus près de vous) ; point ambre plein = l'avion de la fiche ;
 // petit cercle ambre = où il entrera dans la zone visible (cercle pointillé), relié à l'avion par un trait (son sens).
 import { h, modal, cardinal } from "./util.js";
+import { LANG } from "./i18n.js";
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
@@ -51,7 +52,7 @@ export function compassRose({ size = 84, explain = "Le petit cercle orange indiq
     <g class="dial">${ticks}
       <path class="cross" d="M50 ${50 - PLOT}V${50 + PLOT}M${50 - PLOT} 50H${50 + PLOT}"/>
       <text class="lbl n" x="50" y="9.5">N</text><text class="lbl" x="90.5" y="50">E</text>
-      <text class="lbl" x="50" y="90.5">S</text><text class="lbl" x="9.5" y="50">O</text>
+      <text class="lbl" x="50" y="90.5">S</text><text class="lbl" x="9.5" y="50">${LANG === "en" ? "W" : "O"}</text>
       <g class="marks"></g>
     </g>
     <circle class="me" cx="50" cy="50" r="1.8"/>

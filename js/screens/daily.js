@@ -1,7 +1,7 @@
 // Quiz › Quiz du jour : une question par avion passé aujourd'hui dans votre rayon de jeu (le même que le quiz
 // « En direct », selon le grade ; radar actif, passages notés jusqu'à 30 km).
 // Une seule partie par jour : commencée, elle se reprend où on l'a laissée ; terminée, on revient le lendemain.
-import { LOCALE } from "../i18n.js";
+import { LOCALE, DEC } from "../i18n.js";
 import { h, ls, toast } from "../util.js";
 import { Radar } from "../radar.js";
 import { AdsbDb } from "../net.js";
@@ -228,7 +228,7 @@ export function dailyQuiz(box) {
       h("div.xpbar", h("i", { style: { width: `${(st.index / total) * 100}%` } })),
       photo,
       h("p", ["Passé au-dessus de toi aujourd'hui" + (q.seenAt ? ` à ${hourOf(q.seenAt)}` : ""),
-        q.distanceKm != null && `à ${q.distanceKm.toFixed(1).replace(".", ",")} km`].filter(Boolean).join(" · ")),
+        q.distanceKm != null && `à ${q.distanceKm.toFixed(1).replace(".", DEC)} km`].filter(Boolean).join(" · ")),
       h("h3", { style: { margin: "4px 0" } }, "Quel est cet avion ?"), ...opts, result, tipBox, bonusBox, next);
 
     function answer(choice) {

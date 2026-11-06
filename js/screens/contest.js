@@ -6,7 +6,7 @@
 import { LOCALE } from "../i18n.js";
 import { h, modal, toast, confirmBox, timeAgo, rarityMark, infoButton } from "../util.js";
 import { Supa } from "../supa.js";
-import { Weekly, profileFrom, sync } from "../cloud.js";
+import { Weekly, Cloud, profileFrom, sync } from "../cloud.js";
 import { Collection, entryPhoto, entryModel, entryRarity } from "../store.js";
 import { rarityByName, prettyModel, flagOf } from "../game.js";
 import { renderHud } from "../app.js";
@@ -34,17 +34,77 @@ export function gauge(score, { size = 74, label = "Exposition" } = {}) {
 
 export function contestFeed(box) {
   let alive = true, state = null;
+  // Deux onglets : la semaine en cours et le palmarès des photos gagnantes (dernier onglet ouvert retenu)
+  let view = "week";
+  try { if (localStorage.getItem("contest_view") === "winners") view = "winners"; } catch { /* stockage bloqué */ }
   const body = h("div");
-  box.replaceChildren(body);
+  const tabs = [["week", "Cette semaine"], ["winners", "Gagnants"]].map(([id, label]) => {
+    const b = h("button", { type: "button" }, label);
+    b.onclick = () => { if (view === id) return; view = id; try { localStorage.setItem("contest_view", id); } catch { /* */ } show(); };
+    return [id, b];
+  });
+  const seg = h("div.seg", { style: { marginBottom: "12px" } }, tabs.map(([, b]) => b));
+  box.replaceChildren(seg, body);
+  function show() {
+    tabs.forEach(([id, b]) => b.classList.toggle("on", id === view));
+    if (view === "winners") loadWinners(); else load();
+  }
+
+  /** Palmarès : une carte par semaine terminée, photo en grand au toucher. */
+  async function loadWinners() {
+    body.replaceChildren(h("div.spinner"));
+    let list;
+    try { list = await Weekly.winners(); }
+    catch (e) {
+      if (!alive || view !== "winners") return;
+      body.replaceChildren(h("div.empty", `Impossible de charger les gagnants (${e.message}).`, h("div.mt", h("button.btn.outline", { onclick: loadWinners }, "Réessayer"))));
+      return;
+    }
+    if (!alive || view !== "winners") return;
+    list = (list || []).filter((w) => w.photo_path && !(w.catch_id && Reported.has(w.catch_id)));
+    body.replaceChildren(list.length
+      ? h("div.winners", list.map(winnerTile))
+      : h("div.empty", "Pas encore de gagnant : la première photo gagnante sera annoncée dimanche à minuit."));
+  }
+
+  function winnerTile(w) {
+    const r = rarityByName(w.rarity), p = w.profiles || {};
+    const user = profileFrom({ id: w.user_id, username: p.username, avatar_path: p.avatar_path, xp: p.xp || 0 });
+    const who = p.username || "Un spotter", model = prettyModel(w.model || w.type) || "Un avion";
+    const start = Date.parse(w.week), week = `Semaine du ${dayFmt(start)} au ${dayFmt(start + 6 * 86400e3)}`;
+    const tile = h("div.card.winner-tile");
+    const img = h("img", { src: photoUrl(w.photo_path), alt: model, loading: "lazy" });
+    img.onerror = () => tile.remove(); // photo retirée depuis (modération)
+    const av = h("img.avatar.sm", { alt: "", src: user.avatarUrl || "icons/avatar.svg" });
+    av.onerror = () => { av.src = "icons/avatar.svg"; };
+    img.onclick = () => openWinner(w, { who, model, week, r });
+    tile.append(img, h("div.pad",
+      h("div.kicker", { style: { color: "var(--accent)" } }, week),
+      h("div.row", { style: { alignItems: "center", gap: "8px", marginTop: "6px" } }, av,
+        h("div.grow", h("b", who), h("div.small.dim", model))),
+      h("div.small.mt", rarityMark(r, `${r.label} · ${w.votes} vote(s) · +${WEEK_PRIZE_XP} XP`))));
+    return tile;
+  }
+
+  async function openWinner(w, { who, model, week, r }) {
+    const info = h("div");
+    modal({ wide: true, body: [h("img.cover", { src: photoUrl(w.photo_path), alt: "", style: { borderRadius: "12px" } }),
+      h("div.kicker.mt", { style: { color: "var(--accent)" } }, week),
+      h("div", h("b", who), ` — ${model}`), h("div.small.mt", rarityMark(r, `${w.votes} vote(s)`)), info] });
+    // Fiche de l'avion si la capture est lisible (la mienne, un ami ou un joueur qui partage au Monde)
+    if (!w.catch_id) return;
+    const c = await Cloud.catchById(w.catch_id).catch(() => null);
+    if (c) info.replaceChildren(aircraftInfoCard({ ...c, rarity: r }));
+  }
 
   async function load() {
     body.replaceChildren(h("div.spinner"));
     try {
       await sync(); renderHud(); // mes dernières photos doivent être sur le serveur pour participer
       state = await Weekly.state();
-      if (alive) render();
+      if (alive && view === "week") render();
     } catch (e) {
-      if (!alive) return;
+      if (!alive || view !== "week") return;
       body.replaceChildren(e.status === 404
         ? h("div.empty", "Le concours de la photo de la semaine arrive très bientôt !")
         : h("div.empty", `Impossible de charger le concours de la semaine (${e.message}).`, h("div.mt", h("button.btn.outline", { onclick: load }, "Réessayer"))));
@@ -168,6 +228,6 @@ export function contestFeed(box) {
     try { await Weekly.withdraw(); await load(); } catch (err) { toast(err.message); }
   }
 
-  load();
+  show();
   return () => { alive = false; };
 }
