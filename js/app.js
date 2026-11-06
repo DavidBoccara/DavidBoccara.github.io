@@ -1,4 +1,5 @@
 // Plane GO (PWA) : navigation par onglets, HUD du joueur, installation.
+import { syncBlocks } from "./blocks.js";
 import { LOCALE } from "./i18n.js";
 import { $, h, ls, modal, toast, icon } from "./util.js";
 import { Supa, emailLink } from "./supa.js";
@@ -145,7 +146,8 @@ if (emailLink) openEmailLink(emailLink);
 setTimeout(checkAppUpdate, 3000); // appli Android pas à jour ?
 watchDefaultLocation(); // position du téléphone introuvable → fenêtre « ce n'est pas normal »
 setTimeout(askPhotoRulesAtStart, 3500); // joueurs déjà inscrits : engagement « photos depuis des lieux publics »
-window.addEventListener("planego-synced", noticeRemovals); // une de mes publications supprimée après 5 signalements ?
+window.addEventListener("planego-synced", noticeRemovals);
+window.addEventListener("planego-synced", syncBlocks); // joueurs bloqués (blocks.js) // une de mes publications supprimée après 5 signalements ?
 if (Supa.isLoggedIn) {
   Cloud.profile().then((p) => { Player.profile = p; renderHud(); }).catch(() => {});
   sync().then(renderHud);

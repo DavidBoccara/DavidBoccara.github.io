@@ -1,4 +1,5 @@
 // Onglet Profil : mon profil (pseudo, photo, grade, statistiques), mes amis et le classement.
+import { blockedList } from "../blocks.js";
 import { h, ls, toast, prompt, pickImage, toJpeg, confirmBox, infoButton, modal } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, sync } from "../cloud.js";
@@ -99,6 +100,7 @@ function me(view, show) {
     soundRow(), langRow(),
     h("div.row.mt2", h("button.btn.outline.grow", { onclick: () => show("friends") }, "Mes amis"), h("button.btn.outline.grow", { onclick: () => { ls.set("grades_mode", "grades"); show("ranking"); } }, "Grades")),
     h("button.btn.outline.block.mt2", { onclick: changePasswordFlow }, "Changer le mot de passe"),
+    blockedList(),
     h("button.btn.danger.block.mt2", { onclick: logout }, "Se déconnecter"),
     h("div.row.mt", h("button.btn.small.outline.grow", { onclick: () => go("privacy") }, "Confidentialité"),
       h("button.btn.small.outline.grow", { style: { color: "var(--red)", borderColor: "var(--red)" }, onclick: deleteAccountFlow }, "Supprimer mon compte")),

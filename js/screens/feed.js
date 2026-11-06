@@ -2,6 +2,7 @@
 // joueurs qui ont choisi de les partager avec tout le monde), « Amis » (captures de mes amis et les miennes, likes,
 // commentaires, partage, et résultats du Quiz du jour, qu'on peut liker aussi) et « Concours de la semaine »
 // (photo de la semaine, voir contest.js). Chaque publication d'un autre joueur peut être signalée (🚩, report.js).
+import { Blocked } from "../blocks.js";
 import { LOCALE } from "../i18n.js";
 import { h, timeAgo, toast, modal, icon, rarityMark } from "../util.js";
 import { Supa } from "../supa.js";
@@ -164,8 +165,8 @@ function postList(view, { page, extra = null, syncFirst = false, empty, soon = n
       const before = reset ? null : cursor;
       const all = await page(before);
       hasMore = all.length >= 30;
-      const posts = all.filter((c) => !Reported.has(c.id)); // publications que j'ai signalées : masquées
-      const others = extra ? await extra(before, all, hasMore) : [];
+      const posts = all.filter((c) => !Reported.has(c.id) && !Blocked.has(c.userId)); // signalées ou joueur bloqué : masquées
+      const others = (extra ? await extra(before, all, hasMore) : []).filter((x) => !Blocked.has(x.userId));
       if (all.length) cursor = all.at(-1).createdAt;
       const merged = [...posts, ...others].sort((a, b) => b.createdAt - a.createdAt);
       if (reset) { items = []; list.replaceChildren(); adCount = { posts: 0, since: 0 }; }
@@ -207,7 +208,7 @@ function dailyPost(r) {
   const emoji = perfect ? "" : r.correct * 2 >= r.total ? "" : "";
   const dayText = r.day === todayKey() ? "d'aujourd'hui"
     : "du " + new Date(r.day + "T12:00:00").toLocaleDateString(LOCALE, { weekday: "long", day: "numeric", month: "long" });
-  return h("div.card.post.daily-post",
+  return h("div.card.post.daily-post", { "data-author": r.userId || "" },
     h("div.head", avatar(r.user), h("div.grow",
       h("div", h("b", r.user?.username || "Un spotter"), " a fait le ", h("b", "Quiz du jour")),
       h("div.small.dim", timeAgo(r.createdAt) + (r.user ? ` · ${r.user.level.emblem} ${r.user.level.name}` : "")))),
@@ -233,10 +234,11 @@ function post(c) {
   const current = () => urls[car.index()] || c.photoUrl;
   const av = avatar(c.user);
   let card = null;
-  const flag = reportButton(c, () => card?.remove()); // signalée : la publication disparaît de mon feed
+  // signalée : la publication disparaît de mon feed ; joueur bloqué : toutes ses publications affichées aussi
+  const flag = reportButton(c, (r) => r?.blocked ? document.querySelectorAll(`[data-author="${c.userId}"]`).forEach((x) => x.remove()) : card?.remove());
   const details = [c.countryName && `${flagOf(c.countryIso)} ${c.countryName}`, c.operator, c.route && `${c.route}`,
     c.flightKm != null && `${Math.round(c.flightKm).toLocaleString(LOCALE)} km parcourus`, c.source === "import" && "photo ajoutée après coup"].filter(Boolean).join(" • ");
-  card = h("div.card.post",
+  card = h("div.card.post", { "data-author": c.userId || "" },
     h("div.head", av, h("div.grow",
       h("div", h("b", c.user?.username || "Un spotter"), " a attrapé ", h("b", c.modelName ? "un " + c.modelName : "un avion"), c.military ? " (militaire)" : ""),
       h("div.small.dim", timeAgo(c.takenAt) + (c.user ? ` · ${c.user.level.emblem} ${c.user.level.name}` : ""))), flag),

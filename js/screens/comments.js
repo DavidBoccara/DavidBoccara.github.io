@@ -1,4 +1,5 @@
 // Page d'une publication du feed : photo du joueur, fiche de l'avion (comme dans le Scanner), likes et commentaires.
+import { Blocked, blockUser } from "../blocks.js";
 import { h, timeAgo, toast, confirmBox, icon } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, profileFrom } from "../cloud.js";
@@ -85,14 +86,17 @@ export function commentsPage(view, [id]) {
     try {
       const [comments, people] = await Promise.all([Cloud.comments(id), Cloud.likers(id)]);
       likers.textContent = people.length ? "♥ Aimé par " + people.map((p) => p.username).join(", ") : "Pas encore de ♥ — soyez le premier !";
-      list.replaceChildren(...(comments.length ? comments.map((c) => {
+      const shown = comments.filter((c) => !Blocked.has(c.userId));
+      list.replaceChildren(...(shown.length ? shown.map((c) => {
         const av = h("img.avatar.sm", { alt: "", src: c.user?.avatarUrl || "icons/avatar.svg" });
         av.onerror = () => { av.src = "icons/avatar.svg"; };
         return h("div.row", { style: { alignItems: "flex-start" } }, av,
           h("div.grow", h("div", h("b", c.user?.username || "?"), "  ", c.body), h("div.small.dim", timeAgo(c.createdAt))),
           c.userId === Supa.userId && h("button.btn.small.danger", { "aria-label": "Supprimer ce commentaire", onclick: async () => {
             if (await confirmBox("Supprimer ce commentaire ?", "Supprimer", true)) { await Cloud.deleteComment(c.id).catch((e) => toast(e.message)); reload(); }
-          } }, icon("trash", 16)));
+          } }, icon("trash", 16)),
+          c.userId !== Supa.userId && Supa.isLoggedIn && h("button.btn.small.outline", { "aria-label": "Bloquer ce joueur", title: "Bloquer ce joueur",
+            onclick: async () => { if (await blockUser(c.userId, c.user?.username)) reload(); } }, "Bloquer"));
       }) : [h("div.dim", "Aucun commentaire pour l'instant.")]));
     } catch (e) { toast(e.message); }
   }

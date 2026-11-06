@@ -3,6 +3,7 @@
 // La jauge d'exposition d'une photo (aiguille de 0 à 100) monte avec les votes que son auteur donne aux autres ;
 // la photo qui reçoit le plus de votes gagne.
 // Dimanche à minuit (heure de Paris), la photo la plus votée gagne et son auteur reçoit 200 XP.
+import { Blocked } from "../blocks.js";
 import { LOCALE } from "../i18n.js";
 import { h, modal, toast, confirmBox, timeAgo, rarityMark, infoButton } from "../util.js";
 import { Supa } from "../supa.js";
@@ -61,7 +62,7 @@ export function contestFeed(box) {
       return;
     }
     if (!alive || view !== "winners") return;
-    list = (list || []).filter((w) => w.photo_path && !(w.catch_id && Reported.has(w.catch_id)));
+    list = (list || []).filter((w) => w.photo_path && !(w.catch_id && Reported.has(w.catch_id)) && !Blocked.has(w.user_id));
     body.replaceChildren(list.length
       ? h("div.winners", list.map(winnerTile))
       : h("div.empty", "Pas encore de gagnant : la première photo gagnante sera annoncée dimanche à minuit."));
@@ -121,7 +122,7 @@ export function contestFeed(box) {
       myCard(mine, start, endsAt, entries.length),
       h("h3", { style: { margin: "18px 0 8px" } }, entries.length ? `Les photos de la semaine (${entries.length})` : "Les photos de la semaine"),
       // (photos que j'ai signalées : masquées, le rang des autres ne change pas)
-      entries.length ? h("div.list", entries.map((e, i) => !Reported.has(e.catch_id) && entryCard(e, i + 1, e.user_id === meId)).filter(Boolean))
+      entries.length ? h("div.list", entries.map((e, i) => !Reported.has(e.catch_id) && !Blocked.has(e.user_id) && entryCard(e, i + 1, e.user_id === meId)).filter(Boolean))
         : h("div.empty", "Aucune photo pour l'instant : sois le premier à proposer la tienne !"),
     ].filter(Boolean));
   }

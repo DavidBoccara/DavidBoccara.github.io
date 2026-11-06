@@ -6,6 +6,7 @@ import { h, ls, modal, toast, icon } from "./util.js";
 import { Supa } from "./supa.js";
 import { Cloud } from "./cloud.js";
 import { prettyModel } from "./game.js";
+import { blockUser } from "./blocks.js";
 
 export const REPORT_MIN = 5;
 export const REASONS = [
@@ -23,7 +24,7 @@ export const Reported = {
 };
 
 /** Fenêtre « 🚩 Signaler cette publication » : choix de la raison puis envoi. Renvoie {reports, removed} ou null. */
-export function reportCatch(catchId, authorName) {
+export function reportCatch(catchId, authorName, authorId = null) {
   return new Promise((resolve) => {
     let result = null, busy = false;
     const buttons = REASONS.map((r) => h("button.btn.outline.block", { onclick: () => send(r) }, r.label));
@@ -32,6 +33,9 @@ export function reportCatch(catchId, authorName) {
       body: [
         `Quel est le problème avec la photo de ${authorName || "ce joueur"} ?`,
         h("div.report-reasons", buttons),
+        authorId && authorId !== Supa.userId && h("button.btn.outline.block.mt2", { onclick: async () => {
+          if (await blockUser(authorId, authorName)) { result = { blocked: true }; m.close(); }
+        } }, `Bloquer ${authorName || "ce joueur"}`),
         h("div.share-box", h("b", "Comment ça marche"), h("ul",
           h("li", "Tu ne verras plus cette publication."),
           h("li", `Quand ${REPORT_MIN} joueurs différents l'ont signalée, elle est supprimée pour tout le monde et ses XP sont retirés à son auteur, qui est prévenu.`),
@@ -63,7 +67,7 @@ export function reportButton(c, onDone, label = "") {
   if (!Supa.isLoggedIn || !c?.id || (c.userId || c.user?.id) === Supa.userId) return null;
   return h("button.post-flag", { type: "button", title: "Signaler cette publication", "aria-label": "Signaler cette publication", onclick: async (e) => {
     e.stopPropagation();
-    const r = await reportCatch(c.id, c.user?.username);
+    const r = await reportCatch(c.id, c.user?.username, c.userId || c.user?.id);
     if (r) onDone?.(r);
   } }, label || icon("flag", 15));
 }

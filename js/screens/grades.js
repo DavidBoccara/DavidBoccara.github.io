@@ -1,4 +1,5 @@
 // Onglet Classement : amis, général, et liste des grades avec le barème.
+import { Blocked } from "../blocks.js";
 import { LOCALE } from "../i18n.js";
 import { h, ls, toast } from "../util.js";
 import { Supa } from "../supa.js";
@@ -38,6 +39,7 @@ export function grades(view) {
         if (me) sub.textContent = `Ton rang : ${rank}${rank === 1 ? "er" : "e"} sur ${total} spotters`;
       }
       if (mode !== wanted) return;
+      players = players.filter((p) => !Blocked.has(p.id)); // joueurs bloqués : retirés du classement affiché
       list.replaceChildren(...players.map((p, i) => {
         const av = h("img.avatar.sm", { alt: "", src: p.avatarUrl || "icons/avatar.svg" });
         av.onerror = () => { av.src = "icons/avatar.svg"; };
