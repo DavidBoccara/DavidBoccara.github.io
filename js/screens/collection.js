@@ -1,5 +1,5 @@
 // Onglet Collection : grade et XP, puis trois vues — mes photos, avions passés au-dessus, catalogue complet.
-import { h, ls, rarityMark } from "../util.js";
+import { h, ls, rarityMark, infoButton } from "../util.js";
 import { Collection, Player, entryPhoto, entryPhotoItems, entryRarity, entryModel, entryLabel } from "../store.js";
 import { Supa } from "../supa.js";
 import { sync } from "../cloud.js";
@@ -27,7 +27,13 @@ export function collection(view, [sub]) {
   const body = h("div.mt");
   view.append(
     h("div.kicker", "Collection"),
-    h("div.row", h("div.grow", level), h("button.btn.small.outline", { onclick: () => { ls.set("grades_mode", "grades"); go("profile/ranking"); } }, "Grades")),
+    h("div.row", h("div.grow", level), h("button.btn.small.outline", { onclick: () => { ls.set("grades_mode", "grades"); go("profile/ranking"); } }, "Grades"),
+      infoButton("Ta collection", [
+        "Photographie les avions qui passent près de toi pour les ajouter à ta collection et gagner des XP : ouvre la fiche d'un avion (onglet Scanner) et touche « Photographier cet avion ».",
+        "Photo prise au reflex ? Touche « Ajouter une photo d'appareil photo » et choisis l'avion parmi ceux passés près de toi cette semaine.",
+        `Un avion ne rapporte des XP qu'une fois, mais tu peux le photographier encore : jusqu'à ${10} photos dans son album.`,
+        "Photos : tes avions attrapés. Au-dessus : les avions passés près de toi cette semaine. Catalogue : tous les modèles du jeu et ce qu'ils rapportent.",
+      ])),
     bar, xpText, syncText,
     h("button.btn.primary.block.mt", { onclick: async () => { await importFlow(); refresh(); } }, "Ajouter une photo d'appareil photo"),
     seg, body);
@@ -60,7 +66,7 @@ export function collection(view, [sub]) {
     body.replaceChildren(
       h("div.small.dim", { style: { whiteSpace: "pre-line" } }, stats),
       entries.length ? h("div.grid.mt", entries.map(tile))
-        : h("div.empty", "Votre collection est vide.\n\nOuvrez la fiche d'un avion qui passe au-dessus de vous (onglet Scanner) et touchez « Photographier cet avion » pour commencer à gagner des XP.\n\nPhoto prise au reflex ? Touchez « Ajouter une photo d'appareil photo » et choisissez l'avion parmi ceux passés près de vous."));
+        : h("div.empty", "Ta collection est vide.\n\nPhotographie un avion qui passe près de toi (onglet Scanner) pour commencer. Le bouton « i » en haut explique tout."));
   }
 
   function tile(e) {

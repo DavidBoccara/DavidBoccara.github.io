@@ -200,6 +200,7 @@ export function flybyRules() {
   return [
     "Trois défis qui alternent avec les avions autour de toi : lequel va passer près de toi, où un avion va atterrir, lequel vole le plus haut.",
     `Jusqu'à ${lvl.n} avions sur la carte. Premier essai : ${lvl.xp} XP, deuxième : la moitié. Destination : jusqu'à ${lvl.xp} XP, de moins en moins en s'éloignant de l'aéroport.`,
+    `Destination : tout le gain à moins de 25 km de l'aéroport, 90 % à 50 km, 80 % à 100 km, 70 % à 150 km, 50 % à 250 km, 30 % à 400 km, 10 % à 600 km, rien au-delà ni hors du cône. La série continue à moins de ${DEST_OK_KM} km.`,
     "3 bonnes réponses d'affilée = gains ×2, 6 = ×3… jusqu'à ×5. Une erreur remet la série à zéro.",
     `Vérifié en vrai : si l'avion trouvé passe près de toi, photographie-le pendant son passage pour +${HUNT_XP} XP.`,
     next ? `Au grade ${next.grade} : ${next.n} avions, moins d'aides, ${next.xp} XP.` : "",
@@ -502,7 +503,6 @@ export function flybyGame(view) {
         h("div.dest-xp" + (r.xp ? "" : ".dim"), r.xpTxt),
         !inCone ? h("div.small", "Ta réponse était en dehors du cône : l'avion ne va pas dans cette direction.") : null,
         h("div.small" + (ok ? "" : ".dim"), ok ? r.streakTxt : `${r.streakTxt} : il faut viser à moins de ${DEST_OK_KM} km.`),
-        h("div.small.dim.mt", `Gains selon l'écart (sur ${lvl.xp} XP) : tout à moins de 25 km, 90 % à 50 km, 80 % à 100 km, 70 % à 150 km, 50 % à 250 km, 30 % à 400 km, 10 % à 600 km, rien au-delà ni hors du cône. La série continue à moins de ${DEST_OK_KM} km.`),
         nextButtons(null)));
     }
     box.replaceChildren(

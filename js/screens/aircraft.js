@@ -80,7 +80,7 @@ export function aircraftPage(view, [hex]) {
     rarityText.replaceChildren(rarityMark(r.rarity));
     const caught = Collection.caughtFor(hex);
     const album = caught ? entryPhotoItems(caught).length : 0;
-    collectText.textContent = caught ? `Déjà attrapé (+${caught.xp} XP). Un avion ne rapporte des XP qu'une fois, mais tu peux le photographier encore : tes photos s'ajoutent à son album (${album}/${ALBUM_MAX}) et défilent ensemble dans le feed.`
+    collectText.textContent = caught ? `Déjà attrapé (+${caught.xp} XP) · album ${album}/${ALBUM_MAX}. Tes nouvelles photos s'ajoutent à son album, sans XP en plus.`
       : r.zeroReason ? `${r.zeroReason} : approchez-vous pour gagner des XP.` : `${describeXp(r)}\n= ${r.total} XP si vous le photographiez !`;
     camBtn.textContent = caught ? "Encore une photo" : "Photographier cet avion";
     camBtn.disabled = !!caught && album >= ALBUM_MAX;

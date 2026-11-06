@@ -1,5 +1,5 @@
 // Onglet Profil : mon profil (pseudo, photo, grade, statistiques), mes amis et le classement.
-import { h, ls, toast, prompt, pickImage, toJpeg, confirmBox } from "../util.js";
+import { h, ls, toast, prompt, pickImage, toJpeg, confirmBox, infoButton } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, sync } from "../cloud.js";
 import { Collection, Player, entryModel, entryRarity, QuizStore } from "../store.js";
@@ -39,9 +39,9 @@ export function profile(view, [sub]) {
 
 /** Interrupteur « Sons et vibrations » (sound.js). */
 function soundRow() {
-  return h("div.card.pad.mt", h("label.switch", h("span", "Sons et vibrations"),
-    h("input", { type: "checkbox", checked: Sound.on, onchange: (e) => { Sound.on = e.target.checked; } })),
-    h("div.small.dim", "Bonnes réponses en série, XP, avions attrapés, nouveau grade, avions qui deviennent visibles sur le radar."));
+  return h("div.card.pad.mt", h("label.switch", h("span.row", { style: { gap: "8px" } }, "Sons et vibrations",
+    infoButton("Sons et vibrations", "Bonnes réponses en série (la note monte à chaque bonne réponse), XP, avions attrapés, nouveau grade, avions qui deviennent visibles sur le radar.", { small: true })),
+    h("input", { type: "checkbox", checked: Sound.on, onchange: (e) => { Sound.on = e.target.checked; } })));
 }
 
 function me(view, show) {
@@ -66,8 +66,8 @@ function me(view, show) {
     if (saved == null) shareInput.checked = !want; // échec : on remet comme avant
   } });
   const shareRow = h("div.card.pad.mt", { style: { display: "none" } },
-    h("label.switch", h("span", "Mes publications visibles par tout le monde"), shareInput),
-    h("div.small.dim", "Dans le feed Monde, tous les joueurs voient et peuvent liker tes publications (même les anciennes). Les commentaires restent entre amis. Décoché : seuls tes amis les voient."));
+    h("label.switch", h("span.row", { style: { gap: "8px" } }, "Mes publications visibles par tout le monde",
+      infoButton("Feed Monde", "Dans le feed Monde, tous les joueurs voient et peuvent liker tes publications (même les anciennes). Les commentaires restent entre amis. Décoché : seuls tes amis les voient.", { small: true })), shareInput));
   view.append(h("div", { style: { textAlign: "center" } }, avatar, name, email,
     h("div.row.mt", { style: { justifyContent: "center", flexWrap: "wrap" } },
       h("button.btn.small.outline", { onclick: changeAvatar }, "Changer la photo"), h("button.btn.small.outline", { onclick: editName }, "Modifier le pseudo"))),

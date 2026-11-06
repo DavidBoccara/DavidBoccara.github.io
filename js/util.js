@@ -175,6 +175,17 @@ export function toast(msg, ms = 3500) {
  * Fenêtre modale. buttons : [{label, primary?, danger?, onClick?(close) → false pour rester ouverte}]
  * Renvoie { close, el }.
  */
+/**
+ * Petit bouton « i » qui ouvre une fenêtre d'explication : les longs textes ne prennent plus de place à l'écran.
+ * body = texte, liste de paragraphes, ou fonction qui les renvoie (texte calculé au moment du toucher).
+ * small = version discrète à placer dans une ligne (titre de section, interrupteur).
+ */
+export function infoButton(title, body, { small = false } = {}) {
+  return h("button.cam-btn" + (small ? ".info-sm" : ""), { type: "button", "aria-label": title, title,
+    onclick: (e) => { e.preventDefault(); e.stopPropagation(); modal({ title, body: typeof body === "function" ? body() : body }); } },
+    icon("info", small ? 15 : 18));
+}
+
 export function modal({ title, body, buttons = [{ label: "OK", primary: true }], onClose, wide }) {
   const back = h("div.modal-back");
   const box = h("div.modal" + (wide ? ".wide" : ""), { role: "dialog", "aria-modal": "true" });

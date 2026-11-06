@@ -1,6 +1,6 @@
 // Vue « Passés au-dessus » de l'onglet Collection (ex-onglet Hangar) : les avions passés cette semaine.
 // La liste repart à zéro le lundi à 0 h (heure de Paris), avec le concours photo ; les photos attrapées restent dans la vue Photos.
-import { h, ls, dateTime, dateDay, weekStart, icon, rarityMark } from "../util.js";
+import { h, ls, dateTime, dateDay, weekStart, icon, rarityMark, infoButton } from "../util.js";
 import { Collection, Sightings, entryPhoto, entryRarity, entryModel, entryLabel } from "../store.js";
 import { computeXp, spottedRarity, flagOf, prettyModel, MAX_PHOTO_KM } from "../game.js";
 import { askPhotoSource, showEntry, showWiki, wikiDot, wikiImg, wikiQuery } from "../ui.js";
@@ -25,17 +25,24 @@ function dayLabel(key, long = false) {
 
 export function hangarList(box, mode, onChange) {
   let byRarity = ls.get("hangar_sort_rarity", false);
-  const summary = h("div", { style: { color: "var(--cyan)", fontWeight: 700 } });
-  const hint = h("div.small.dim");
+  const summary = h("div.grow", { style: { color: "var(--cyan)", fontWeight: 700 } });
+  const hint = h("div.row", { style: { alignItems: "flex-start" } }, summary, infoButton("Avions passés au-dessus", [
+    `Les avions passés cette semaine à moins de ${MAX_PHOTO_KM} km pendant que le radar tournait.`,
+    "Touche un avion pour ajouter ta photo (déjà attrapé : d'autres photos pour son album), ou sa photo Wikipédia pour sa fiche.",
+    "Jour : n'affiche que les avions d'un jour. Plus rares : les plus rares en premier.",
+    "La liste repart à zéro lundi à 0 h, avec le concours photo : ajoute tes photos avant !",
+  ], { small: true }));
   const sortSeg = h("div.seg.grow");
   const sortRow = h("div.row.mt", h("span.small", { style: { fontWeight: 700 } }, "Trier :"), sortSeg);
   // Choix du jour : toute la semaine ou un seul jour (jours où des avions sont passés, avec leur nombre)
   let day = ls.get("hangar_day", "all");
   const daySeg = h("div.seg.grow.day-seg");
   const dayRow = h("div.row", h("span.small", { style: { fontWeight: 700 } }, "Jour :"), daySeg);
-  const empty = h("div.empty", `Aucun avion n'est encore passé à moins de ${MAX_PHOTO_KM} km de vous cette semaine.\n\nLancez le radar (onglet Scanner) pendant vos sessions de spotting : chaque avion qui passe au-dessus de vous apparaîtra ici. La liste repart à zéro chaque lundi à 0 h, en même temps que le concours photo de la semaine.`);
+  const empty = h("div.empty", `Aucun avion n'est encore passé à moins de ${MAX_PHOTO_KM} km de toi cette semaine.
+
+Lance le radar dans l'onglet Scanner : les avions qui passent près de toi apparaîtront ici.`);
   const list = h("div.list.mt");
-  box.replaceChildren(summary, hint, sortRow, dayRow, empty, list);
+  box.replaceChildren(hint, sortRow, dayRow, empty, list);
 
   const changed = () => { render(); onChange?.(); };
   const bestOf = (l) => l.reduce((b, e) => (!b || e.xp > b.xp || (e.xp === b.xp && e.takenAt > b.takenAt) ? e : b), null);
@@ -74,7 +81,6 @@ export function hangarList(box, mode, onChange) {
     const xp = rows.reduce((t, r) => t + (r.entry?.xp || 0), 0);
     const when = day === "all" ? "cette semaine" : dayLabel(day, true).toLowerCase();
     summary.textContent = `${rows.length} avion(s) passé(s) au-dessus de vous ${when} · ${rows.filter((r) => r.entry).length} attrapé(s) · ${xp} XP`;
-    hint.textContent = `Avions passés cette semaine à moins de ${MAX_PHOTO_KM} km pendant que le radar tournait. Touchez un avion pour ajouter votre photo (déjà attrapé : d'autres photos pour son album), ou sa photo Wikipédia pour sa fiche. La liste repart à zéro lundi à 0 h, avec le concours photo : ajoutez vos photos avant !`;
   }
 
   function row(r) {

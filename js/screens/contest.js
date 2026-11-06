@@ -3,7 +3,7 @@
 // La jauge d'exposition d'une photo (aiguille de 0 à 100) monte avec les votes que son auteur donne aux autres ;
 // la photo qui reçoit le plus de votes gagne.
 // Dimanche à minuit (heure de Paris), la photo la plus votée gagne et son auteur reçoit 200 XP.
-import { h, modal, toast, confirmBox, timeAgo, rarityMark } from "../util.js";
+import { h, modal, toast, confirmBox, timeAgo, rarityMark, infoButton } from "../util.js";
 import { Supa } from "../supa.js";
 import { Weekly, profileFrom, sync } from "../cloud.js";
 import { Collection, entryPhoto, entryModel, entryRarity } from "../store.js";
@@ -68,10 +68,12 @@ export function contestFeed(box) {
   function intro(start, endsAt, n) {
     const left = endsAt - Date.now(), d = Math.floor(left / 86400e3), hrs = Math.floor((left % 86400e3) / 3600e3);
     return h("div.card.pad.week-intro",
-      h("div", { style: { fontWeight: 800, color: "var(--amber)", fontSize: "17px" } }, "Concours de la semaine"),
-      h("div.small", `Du ${dayFmt(start)} au ${dayFmt(endsAt - 1)} · fin des votes dans ${d > 0 ? `${d} j ${hrs} h` : `${hrs} h ${Math.floor((left % 3600e3) / 60e3)} min`}`),
-      h("div.small.dim", { style: { marginTop: "6px" } },
-        `Propose ta plus belle photo de la semaine : c'est la communauté qui vote, et dimanche à minuit la photo qui a reçu le plus de votes gagne ${WEEK_PRIZE_XP} XP. Pour que ta photo reste bien visible et continue de recevoir des votes, vote toi aussi pour les photos des autres : chaque vote remplit ta jauge d'exposition.`));
+      h("div.row", h("div.grow", { style: { fontWeight: 800, color: "var(--amber)", fontSize: "17px" } }, "Concours de la semaine"),
+        infoButton("Concours de la semaine", [
+          `Propose ta plus belle photo de la semaine : c'est la communauté qui vote, et dimanche à minuit la photo qui a reçu le plus de votes gagne ${WEEK_PRIZE_XP} XP.`,
+          "Pour que ta photo reste bien visible et continue de recevoir des votes, vote toi aussi pour les photos des autres : chaque vote remplit ta jauge d'exposition.",
+        ], { small: true })),
+      h("div.small", `Du ${dayFmt(start)} au ${dayFmt(endsAt - 1)} · fin des votes dans ${d > 0 ? `${d} j ${hrs} h` : `${hrs} h ${Math.floor((left % 3600e3) / 60e3)} min`}`));
   }
 
   function winnerCard(w) {

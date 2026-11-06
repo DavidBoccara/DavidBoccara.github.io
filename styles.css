@@ -611,6 +611,7 @@ img.cover { width: 100%; display: block; object-fit: cover; background: var(--ca
 .scan-head { display: flex; align-items: flex-start; gap: 12px; }
 .cam-btn { position: relative; flex: none; width: 34px; height: 34px; margin-top: 2px; display: inline-flex; align-items: center; justify-content: center;
   background: none; border: 1px solid var(--line); border-radius: 50%; color: var(--dim); cursor: pointer; padding: 0; }
+.cam-btn.info-sm { width: 24px; height: 24px; margin-top: 0; border-color: var(--line-3); }
 .cam-btn.ready { color: var(--green); border-color: rgba(143, 191, 159, .55); }
 .cam-btn.err { color: var(--red); border-color: rgba(224, 113, 108, .5); }
 .cam-badge { position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;

@@ -1,6 +1,6 @@
 // Vue « Catalogue » de l'onglet Collection : tous les modèles d'avions du jeu, classés par thème,
 // rareté ou marque, avec les XP à gagner, le lien Wikipédia et la mention ✅ quand on l'a attrapé.
-import { h, ls, modal, choose, dateDay, dateTime, icon, rarityMark } from "../util.js";
+import { h, ls, modal, choose, dateDay, dateTime, icon, rarityMark, infoButton } from "../util.js";
 import { Collection, Sightings, entryPhoto } from "../store.js";
 import { CATALOG, THEMES, RARITIES, catalogMatches, wikiLink, MAX_PHOTO_KM } from "../game.js";
 import { askPhotoSource, showEntry, wikiImg, photoStrip } from "../ui.js";
@@ -19,15 +19,17 @@ export function catalogView(box, onChange) {
   let onlyFamous = false, onlyCaught = false, query = "";
   const open = new Set(ls.get("catalog_open", []));
 
-  const summary = h("div", { style: { color: "var(--cyan)", fontWeight: 700 } });
+  const summary = h("div.grow", { style: { color: "var(--cyan)", fontWeight: 700 } });
   const bar = h("div.xpbar.cyan", { style: { marginTop: "6px" } }, h("i"));
   const search = h("input.cat-search", { type: "search", placeholder: "Avion, marque ou code (A320, Rafale…)",
     oninput: (e) => { query = e.target.value; render(); } });
   const seg = h("div.seg.grow");
   const chips = h("div.cat-chips");
   const groups = h("div.mt");
-  box.replaceChildren(summary, bar,
-    h("div.small.dim", { style: { marginTop: "6px" } }, "Tous les modèles du jeu et les XP qu'ils rapportent. Touchez un avion pour sa fiche, « Wikipédia » pour l'article."),
+  box.replaceChildren(h("div.row", summary, infoButton("Catalogue", [
+      "Tous les modèles du jeu et les XP qu'ils rapportent.",
+      "Touche un avion pour sa fiche, « Wikipédia » pour l'article. Un cadenas : pas encore attrapé.",
+    ], { small: true })), bar,
     search, h("div.row.mt", h("span.small", { style: { fontWeight: 700 } }, "Classer par :"), seg), chips, groups);
 
   // Photos de la collection correspondant à chaque modèle (la meilleure en XP)
