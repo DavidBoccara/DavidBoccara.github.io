@@ -1,6 +1,6 @@
 // Service worker de Plane GO : l'appli s'ouvre même sans réseau, et un clic sur une
 // notification ouvre la fiche de l'avion.
-const CACHE = "planego-b4afa41fe436c485aec64d43c9c32bb38d7e8da8";
+const CACHE = "planego-11b7204739830eb6c957553fdaa0af5be38e33c3";
 const SHELL = [
   "./",
   "icons/apple-touch-icon.png",
@@ -89,7 +89,11 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET" || url.origin !== location.origin) return;
   if (url.pathname.startsWith("/__camera/")) return; // photos de l'appareil photo, servies par l'appli Android
-  e.respondWith(fetch(e.request).then((res) => {
+  // « no-cache » : toujours redemander au serveur s'il y a plus récent (GitHub Pages garde sinon les fichiers 10 min
+  // dans le navigateur, et l'ancienne version restait affichée après une mise à jour)
+  const fresh = e.request.mode === "navigate" ? fetch(e.request.url, { cache: "no-cache", credentials: "same-origin", redirect: "manual" })
+    : fetch(e.request, { cache: "no-cache" });
+  e.respondWith(fresh.then((res) => {
     if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); }
     return res;
   }).catch(() => caches.match(e.request, { ignoreSearch: true }).then((r) => r || caches.match("./"))));
