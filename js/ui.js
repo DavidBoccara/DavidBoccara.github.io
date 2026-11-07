@@ -1,5 +1,5 @@
 // Éléments d'interface partagés : fiche Wikipédia, photos, captures, partage.
-import { creditLine, osmCredit } from "./credits.js";
+import { creditLine, osmCredit, textCredit } from "./credits.js";
 import { LOCALE, LANG } from "./i18n.js";
 import { h, modal, toast, icon, infoButton, pickImage, toJpeg, imageKind, exifDate, confirmBox, choose, dateTime, dateDay, dec, rarityMark } from "./util.js";
 import { Wiki, AdsbDb, Places, aircraftPhotos } from "./net.js";
@@ -52,12 +52,13 @@ export function showWiki(q) {
   const title = h("h2.modal-title", q.title || "Wikipédia");
   const text = h("p", "Recherche sur Wikipédia…");
   let page = null, label = "Ouvrir Wikipédia";
-  const credit = creditLine();
-  const m = modal({ body: [img, credit, title, h("div.small", { style: { color: "var(--cyan)" } }, "Wikipédia"), text],
+  const credit = creditLine(), tCredit = textCredit();
+  const m = modal({ body: [img, credit, title, h("div.small", { style: { color: "var(--cyan)" } }, "Wikipédia"), text, tCredit],
     buttons: [{ label: "Fermer" }, { label, primary: true, onClick: () => { if (page) window.open(page, "_blank", "noopener"); return !!page; } }] });
   Wiki.find(q).then((s) => {
     if (!s) { text.textContent = navigator.onLine ? "Aucun article Wikipédia trouvé pour cet avion." : "Pas de connexion internet."; return; }
     title.textContent = s.title; text.textContent = s.extract; page = s.pageUrl;
+    if (!s.searchOnly) tCredit.set(s.pageUrl); // texte de l'article : licence CC BY-SA 4.0
     if (s.searchOnly) m.el.querySelector(".modal-actions .primary").textContent = "Chercher sur Wikipédia";
     const src = s.imageUrl || s.thumbnailUrl;
     if (src) { img.onerror = () => { if (s.thumbnailUrl && img.src !== s.thumbnailUrl) img.src = s.thumbnailUrl; }; img.src = src; img.style.display = "block"; credit.set(src); }
@@ -107,6 +108,7 @@ export function aircraftInfoCard(c) {
   const wTitle = h("h3", { style: { margin: "8px 0 0" } });
   const wText = h("p.small", { style: { display: "-webkit-box", WebkitLineClamp: "5", WebkitBoxOrient: "vertical", overflow: "hidden" } }, "Recherche sur Wikipédia…");
   const wBtn = h("a.btn.outline.small", { target: "_blank", rel: "noopener", style: { display: "none", textDecoration: "none" } }, "Lire l'article complet");
+  const wTextCredit = textCredit();
   const live = c.hex && Radar.find(c.hex);
   const lines = [
     c.registration && `Immatriculation : ${c.registration}`, c.callsign && `Indicatif : ${c.callsign}`,
@@ -125,7 +127,7 @@ export function aircraftInfoCard(c) {
     live && h("button.btn.primary.block.mt", { onclick: () => go("ac/" + c.hex) }, "Il vole près de vous en ce moment : voir où il est"),
     c.hex && h("a.btn.outline.small.mt", { href: `https://globe.airplanes.live/?icao=${c.hex.toLowerCase().replace(/^~/, "")}`, target: "_blank", rel: "noopener",
       style: { display: "inline-block", textDecoration: "none" } }, "Voir sur la carte en direct"),
-    h("div.section", "Wikipédia"), wImg, wCredit, wTitle, wText, wBtn);
+    h("div.section", "Wikipédia"), wImg, wCredit, wTitle, wText, wTextCredit, wBtn);
   // Fiche de l'appareil (constructeur, propriétaire) ; sans opérateur connu, la photo attend son propriétaire (compagnie)
   if (c.hex) AdsbDb.aircraft(c.hex).then((info) => {
     if (!c.operator) acPhoto.load(photoCtx(info?.owner || ""));
@@ -136,6 +138,7 @@ export function aircraftInfoCard(c) {
   Wiki.find({ type: c.type, model: c.model, military: c.military, title: model }).then((s) => {
     if (!s) { wText.textContent = "Aucun article Wikipédia trouvé pour ce modèle."; return; }
     wTitle.textContent = s.title; wText.textContent = s.extract;
+    if (!s.searchOnly) wTextCredit.set(s.pageUrl);
     wBtn.href = s.pageUrl; wBtn.style.display = "inline-block";
     if (s.searchOnly) wBtn.textContent = "Chercher sur Wikipédia";
     const src = s.thumbnailUrl || s.imageUrl;

@@ -101,6 +101,13 @@ export function privacyPage(view) {
       list(
         "Ton compte, tes captures et tes photos : jusqu'à ce que tu les supprimes.",
         "Une photo retirée ou supprimée (par toi, ou après 5 signalements) est effacée du serveur.",
+        "Tes signalements de publications : tant que la publication signalée existe (ils disparaissent avec elle, ou avec ton compte).",
+        "La trace d'une de tes publications retirée après 5 signalements (date, modèle, raison) : un an, pour pouvoir répondre si tu contestes, puis effacée automatiquement.",
+        "Les joueurs que tu as bloqués : jusqu'à ce que tu les débloques ou que tu supprimes ton compte.",
+        "Ton engagement sur les photos (date et version du texte accepté) : tant que ton compte existe, pour pouvoir le prouver.",
+        "Tes signalements de photos ou de questions du quiz : tant que ton compte existe.",
+        "Les messages envoyés avec le formulaire de contact (nom, e-mail, message) : un an au plus, puis effacés automatiquement.",
+        "Les journaux techniques des hébergeurs (adresse internet, page demandée) : gardés par eux pour la sécurité, selon leurs propres règles.",
         "Les passages d'avions sur ton téléphone : effacés chaque lundi à 0 h.",
       )),
 

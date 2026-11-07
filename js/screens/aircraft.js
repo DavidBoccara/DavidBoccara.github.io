@@ -1,5 +1,5 @@
 // Fiche d'un avion du radar : photo, provenance, vol en direct, approche, capture, Wikipédia.
-import { creditLine } from "../credits.js";
+import { creditLine, textCredit } from "../credits.js";
 import { DEC } from "../i18n.js";
 import { h, meters, cardinal, direction, dec, rarityMark } from "../util.js";
 import { compassRose, nextMark } from "../compass.js";
@@ -50,6 +50,7 @@ export function aircraftPage(view, [hex]) {
   const wikiTitle = h("h3", { style: { margin: "8px 0 0" } });
   const wikiKind = h("div.small", { style: { color: "var(--cyan)" } });
   const wikiText = h("p.small", "Recherche sur Wikipédia…");
+  const wikiTextCredit = textCredit(); // licence des textes de Wikipédia (CC BY-SA 4.0)
   const wikiBtn = h("a.btn.outline", { target: "_blank", rel: "noopener", style: { display: "none", textDecoration: "none" } }, "Lire l'article complet");
 
   view.append(
@@ -60,7 +61,7 @@ export function aircraftPage(view, [hex]) {
     h("div.row.mt", camBtn, h("button.btn.outline", { onclick: () => capture(false) }, "Galerie")),
     h("div.section", "Vol en direct"), flight,
     h("a.btn.outline.mt", { href: `https://globe.airplanes.live/?icao=${hex.toLowerCase()}`, target: "_blank", rel: "noopener", style: { display: "inline-block", textDecoration: "none" } }, "Voir sur la carte"),
-    h("div.section", "Wikipédia"), wikiImg, wikiCredit, wikiTitle, wikiKind, wikiText, wikiBtn,
+    h("div.section", "Wikipédia"), wikiImg, wikiCredit, wikiTitle, wikiKind, wikiText, wikiTextCredit, wikiBtn,
   );
 
   const spotted = () => spottedFrom(ac, extra, Radar.location?.lat, Radar.location?.lon);
@@ -142,6 +143,7 @@ export function aircraftPage(view, [hex]) {
   Wiki.find(wikiQuery.ac(ac)).then((s) => {
     if (!s) { wikiText.textContent = "Aucun article Wikipédia trouvé pour ce modèle."; return; }
     wikiTitle.textContent = s.title; wikiText.textContent = s.extract;
+    if (!s.searchOnly) wikiTextCredit.set(s.pageUrl);
     wikiKind.textContent = s.searchOnly ? "Pas d'article : recherche Wikipédia" : "Article sur le modèle de l'appareil";
     wikiBtn.href = s.pageUrl; wikiBtn.style.display = "inline-block";
     if (s.searchOnly) wikiBtn.textContent = "Chercher sur Wikipédia";

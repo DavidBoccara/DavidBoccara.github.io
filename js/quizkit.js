@@ -1,6 +1,6 @@
 // Outils communs aux modes du Quiz du ciel : préparation d'une question (nom + photo), mémoire des avions
 // déjà proposés en entraînement, note « Comment le reconnaître » après une erreur.
-import { creditLine, photoCredit, safeLicense } from "./credits.js";
+import { creditLine, photoCredit, safeLicense, textCredit } from "./credits.js";
 import { LOCALE } from "./i18n.js";
 import { h, ls, modal, toast, confirmBox } from "./util.js";
 import { Radar } from "./radar.js";
@@ -84,6 +84,7 @@ export function bonusBlock(q, n, { onAward, xp = true } = {}) {
         out.replaceChildren(
           h("div.bonus-verdict" + (ok ? ".ok" : ".ko"), ok ? (xp ? `Bonne réponse ! +${Quiz.BONUS_XP} XP` : "Bonne réponse !") : `Raté : c'était « ${b.answer} ».`),
           h("div.small.dim", b.explain),
+          b.ai && b.pageUrl ? textCredit(b.pageUrl) : "", // citation de l'article : licence CC BY-SA 4.0
           flag || "",
           last ? h("div.bonus-end", list.length > 1 ? `Bonus : ${good} bonne${good > 1 ? "s" : ""} réponse${good > 1 ? "s" : ""} sur ${list.length} · ` : "",
                 h("a", { href: b.pageUrl, target: "_blank", rel: "noopener" }, "Lire l'article Wikipédia"))

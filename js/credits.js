@@ -129,6 +129,22 @@ export function creditLine(url = null, { hold = false } = {}) {
   return el;
 }
 
+/**
+ * Mention obligatoire sous un texte tiré de Wikipédia (résumé d'un article, citation d'une question bonus) : les textes de
+ * Wikipédia sont sous licence CC BY-SA 4.0, qui demande de citer la source (lien vers l'article) et la licence.
+ * `el.set(url)` (adresse de l'article) l'affiche ; sans adresse, la ligne reste cachée.
+ */
+export function textCredit(pageUrl = null) {
+  const lic = LANG === "en" ? "https://creativecommons.org/licenses/by-sa/4.0/" : "https://creativecommons.org/licenses/by-sa/4.0/deed.fr";
+  const el = h("div.photo-credit");
+  el.set = (u) => {
+    el.hidden = !u;
+    el.replaceChildren(...(u ? [h("span", "Texte :"), " ", link(u, "Wikipédia"), " · ", h("span", { "data-notr": "" }, link(lic, "CC BY-SA 4.0"))] : []));
+  };
+  el.set(pageUrl);
+  return el;
+}
+
 /** Ligne « Données des avions : adsb.fi · adsb.lol · adsbdb » avec les liens (adsb.fi demande d'être cité avec un lien). */
 export function dataSources() {
   return h("div.photo-credit", h("span", "Données des avions :"), " ", link("https://adsb.fi/", "adsb.fi"), " · ",
