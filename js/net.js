@@ -136,7 +136,7 @@ async function summary(lang, title) {
   const o = await wget(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${enc(title.replace(/ /g, "_"))}`);
   if (o.type === "disambiguation" || !o.extract) return null;
   const thumb = (o.thumbnail || o.originalimage)?.source || null;
-  const big = thumb && thumb.includes("/thumb/") ? thumb.replace(/\/\d+px-/, "/1024px-") : thumb;
+  const big = wmSize(thumb, 960);
   return {
     s: { title: o.title || title, extract: o.extract, pageUrl: o.content_urls?.mobile?.page || `https://${lang}.wikipedia.org/wiki/${enc(title.replace(/ /g, "_"))}`,
       thumbnailUrl: thumb, imageUrl: big, lang, searchOnly: false },
@@ -205,6 +205,11 @@ async function commonsSearch(query, limit, width) {
         licenseUrl: md.LicenseUrl?.value || "", author: plainText(md.Artist?.value) };
     });
 }
+/**
+ * Miniature Wikimedia à une largeur standard (250, 330, 500, 960, 1280 px…) : Wikimedia refuse désormais les autres
+ * largeurs (1024 px…) quand la miniature n'existe pas déjà, et l'image ne se chargeait pas (le quiz tournait dans le vide).
+ */
+export const wmSize = (url, w) => (url && /\/thumb\//.test(url) ? url.replace(/\/\d+px-/, `/${w}px-`) : url);
 const plainText = (html) => (html ? new DOMParser().parseFromString(String(html), "text/html").body.textContent.replace(/\s+/g, " ").trim() : "");
 const flat = (t) => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
 
@@ -253,9 +258,9 @@ export async function quizPhotos({ registration = "", airline = "", model = "", 
     const hasCore = (x) => !core || flat(x.title).includes(core);
     const reg = flat(registration), word = airlineWord(airline);
     const [byReg, byAirline, byModel] = await Promise.all([
-      reg.length >= 4 ? safe(commonsSearch(`"${registration}"`, 20, 800)) : null,
-      word && core ? safe(commonsSearch(`(${airlineName(airline)} OR ${airlineName(airline).replace(/\s+/g, "")}) ${core}`, 20, 800)) : null,
-      safe(commonsSearch(article || model || name, 20, 800)),
+      reg.length >= 4 ? safe(commonsSearch(`"${registration}"`, 20, 960)) : null,
+      word && core ? safe(commonsSearch(`(${airlineName(airline)} OR ${airlineName(airline).replace(/\s+/g, "")}) ${core}`, 20, 960)) : null,
+      safe(commonsSearch(article || model || name, 20, 960)),
     ]);
     const tiers = [
       (byReg || []).filter((x) => ok(x) && flat(x.title).includes(reg) && hasCore(x)),
@@ -264,7 +269,7 @@ export async function quizPhotos({ registration = "", airline = "", model = "", 
     ];
     const out = [];
     for (const t of tiers) for (const x of t.sort(() => Math.random() - 0.5)) {
-      const url = x.thumb.replace(/\/\d+px-/, "/1024px-");
+      const url = x.thumb; // largeur choisie par l'API (960 px, taille standard)
       rememberCredit(url, { author: x.author.length > 70 ? x.author.slice(0, 69).trimEnd() + "…" : x.author, license: x.license,
         licenseUrl: x.licenseUrl, site: "Wikimedia Commons", pageUrl: `https://commons.wikimedia.org/wiki/${encodeURIComponent(x.title.replace(/ /g, "_")).replace("%3A", ":")}` });
       if (!out.includes(url)) out.push(url);
@@ -280,14 +285,14 @@ const safeFirst = (list) => [...list.filter((x) => safeLicense(x.license)), ...l
 export async function commonsPhoto(query, { safeOnly = false } = {}) {
   const list = safeFirst(await commonsSearch(query, 8, 400));
   const p = safeOnly ? list.find((x) => safeLicense(x.license)) : list[0];
-  return p ? [p.thumb, p.thumb.replace(/\/\d+px-/, "/1024px-")] : null;
+  return p ? [wmSize(p.thumb, 330), wmSize(p.thumb, 960)] : null;
 }
 /**
  * Plusieurs photos d'un modèle sur Wikimedia Commons (JPEG, 800 px), pour remplacer une photo du quiz signalée
  * ou introuvable ; licences sans risque d'abord.
  */
 export async function commonsPhotos(query, limit = 15) {
-  return safeFirst(await commonsSearch(query, limit, 800)).map((x) => x.thumb);
+  return safeFirst(await commonsSearch(query, limit, 960)).map((x) => x.thumb);
 }
 const altMem = new Map();
 

@@ -11,9 +11,12 @@ import { h, ls } from "./util.js";
 const KEY = "photo_credits_v1", KEEP = 30 * 864e5, MAX = 400;
 const mem = new Map();
 
-/** Fichier Wikimedia d'une adresse upload.wikimedia.org (miniature ou original) : { host, file } ou null. */
+/**
+ * Fichier Wikimedia d'une adresse d'image (upload.wikimedia.org, ou thumb.wikimedia.org que l'API renvoie depuis 2026 ;
+ * miniature ou original) : { host, file } ou null.
+ */
 export function wikimediaFile(url) {
-  const m = /^https?:\/\/upload\.wikimedia\.org\/(wikipedia|wikimedia)\/([a-z-]+)\/(?:thumb\/)?[0-9a-f]\/[0-9a-f]{2}\/([^/?#]+)/i.exec(url || "");
+  const m = /^https?:\/\/(?:upload|thumb)\.wikimedia\.org\/(wikipedia|wikimedia)\/([a-z-]+)\/(?:thumb\/)?[0-9a-f]\/[0-9a-f]{2}\/([^/?#]+)/i.exec(url || "");
   if (!m) return null;
   let file = m[3];
   try { file = decodeURIComponent(file); } catch { /* nom déjà lisible */ }

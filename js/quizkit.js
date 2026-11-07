@@ -146,7 +146,7 @@ export async function questionPhoto(_ownUrl, wikiQ, name, ctx = {}) {
   const wiki = await Wiki.find(wikiQ).catch(() => null);
   const article = wiki && !wiki.searchOnly ? wiki.title : "";
   const list = await quizPhotos({ ...ctx, name, article }).catch(() => []);
-  for (const u of usablePhotos(list).slice(0, 6)) if (await loads(u)) return u;
+  for (const u of usablePhotos(list).slice(0, 3)) if (await loads(u)) return u;
   for (const u of usablePhotos([wiki?.imageUrl, wiki?.thumbnailUrl])) {
     const c = await photoCredit(u).catch(() => null);
     if (c && safeLicense(c.license) && c.author && !revealsAnswer(c.author, name) && (await loads(u))) return u;
@@ -200,7 +200,7 @@ const confirmFlag = () => new Promise((resolve) => {
 /** L'image se charge-t-elle ? (12 s au plus) */
 export const loads = (url) => new Promise((res) => {
   const img = new Image();
-  const t = setTimeout(() => res(false), 12000);
+  const t = setTimeout(() => res(false), 8000);
   img.onload = () => { clearTimeout(t); res(true); };
   img.onerror = () => { clearTimeout(t); res(false); };
   img.src = url;
