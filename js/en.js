@@ -1374,4 +1374,7 @@ export const EN = [
   ["Bloquer {1}", "Block {1}"],
   ["Joueurs bloqués ({1})", "Blocked players ({1})"],
   ["Joueur", "Player"],
+  ["Au grade {1} :", "At rank {1}:"],
+  ["{1} question bonus", "{1} bonus question"],
+  ["infini", "infinite"],
 ];

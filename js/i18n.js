@@ -152,7 +152,12 @@ function doAttrs(el) {
 
 function walk(root) {
   if (root.nodeType === 3) return doText(root);
-  if (root.nodeType !== 1 || skipNode(root)) return;
+  if (root.nodeType !== 1) return;
+  if (skipNode(root)) {
+    // Champ de saisie ajouté seul (ex. recherche du Catalogue) : son texte n'est pas traduit, mais son placeholder oui
+    if ((root.tagName === "INPUT" || root.tagName === "TEXTAREA") && !root.closest("[data-notr]")) doAttrs(root);
+    return;
+  }
   doAttrs(root);
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
   for (let n = w.nextNode(); n; n = w.nextNode()) {

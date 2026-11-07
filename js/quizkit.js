@@ -38,10 +38,12 @@ export function radiusButton({ km, lvl, label, sub, onClick }) {
 
 /** Petite ligne sous le bouton : rayon (et questions bonus) au grade suivant. */
 export function radiusNext(lvl, next, xp) {
-  const bonus = next && Quiz.bonusLabel(next);
-  return h("div.rb-next", next
-    ? `Au grade ${next.name} : ${Quiz.radiusLabel(next)}${bonus ? ` + ${bonus}` : ""}${xp != null && next.minXp > xp ? ` (encore ${(next.minXp - xp).toLocaleString(LOCALE)} XP)` : ""}`
-    : "Grade maximum : radar infini");
+  if (!next) return h("div.rb-next", "Grade maximum : radar infini");
+  const bonus = Quiz.bonusLabel(next);
+  const more = xp != null && next.minXp > xp ? (next.minXp - xp).toLocaleString(LOCALE) : null;
+  // Morceaux séparés : en anglais, chacun est traduit à part (i18n.js) ; d'un seul bloc, « (encore … XP) » restait en français
+  return h("div.rb-next", h("span", `Au grade ${next.name} :`), " ", h("span", Quiz.radiusLabel(next)),
+    bonus ? " + " : null, bonus ? h("span", bonus) : null, more ? " " : null, more ? h("span", `(encore ${more} XP)`) : null);
 }
 
 /**
