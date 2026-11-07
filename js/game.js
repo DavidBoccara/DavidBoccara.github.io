@@ -388,7 +388,8 @@ export function quizName(ac, extra) {
   const known = MODELS.find((m) => modelMatches(m, ac)) || MODELS.find((m) => m.codes.includes(t) && !m.militaryOnly);
   if (known) return known.label;
   const raw = ac.description || (extra?.info ? `${extra.info.manufacturer} ${extra.info.model}`.trim() : "");
-  const p = prettyModel(raw).trim();
+  // « Gulfstream Aerospace Gulfstream G100 » → « Gulfstream G100 » (raison sociale suivie de la marque répétée)
+  const p = prettyModel(raw).trim().replace(/^(\S+)(?: \S+){1,2} (\1\b)/i, "$2");
   return p.length >= 3 && t !== "ZZZZ" ? p : null;
 }
 

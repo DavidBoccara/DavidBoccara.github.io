@@ -891,6 +891,9 @@ export const D = {
 "A310": "Airbus A310 MRTT"
 },
 "civilTypes": {
+"ASTR": "Gulfstream G100",
+"GALX": "Gulfstream G200",
+"G280": "Gulfstream G280",
 "A318": "Airbus A318",
 "A319": "Airbus A319",
 "A320": "Airbus A320",

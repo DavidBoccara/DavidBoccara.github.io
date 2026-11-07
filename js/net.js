@@ -1,5 +1,5 @@
 // Données en ligne : avions ADS-B (via le relais Supabase), adsbdb, Wikipédia.
-import { photoCredit, safeLicense, rememberCredit } from "./credits.js";
+import { photoCredit, safeLicense, rememberCredit, wikimediaFile } from "./credits.js";
 import { LANG } from "./i18n.js";
 import { Supa } from "./supa.js";
 import { distanceKm, bearingDeg, ls, sleep } from "./util.js";
@@ -191,7 +191,9 @@ async function langLink(lang, title, target) {
  * Photos JPEG d'une recherche sur Wikimedia Commons, avec leur licence : [{ thumb, license, title }] dans l'ordre de
  * la recherche. Vues de détail (cockpit, cabine, moteur…), maquettes et schémas écartées.
  */
-const NOT_A_PLANE = /cockpit|cabin|cabine|interior|int[ée]rieur|seat|si[èe]ge|engine|moteur|logo|maquette|model|diagram|drawing|sch[ée]ma|map|carte|galley|lavatory|wheel|landing.gear|tail|d[ée]rive|wing|aile/i;
+// Photos sans avion entier (d'après le nom du fichier) : intérieur, pièce, dessin… et, depuis le 8/11/2026, les photos de
+// personnes et d'événements (une conférence de presse Gulfstream illustrait une question du quiz).
+const NOT_A_PLANE = /cockpit|cabin|cabine|interior|int[ée]rieur|seat|si[èe]ge|engine|moteur|logo|maquette|model|diagram|drawing|sch[ée]ma|map|carte|galley|lavatory|wheel|landing.gear|tail|d[ée]rive|wing|aile|\bpress\b|konferenz|conference|conf[ée]rence|speech|speaker|podium|portrait|\bceo\b|\bpresident\b|\bpr[ée]sident\b|interview|ceremony|c[ée]r[ée]monie|employee|headquarter|building|b[âa]timent|\boffice\b|factory|usine|assembly line|cha[iî]ne d.assemblage/i;
 async function commonsSearch(query, limit, width) {
   const q = (query || "").trim();
   if (!q) return [];
@@ -223,6 +225,20 @@ function modelCore(name) {
     if (m) return m[1] + m[2];
   }
   return null;
+}
+/**
+ * Le nom du fichier d'une photo Wikimedia correspond-il bien à l'avion (désignation du modèle, ex. « g100 » ; pas une
+ * photo de personnes ni une version trompeuse) ? Pour la photo de l'article Wikipédia, dernier recours du quiz : un
+ * article d'entreprise (« Gulfstream Aerospace ») peut avoir pour photo une conférence de presse.
+ */
+export function photoMatchesModel(url, article, ...names) {
+  const file = wikimediaFile(url)?.file || "";
+  if (!file || NOT_A_PLANE.test(file)) return false;
+  const core = names.map(modelCore).find(Boolean);
+  const variant = (names.join(" ").match(VARIANTS) || [])[0];
+  // Article du modèle lui-même (« Gulfstream G100 ») : sa photo peut ne porter que l'immatriculation (« N916CG.jpg »)
+  const ofModel = !core || flat(article).includes(core) || flat(file).includes(core);
+  return ofModel && (variant ? flat(file).includes(flat(variant)) : !VARIANTS.test(file));
 }
 // Constructeurs : un auteur qui s'appelle ainsi (photo officielle) donnerait la réponse du quiz
 const MAKERS = /airbus|boeing|embraer|bombardier|\batr\b|dassault|cessna|pilatus|beech|gulfstream|lockheed|havilland|saab|fokker|sukhoi|antonov|ilyushin|tupolev|comac|mitsubishi|piper|diamond|cirrus|eurocopter|leonardo|agusta|sikorsky|\bbell\b|robinson|daher|socata|textron|learjet|hawker|mcdonnell|douglas|northrop|grumman|nhindustries|\brobin\b|tecnam|casa\b|kawasaki/i;

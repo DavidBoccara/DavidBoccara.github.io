@@ -4,7 +4,7 @@ import { creditLine, photoCredit, safeLicense, textCredit } from "./credits.js";
 import { LOCALE } from "./i18n.js";
 import { h, ls, modal, toast, confirmBox } from "./util.js";
 import { Radar } from "./radar.js";
-import { Wiki, quizPhotos, revealsAnswer } from "./net.js";
+import { Wiki, quizPhotos, revealsAnswer, photoMatchesModel } from "./net.js";
 import { quizName, buildQuestion, recognitionTip, familyTip, Quiz, prettyModel } from "./game.js";
 import { wikiQuery } from "./ui.js";
 import { Supa } from "./supa.js";
@@ -149,6 +149,7 @@ export async function questionPhoto(_ownUrl, wikiQ, name, ctx = {}) {
   const list = await quizPhotos({ ...ctx, name, article }).catch(() => []);
   for (const u of usablePhotos(list).slice(0, 3)) if (await loads(u)) return u;
   for (const u of usablePhotos([wiki?.imageUrl, wiki?.thumbnailUrl])) {
+    if (!photoMatchesModel(u, article, ctx.model, name)) continue; // photo d'entreprise, de personnes, d'une autre version…
     const c = await photoCredit(u).catch(() => null);
     if (c && safeLicense(c.license) && c.author && !revealsAnswer(c.author, name) && (await loads(u))) return u;
   }
