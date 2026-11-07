@@ -1,11 +1,11 @@
 // Outils communs aux modes du Quiz du ciel : préparation d'une question (nom + photo), mémoire des avions
 // déjà proposés en entraînement, note « Comment le reconnaître » après une erreur.
-import { creditLine, isAirportData } from "./credits.js";
+import { creditLine, photoCredit, safeLicense } from "./credits.js";
 import { LOCALE } from "./i18n.js";
 import { h, ls, modal, toast, confirmBox } from "./util.js";
 import { Radar } from "./radar.js";
-import { Wiki } from "./net.js";
-import { quizName, buildQuestion, recognitionTip, familyTip, Quiz } from "./game.js";
+import { Wiki, quizPhotos, revealsAnswer } from "./net.js";
+import { quizName, buildQuestion, recognitionTip, familyTip, Quiz, prettyModel } from "./game.js";
 import { wikiQuery } from "./ui.js";
 import { Supa } from "./supa.js";
 import { bonusQuestions, flagAiQuestion } from "./wikiquiz.js";
@@ -136,17 +136,21 @@ setTimeout(() => PhotoFlags.refresh(), 2000);
 export const usablePhotos = (urls) => [...new Set(urls.filter(Boolean))].filter((u) => !PhotoFlags.has(u));
 
 /**
- * Photo d'une question : la photo de l'article Wikipédia du modèle, sinon (photo signalée ou introuvable) une autre
- * photo du modèle sur Wikimedia Commons, toutes sous licence libre et créditées (credits.js). null si aucune ne
- * s'affiche. ownUrl : photo de l'appareil, utilisée seulement si elle n'est pas d'airport-data.com (dont on n'affiche
- * que les miniatures, trop petites pour le quiz).
+ * Photo d'une question, toujours libre de droits et créditée : `quizPhotos` (net.js) cherche sur Wikimedia Commons
+ * cet avion précis (immatriculation), sinon le même modèle aux couleurs de la compagnie, sinon le modèle — licences
+ * sans risque seulement (domaine public, CC0, CC 4.0), auteur connu qui ne donne pas la réponse. En dernier recours,
+ * la photo de l'article Wikipédia aux mêmes conditions. Jamais les photos airport-data (sans licence libre).
+ * ctx = { registration, airline, model } de l'avion. null si aucune photo ne convient (la question est passée).
  */
-export async function questionPhoto(ownUrl, wikiQ, name) {
-  if (ownUrl && !isAirportData(ownUrl)) for (const u of usablePhotos([ownUrl])) if (await loads(u)) return u;
+export async function questionPhoto(_ownUrl, wikiQ, name, ctx = {}) {
   const wiki = await Wiki.find(wikiQ).catch(() => null);
-  for (const u of usablePhotos([wiki?.imageUrl, wiki?.thumbnailUrl])) if (await loads(u)) return u;
-  const alt = await Wiki.altPhotos(wiki && !wiki.searchOnly ? wiki.title : name).catch(() => []);
-  for (const u of usablePhotos(alt).slice(0, 4)) if (await loads(u)) return u;
+  const article = wiki && !wiki.searchOnly ? wiki.title : "";
+  const list = await quizPhotos({ ...ctx, name, article }).catch(() => []);
+  for (const u of usablePhotos(list).slice(0, 6)) if (await loads(u)) return u;
+  for (const u of usablePhotos([wiki?.imageUrl, wiki?.thumbnailUrl])) {
+    const c = await photoCredit(u).catch(() => null);
+    if (c && safeLicense(c.license) && c.author && !revealsAnswer(c.author, name) && (await loads(u))) return u;
+  }
   return null;
 }
 
@@ -214,7 +218,8 @@ export async function pickQuestion(list, { avoid = null, tries = 8, onFail = nul
     const extra = await Radar.extra(ac).catch(() => null);
     const name = quizName(ac, extra);
     if (!name) { onFail?.(ac.hex); continue; }
-    const url = await questionPhoto(extra?.info?.photoUrl, wikiQuery.ac(ac), name);
+    const url = await questionPhoto(null, wikiQuery.ac(ac), name,
+      { registration: ac.registration, airline: extra?.route?.airline || extra?.info?.owner || ac.operator, model: prettyModel(ac.description || "") });
     if (!url) { onFail?.(ac.hex); continue; }
     const q = buildQuestion(ac, extra, url);
     if (!q) { onFail?.(ac.hex); continue; }

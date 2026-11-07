@@ -196,7 +196,7 @@ export function dailyQuiz(box) {
     const extra = { info };
     const name = quizName(ac, extra);
     if (!name) return null;
-    const u = await questionPhoto(info?.photoUrl, wikiQuery.spotted(s), name);
+    const u = await questionPhoto(null, wikiQuery.spotted(s), name, { registration: s.registration, airline: s.operator, model: s.model });
     if (!u) return null;
     const q = buildQuestion(ac, extra, u);
     return q && { ...q, seenAt: seen.seenAt, wiki: wikiQuery.spotted(s) }; // wiki : article du modèle (questions bonus)

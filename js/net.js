@@ -1,5 +1,5 @@
 // Données en ligne : avions ADS-B (via le relais Supabase), adsbdb, Wikipédia.
-import { photoCredit, safeLicense } from "./credits.js";
+import { photoCredit, safeLicense, rememberCredit } from "./credits.js";
 import { LANG } from "./i18n.js";
 import { Supa } from "./supa.js";
 import { distanceKm, bearingDeg, ls, sleep } from "./util.js";
@@ -196,10 +196,82 @@ async function commonsSearch(query, limit, width) {
   const q = (query || "").trim();
   if (!q) return [];
   const j = await wget(`https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=${limit}&gsrsearch=${enc(q + " filetype:bitmap")}`
-    + `&prop=imageinfo&iiprop=url|mime|extmetadata&iiextmetadatafilter=LicenseShortName&iiurlwidth=${width}`);
+    + `&prop=imageinfo&iiprop=url|mime|extmetadata&iiextmetadatafilter=LicenseShortName|LicenseUrl|Artist&iiurlwidth=${width}`);
   return Object.values(j.query?.pages || {}).sort((a, b) => (a.index ?? 99) - (b.index ?? 99))
     .filter((p) => p.imageinfo?.[0]?.mime === "image/jpeg" && p.imageinfo[0].thumburl && !NOT_A_PLANE.test(p.title || ""))
-    .map((p) => ({ thumb: p.imageinfo[0].thumburl, title: p.title, license: p.imageinfo[0].extmetadata?.LicenseShortName?.value || "" }));
+    .map((p) => {
+      const md = p.imageinfo[0].extmetadata || {};
+      return { thumb: p.imageinfo[0].thumburl, title: p.title, license: md.LicenseShortName?.value || "",
+        licenseUrl: md.LicenseUrl?.value || "", author: plainText(md.Artist?.value) };
+    });
+}
+const plainText = (html) => (html ? new DOMParser().parseFromString(String(html), "text/html").body.textContent.replace(/\s+/g, " ").trim() : "");
+const flat = (t) => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+
+/**
+ * Désignation du modèle telle qu'on la trouve dans les noms de fichiers : « A-220-300 » → « a220 », « 737-800 » → « 737 »,
+ * « EC-135 » → « ec135 », « PC-12 » → « pc12 » ; null si le nom n'a pas de chiffre (« Rafale »).
+ */
+function modelCore(name) {
+  for (const w of String(name || "").toLowerCase().split(/\s+/)) {
+    const m = /^([a-z]*)-?(\d+)/.exec(w);
+    if (m) return m[1] + m[2];
+  }
+  return null;
+}
+// Constructeurs : un auteur qui s'appelle ainsi (photo officielle) donnerait la réponse du quiz
+const MAKERS = /airbus|boeing|embraer|bombardier|\batr\b|dassault|cessna|pilatus|beech|gulfstream|lockheed|havilland|saab|fokker|sukhoi|antonov|ilyushin|tupolev|comac|mitsubishi|piper|diamond|cirrus|eurocopter|leonardo|agusta|sikorsky|\bbell\b|robinson|daher|socata|textron|learjet|hawker|mcdonnell|douglas|northrop|grumman|nhindustries|\brobin\b|tecnam|casa\b|kawasaki/i;
+/** L'auteur d'une photo donnerait-il la réponse (constructeur, nom ou désignation du modèle) ? */
+export function revealsAnswer(author, name) {
+  if (!author || MAKERS.test(author)) return true;
+  const a = flat(author), core = modelCore(name);
+  if (core && a.includes(core)) return true;
+  return String(name || "").toLowerCase().split(/[\s/()-]+/).filter((w) => w.length >= 4 && !/^\d+$/.test(w)).some((w) => a.includes(flat(w)));
+}
+const GENERIC = new Set(["air", "airlines", "airline", "airways", "aviation", "lines", "corporation", "company", "group", "limited", "ltd",
+  "inc", "the", "sa", "ag", "spa", "plc", "de", "of", "and", "international", "cargo", "express", "regional", "leasing", "capital"]);
+const airlineWord = (s) => (String(s || "").toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !GENERIC.has(w)).sort((a, b) => b.length - a.length)[0] || "");
+
+// Nom de la compagnie sans forme juridique (« Air Baltic Corporation » → « Air Baltic »)
+const airlineName = (s) => String(s || "").replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/)
+  .filter((w) => w && !/^(corporation|company|group|limited|ltd|inc|sa|ag|spa|plc|gmbh|as|asa|ab|nv|bv|srl|llc)$/i.test(w)).join(" ");
+
+const quizMem = new Map();
+/**
+ * Photos libres de l'avion du quiz sur Wikimedia Commons, de la plus précise à la plus générale :
+ * 1) cet avion précis (immatriculation et désignation du modèle dans le nom du fichier), 2) le même modèle aux couleurs
+ * de la même compagnie, 3) le modèle. Seulement des licences sans risque (domaine public, CC0, Creative Commons 4.0),
+ * avec un auteur connu qui ne donne pas la réponse ; tirées au hasard dans chaque groupe pour varier les photos.
+ * Le crédit lu ici est gardé (credits.js) : il s'affiche sous la photo sans nouvelle requête.
+ * ctx = { registration, airline, model (désignation ADS-B, ex. « Airbus A220-300 »), name (réponse du quiz), article }.
+ */
+export async function quizPhotos({ registration = "", airline = "", model = "", name = "", article = "" }) {
+  const key = [registration, airline, model, name, article].join("|");
+  if (!quizMem.has(key)) quizMem.set(key, (async () => {
+    const core = modelCore(model) || modelCore(name) || modelCore(article);
+    const ok = (x) => safeLicense(x.license) && x.author && !revealsAnswer(x.author, name) && !revealsAnswer(x.author, model);
+    const hasCore = (x) => !core || flat(x.title).includes(core);
+    const reg = flat(registration), word = airlineWord(airline);
+    const [byReg, byAirline, byModel] = await Promise.all([
+      reg.length >= 4 ? safe(commonsSearch(`"${registration}"`, 20, 800)) : null,
+      word && core ? safe(commonsSearch(`(${airlineName(airline)} OR ${airlineName(airline).replace(/\s+/g, "")}) ${core}`, 20, 800)) : null,
+      safe(commonsSearch(article || model || name, 20, 800)),
+    ]);
+    const tiers = [
+      (byReg || []).filter((x) => ok(x) && flat(x.title).includes(reg) && hasCore(x)),
+      (byAirline || []).filter((x) => ok(x) && flat(x.title).includes(word) && hasCore(x)),
+      (byModel || []).filter((x) => ok(x) && hasCore(x)).slice(0, 10),
+    ];
+    const out = [];
+    for (const t of tiers) for (const x of t.sort(() => Math.random() - 0.5)) {
+      const url = x.thumb.replace(/\/\d+px-/, "/1024px-");
+      rememberCredit(url, { author: x.author.length > 70 ? x.author.slice(0, 69).trimEnd() + "…" : x.author, license: x.license,
+        licenseUrl: x.licenseUrl, site: "Wikimedia Commons", pageUrl: `https://commons.wikimedia.org/wiki/${encodeURIComponent(x.title.replace(/ /g, "_")).replace("%3A", ":")}` });
+      if (!out.includes(url)) out.push(url);
+    }
+    return out;
+  })());
+  return quizMem.get(key);
 }
 /** Photos sous licence sans risque (credits.js) d'abord, les autres ensuite (affichées avec leur crédit complet). */
 const safeFirst = (list) => [...list.filter((x) => safeLicense(x.license)), ...list.filter((x) => !safeLicense(x.license))];

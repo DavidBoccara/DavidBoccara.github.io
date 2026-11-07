@@ -73,13 +73,25 @@ export function safeLicense(license) {
   return /public domain|domaine public|^pd\b|cc0|cc[ -]?by(-sa)?[ -]4\.0/i.test(String(license || "").trim());
 }
 
+/** Crédit déjà connu (lu avec la recherche Commons) : évite une requête de plus quand la photo s'affiche. */
+export function rememberCredit(url, c) {
+  const f = wikimediaFile(url);
+  if (!f || !c) return;
+  const k = f.host + "|" + f.file;
+  mem.set(k, c);
+  const s = stored(), keys = Object.keys(s);
+  if (keys.length >= MAX) keys.slice(0, keys.length - MAX + 1).forEach((x) => delete s[x]);
+  s[k] = { at: Date.now(), c }; ls.set(KEY, s);
+}
+
 const link = (href, text, open = true) => (href && open ? h("a", { href, target: "_blank", rel: "noopener" }, text) : h("span", text));
 
 /**
  * Petite ligne « Photo : Auteur · Licence · Wikimedia Commons » (liens vers la licence et la page du fichier), remplie
  * quand le crédit est connu ; cachée pour une photo qui n'en a pas besoin (photo du joueur…). `el.set(url)` change de photo.
- * { hold: true } (quiz) : seulement la source avant la réponse (l'auteur ou la page du fichier pourraient donner la
- * réponse), tout le crédit avec `el.reveal()`.
+ * { hold: true } (quiz) : auteur et licence affichés tout de suite (crédit complet), mais le lien vers la page du fichier
+ * (dont le titre donne la réponse) seulement après la réponse, avec `el.reveal()`. Les photos du quiz dont l'auteur
+ * donnerait la réponse (constructeur…) sont écartées avant (`quizPhotos` de net.js).
  */
 export function creditLine(url = null, { hold = false } = {}) {
   const el = h("div.photo-credit");
@@ -88,8 +100,8 @@ export function creditLine(url = null, { hold = false } = {}) {
     el.hidden = !cur;
     if (!cur) { el.replaceChildren(); return; }
     const parts = [h("span", "Photo :"), " "];
-    if (open && cur.author) parts.push(h("span", { "data-notr": "" }, cur.author), " · ");
-    if (open && cur.license) parts.push(h("span", { "data-notr": "" }, link(cur.licenseUrl, cur.license)), " · ");
+    if (cur.author) parts.push(h("span", { "data-notr": "" }, cur.author), " · ");
+    if (cur.license) parts.push(h("span", { "data-notr": "" }, link(cur.licenseUrl, cur.license)), " · ");
     parts.push(link(cur.pageUrl, cur.site, open));
     el.replaceChildren(...parts);
   };
