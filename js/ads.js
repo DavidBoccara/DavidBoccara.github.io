@@ -8,9 +8,10 @@
 //   (protection des mineurs, DSA art. 28) ; Plane GO ne transmet aucune donnée du compte à Google ;
 // - consentement : message certifié de Google (« Confidentialité et messages », IAB TCF v2.2), affiché par le script
 //   d'AdSense, chargé seulement à l'ouverture du feed ; « Choix cookies et pub » (adChoices) permet de changer d'avis ;
-// - rien n'est chargé tant qu'ADSENSE (identifiants) et LEGAL (adresse, téléphone) ne sont pas remplis dans config.js.
+// - rien n'est chargé tant que l'interrupteur ADS_ENABLED est à false, ni tant qu'ADSENSE (identifiants) et LEGAL
+//   (adresse, téléphone) ne sont pas remplis dans config.js.
 import { h, modal } from "./util.js";
-import { ADSENSE, LEGAL, onGithubPages } from "./config.js";
+import { ADS_ENABLED, ADSENSE, LEGAL, onGithubPages } from "./config.js";
 
 export const AD_FIRST = 4; // première annonce après la 4e publication
 export const AD_EVERY = 8; // puis une annonce toutes les 8 publications
@@ -19,7 +20,7 @@ export const AD_EVERY = 8; // puis une annonce toutes les 8 publications
 export const legalComplete = () => !!(LEGAL.editor && LEGAL.address && LEGAL.phone);
 /** La publicité est-elle en service ? */
 // Publicité seulement sur plane-go.com (le compte AdSense ne couvre pas la copie GitHub Pages)
-export const adsOn = () => !!(ADSENSE.client && ADSENSE.slot && legalComplete()) && !onGithubPages();
+export const adsOn = () => ADS_ENABLED && !!(ADSENSE.client && ADSENSE.slot && legalComplete()) && !onGithubPages();
 
 let script = null;
 /** Charge le script d'AdSense (une seule fois), qui affiche aussi le message de consentement de Google. */

@@ -18,6 +18,12 @@ export const LEGAL = {
   siren: "",                 // numéro SIREN (micro-entreprise), s'il y en a un
 };
 
+// Interrupteur général de la publicité : false = aucune publicité et aucun script de Google, quoi qu'il y ait dans
+// ADSENSE et LEGAL. Coupée le 7/11/2026 à la demande du propriétaire : les données des avions d'adsb.fi sont réservées
+// à un usage « personnel et non commercial ». Ne la remettre à true qu'avec l'accord écrit d'adsb.fi, ou après être passé
+// à adsb.lol comme source principale (licence ODbL, accord demandé par mail le 7/11/2026).
+export const ADS_ENABLED = false;
+
 // Publicité Google AdSense dans le feed. Vide = aucune publicité et aucun script de Google chargé.
 // client : identifiant d'éditeur « ca-pub-… » ; slot : numéro du bloc d'annonces ; layoutKey : clé de mise en page
 // d'un bloc « In-feed » (vide = bloc d'annonces display ordinaire, adaptatif).
