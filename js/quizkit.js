@@ -1,5 +1,6 @@
 // Outils communs aux modes du Quiz du ciel : préparation d'une question (nom + photo), mémoire des avions
 // déjà proposés en entraînement, note « Comment le reconnaître » après une erreur.
+import { creditLine, isAirportData } from "./credits.js";
 import { LOCALE } from "./i18n.js";
 import { h, ls, modal, toast, confirmBox } from "./util.js";
 import { Radar } from "./radar.js";
@@ -135,11 +136,13 @@ setTimeout(() => PhotoFlags.refresh(), 2000);
 export const usablePhotos = (urls) => [...new Set(urls.filter(Boolean))].filter((u) => !PhotoFlags.has(u));
 
 /**
- * Photo d'une question : celle de l'appareil (adsbdb), sinon la photo de l'article Wikipédia du modèle, sinon
- * (photo signalée ou introuvable) une autre photo du modèle sur Wikimedia Commons. null si aucune ne s'affiche.
+ * Photo d'une question : la photo de l'article Wikipédia du modèle, sinon (photo signalée ou introuvable) une autre
+ * photo du modèle sur Wikimedia Commons, toutes sous licence libre et créditées (credits.js). null si aucune ne
+ * s'affiche. ownUrl : photo de l'appareil, utilisée seulement si elle n'est pas d'airport-data.com (dont on n'affiche
+ * que les miniatures, trop petites pour le quiz).
  */
 export async function questionPhoto(ownUrl, wikiQ, name) {
-  for (const u of usablePhotos([ownUrl])) if (await loads(u)) return u;
+  if (ownUrl && !isAirportData(ownUrl)) for (const u of usablePhotos([ownUrl])) if (await loads(u)) return u;
   const wiki = await Wiki.find(wikiQ).catch(() => null);
   for (const u of usablePhotos([wiki?.imageUrl, wiki?.thumbnailUrl])) if (await loads(u)) return u;
   const alt = await Wiki.altPhotos(wiki && !wiki.searchOnly ? wiki.title : name).catch(() => []);
@@ -155,7 +158,8 @@ export async function questionPhoto(ownUrl, wikiQ, name) {
 export function quizPhoto(q, cls = "") {
   const img = h("img.quiz-photo", { src: q.photoUrl, alt: "Photo de l'avion à reconnaître" });
   const flag = h("button.photo-flag", { type: "button", style: { display: "none" }, title: "Signaler une photo qui donne la réponse" }, "Signaler");
-  const wrap = h("div.quiz-photo-wrap" + cls, img, flag);
+  const credit = creditLine(q.photoUrl, { hold: true }); // auteur et licence après la réponse (ils pourraient la donner)
+  const wrap = h("div.quiz-photo-wrap" + cls, img, flag, credit);
   flag.onclick = async (e) => {
     e.stopPropagation();
     if (!(await confirmFlag())) return;
@@ -166,7 +170,7 @@ export function quizPhoto(q, cls = "") {
       : n >= FLAG_MIN ? `Merci ! ${n} joueurs l'ont signalée : elle est remplacée pour tout le monde`
       : `Merci ! Signalée par ${n} joueur${n > 1 ? "s" : ""} sur les ${FLAG_MIN} nécessaires. Tu ne la reverras plus.`, 5000);
   };
-  wrap.showFlag = () => { flag.style.display = ""; };
+  wrap.showFlag = () => { flag.style.display = ""; credit.reveal(); };
   return wrap;
 }
 

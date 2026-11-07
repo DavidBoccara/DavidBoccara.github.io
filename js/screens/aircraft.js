@@ -1,4 +1,5 @@
 // Fiche d'un avion du radar : photo, provenance, vol en direct, approche, capture, Wikipédia.
+import { creditLine } from "../credits.js";
 import { DEC } from "../i18n.js";
 import { h, meters, cardinal, direction, dec, rarityMark } from "../util.js";
 import { compassRose, nextMark } from "../compass.js";
@@ -28,8 +29,8 @@ export function aircraftPage(view, [hex]) {
     return () => { done = true; stopWait(); inner?.(); };
   }
   let extra = Radar.extras.get(hex) || null;
-  const photo = h("img.cover", { alt: "Photo de l'appareil", style: { display: "none", maxHeight: "300px", borderRadius: "16px" } });
-  const credit = h("div.small.dim", { style: { display: "none" } }, "Photo de l'appareil : adsbdb / planespotters.net");
+  const photo = h("img.ad-thumb", { alt: "Photo de l'appareil", style: { display: "none" } });
+  const credit = creditLine();
   const name = h("h2", { style: { margin: "12px 0 0" } });
   const prov = h("div.kv.small");
   const appr = h("div", { style: { fontWeight: 700, color: "var(--green)", whiteSpace: "pre-line" } });
@@ -45,6 +46,7 @@ export function aircraftPage(view, [hex]) {
   const camBtn = h("button.btn.primary.grow", { onclick: () => capture(true) }, "Photographier cet avion");
   const flight = h("div.kv.small");
   const wikiImg = h("img.cover", { alt: "", style: { display: "none", maxHeight: "240px", borderRadius: "12px" } });
+  const wikiCredit = creditLine();
   const wikiTitle = h("h3", { style: { margin: "8px 0 0" } });
   const wikiKind = h("div.small", { style: { color: "var(--cyan)" } });
   const wikiText = h("p.small", "Recherche sur Wikipédia…");
@@ -58,7 +60,7 @@ export function aircraftPage(view, [hex]) {
     h("div.row.mt", camBtn, h("button.btn.outline", { onclick: () => capture(false) }, "Galerie")),
     h("div.section", "Vol en direct"), flight,
     h("a.btn.outline.mt", { href: `https://globe.airplanes.live/?icao=${hex.toLowerCase()}`, target: "_blank", rel: "noopener", style: { display: "inline-block", textDecoration: "none" } }, "Voir sur la carte"),
-    h("div.section", "Wikipédia"), wikiImg, wikiTitle, wikiKind, wikiText, wikiBtn,
+    h("div.section", "Wikipédia"), wikiImg, wikiCredit, wikiTitle, wikiKind, wikiText, wikiBtn,
   );
 
   const spotted = () => spottedFrom(ac, extra, Radar.location?.lat, Radar.location?.lon);
@@ -135,7 +137,7 @@ export function aircraftPage(view, [hex]) {
 
   Radar.extra(ac).then((x) => {
     extra = x; renderHeader(); renderCollection();
-    if (x?.info?.photoUrl) { photo.src = x.info.photoUrl; photo.onload = () => { photo.style.display = "block"; credit.style.display = ""; }; }
+    if (x?.info?.photoThumb) { photo.onload = () => { photo.style.display = "block"; credit.set(x.info.photoThumb); }; photo.src = x.info.photoThumb; }
   });
   Wiki.find(wikiQuery.ac(ac)).then((s) => {
     if (!s) { wikiText.textContent = "Aucun article Wikipédia trouvé pour ce modèle."; return; }
@@ -144,7 +146,7 @@ export function aircraftPage(view, [hex]) {
     wikiBtn.href = s.pageUrl; wikiBtn.style.display = "inline-block";
     if (s.searchOnly) wikiBtn.textContent = "Chercher sur Wikipédia";
     const src = s.imageUrl || s.thumbnailUrl;
-    if (src) { wikiImg.onerror = () => { if (wikiImg.src !== s.thumbnailUrl) wikiImg.src = s.thumbnailUrl; }; wikiImg.src = src; wikiImg.style.display = "block"; }
+    if (src) { wikiImg.onerror = () => { if (wikiImg.src !== s.thumbnailUrl) wikiImg.src = s.thumbnailUrl; }; wikiImg.src = src; wikiImg.style.display = "block"; wikiCredit.set(src); }
   });
   // ---------- Photos de l'appareil photo branché (appli Android 1.17+) ----------
   // Elles apparaissent ici dès qu'elles sont prises : × pour supprimer une photo ratée, toucher pour la voir en grand,

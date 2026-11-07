@@ -5,6 +5,7 @@
 // Difficulté et gains selon le grade (FLY_LEVELS), série de bonnes réponses avec multiplicateur, et bonus
 // « Vérifié en vrai » si l'on photographie ensuite l'avion trouvé (Hunts, store.js). Une fois par avion et par jour.
 // Calcul : approach() de game.js (ligne droite à la vitesse sol, comme le Scanner), position exacte du téléphone.
+import { creditLine } from "../credits.js";
 import { LOCALE, LANG, DEC } from "../i18n.js";
 import { h, toast, cardinal, bearingDeg, distanceKm, ls } from "../util.js";
 import { Radar } from "../radar.js";
@@ -444,9 +445,10 @@ export function flybyGame(view) {
     const leftMin = (leftKm / (ac.speedKt * 1.852)) * 60 + 10; // + descente et approche
     let guess = null;
     const photo = h("img.dest-photo", { alt: "", referrerPolicy: "no-referrer", style: { display: "none" } });
+    const photoCredit = creditLine();
     const model = h("div.dest-model", prettyModel(ac.description) || ac.type || "Avion");
     const company = h("div.small.dim", route.airline || ac.operator || "");
-    const card = h("div.card.pad.dest-card", photo, h("div.dest-cs", acLabel(ac)), model, company,
+    const card = h("div.card.pad.dest-card", photo, photoCredit, h("div.dest-cs", acLabel(ac)), model, company,
       h("div.dest-facts",
         fact("Vient de", airport(o)),
         fact("Cap", `${Math.round(ac.trackDeg)}° (${cardinal(ac.trackDeg)})`),
@@ -457,8 +459,8 @@ export function flybyGame(view) {
       const info = x?.info;
       if (!company.textContent && info?.owner) company.textContent = info.owner;
       // Photo de l'appareil (avec la livrée de la compagnie), sinon celle du modèle
-      if (info?.photoUrl) { photo.src = info.photoUrl; photo.style.display = ""; }
-      else Wiki.find(wikiQuery.ac(ac)).then((w) => { if (w?.thumbnailUrl) { photo.src = w.imageUrl || w.thumbnailUrl; photo.style.display = ""; } }).catch(() => {});
+      if (info?.photoThumb) { photo.classList.add("ad-thumb"); photo.src = info.photoThumb; photo.style.display = ""; photoCredit.set(info.photoThumb); }
+      else Wiki.find(wikiQuery.ac(ac)).then((w) => { if (w?.thumbnailUrl) { const u = w.imageUrl || w.thumbnailUrl; photo.src = u; photo.style.display = ""; photoCredit.set(u); } }).catch(() => {});
     }).catch(() => {});
 
     // Aide : cône dans la direction de l'avion (assez large pour contenir l'arrivée, sans être centré dessus)

@@ -169,6 +169,12 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 @keyframes spin { to { transform: rotate(360deg); } }
 .list > * + * { margin-top: 8px; }
 img.cover { width: 100%; display: block; object-fit: cover; background: var(--card-2); border-radius: 6px; }
+/* Miniature d'une photo d'appareil airport-data.com (via adsbdb) : affichée à sa taille, jamais agrandie (credits.js) */
+img.ad-thumb { width: auto; max-width: 100%; height: auto; max-height: 200px; object-fit: contain; display: block; border-radius: 6px; background: var(--card-2); }
+/* Crédit d'une photo ou d'une source de données (auteur, licence, liens) : petit, discret */
+.photo-credit { font-size: 11px; line-height: 1.4; color: var(--faint); margin-top: 4px; overflow-wrap: anywhere; }
+.photo-credit a { color: var(--dim); text-decoration: underline; text-underline-offset: 2px; }
+.photo-credit[hidden] { display: none; }
 
 /* Rareté : barres de 1 à 5 (couleur de la rareté) + libellé en capitales */
 .rmark { display: inline-flex; align-items: center; gap: 8px; font: 500 11px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; }

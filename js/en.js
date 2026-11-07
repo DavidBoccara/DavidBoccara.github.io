@@ -1377,4 +1377,9 @@ export const EN = [
   ["Au grade {1} :", "At rank {1}:"],
   ["{1} question bonus", "{1} bonus question"],
   ["infini", "infinite"],
+  ["Photo :", "Photo:"],
+  ["Données des avions :", "Aircraft data:"],
+  ["Recherche de lieux :", "Place search:"],
+  ["© les contributeurs d'OpenStreetMap", "© OpenStreetMap contributors"],
+  ["Données et images d'autres sources, propriété de leurs auteurs : positions des avions (adsb.fi, adsb.lol), fiches des appareils (adsbdb) et leurs miniatures (airport-data.com), articles et photos de Wikipédia et Wikimedia Commons (licences libres : auteur et licence indiqués sous chaque photo), recherche de lieux (© les contributeurs d'OpenStreetMap, licence ODbL).", "Data and images from other sources, property of their authors: aircraft positions (adsb.fi, adsb.lol), aircraft records (adsbdb) and their thumbnails (airport-data.com), Wikipedia and Wikimedia Commons articles and photos (free licences: author and licence shown under each photo), place search (© OpenStreetMap contributors, ODbL licence)."],
 ];

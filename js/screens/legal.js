@@ -63,7 +63,7 @@ export function legalPage(view) {
       list(
         "Le nom Plane GO, son logo, sa présentation et son code appartiennent à son éditeur : pas de reproduction sans autorisation.",
         h("span", "Les photos publiées par les joueurs restent la propriété de leurs auteurs (voir les ", h("a", { href: "#terms" }, "Conditions d'utilisation"), ")."),
-        "Données et images d'autres sources, propriété de leurs auteurs : positions des avions (adsb.fi, adsb.lol), fiches des appareils et leurs photos (adsbdb, planespotters.net), articles et photos de Wikipédia et Wikimedia Commons (licences libres ; auteurs et licences indiqués sur Wikimedia Commons).",
+        "Données et images d'autres sources, propriété de leurs auteurs : positions des avions (adsb.fi, adsb.lol), fiches des appareils (adsbdb) et leurs miniatures (airport-data.com), articles et photos de Wikipédia et Wikimedia Commons (licences libres : auteur et licence indiqués sous chaque photo), recherche de lieux (© les contributeurs d'OpenStreetMap, licence ODbL).",
       )),
 
     sec("Signaler un contenu illicite",

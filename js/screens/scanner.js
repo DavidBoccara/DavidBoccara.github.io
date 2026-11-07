@@ -1,4 +1,5 @@
 // Onglet Scanner : radar en direct, réglages de zone, filtre de notifications.
+import { creditLine, dataSources } from "../credits.js";
 import { LOCALE, LANG, t } from "../i18n.js";
 import { h, icon, meters, modal, toast, rarityMark, cardinal, dec, dragSlider } from "../util.js";
 import { compassRose, nextMark } from "../compass.js";
@@ -65,7 +66,7 @@ export function scanner(view) {
   const rose = compassRose({ size: 190, explain: "Chaque point de couleur est un avion de la liste (couleur de sa rareté, rouge pour un militaire) ; sa vignette porte une pastille de la même couleur. Plus le point est près du centre, plus l'avion est proche de vous. Le petit cercle orange montre où le prochain avion deviendra visible, et le trait qui part de l'avion montre dans quel sens il va." });
   // Sur ordinateur, deux colonnes : réglages et rose des vents à gauche, liste des avions à droite (une seule sur téléphone)
   view.append(h("div.scan-head", h("div.grow", h("div.kicker", "Scanner"), h("h1.title", "Le ciel autour de vous")), h("div.scan-tools", infoBtn, camBtn)), h("div.scan-layout", h("div.scan-side",
-    locBox, warn, status,
+    locBox, warn, status, dataSources(),
     h("div.scan-rose", rose.el), // grande rose des vents, centrée, sous l'état du radar
     slider("Zone de détection", Prefs.RADIUS_STEPS, Prefs.radiusM, (v) => { Prefs.radiusM = v; pushConfig(); }),
     slider("Zone visible à l'œil nu", Prefs.VISIBLE_STEPS, Prefs.visibleM, (v) => { Prefs.visibleM = v; pushConfig(); render(); }),
@@ -191,7 +192,7 @@ export function scanner(view) {
       const rText = caught.has(ac.hex) ? `${r.label} · ✓ attrapé` : `${r.label} · ${r.xp} XP`;
       if (rarKey !== r.label + rText) { rarKey = r.label + rText; rar.replaceChildren(rarityMark(r, rText)); }
       // Photo cherchée une fois, puis seulement si la fiche de l'appareil arrive avec sa propre photo
-      const pk = extra?.info?.photoUrl || "";
+      const pk = extra?.info?.photoThumb || "";
       if (photoKey !== pk) { photoKey = pk; setPhoto(thumb, ac, extra); }
       return el;
     } };
@@ -250,7 +251,7 @@ const photos = new Map(); // hex -> { url, from: "adsbdb" | "wiki" }
 
 function setPhoto(img, ac, extra) {
   const show = (url) => { if (url && img.getAttribute("src") !== url) img.src = url; };
-  const own = extra?.info?.photoUrl;
+  const own = extra?.info?.photoThumb;
   const known = photos.get(ac.hex);
   if (own && known?.from !== "adsbdb") photos.set(ac.hex, { url: own, from: "adsbdb" });
   const cur = photos.get(ac.hex);
@@ -446,10 +447,12 @@ async function showNearest(ac, loc) {
     await showAircraftNotification(ac, approachOf(ac, loc)); toast("Notification envoyée"); return false;
   } });
   buttons.push({ label: "Voir la fiche ›", primary: true, onClick: () => { go("ac/" + ac.hex); } });
-  modal({ title: `${acLabel(ac)}`, body: [img, name, h("div.kv.small.mt", lines.join("\n"))], buttons });
+  const credit = creditLine();
+  modal({ title: `${acLabel(ac)}`, body: [img, credit, name, h("div.kv.small.mt", lines.join("\n"))], buttons });
   const extra = await Radar.extra(ac).catch(() => null);
-  const wiki = extra?.info?.photoUrl ? null : await Wiki.find(wikiQuery.ac(ac)).catch(() => null);
-  const src = extra?.info?.photoUrl || wiki?.imageUrl || wiki?.thumbnailUrl;
-  if (src) { img.onload = () => { img.style.display = "block"; }; img.src = src; }
+  const wiki = await Wiki.find(wikiQuery.ac(ac)).catch(() => null);
+  // Photo du modèle (Wikimedia, en grand) ; sinon la miniature de l'appareil (airport-data), à sa taille
+  const src = wiki?.imageUrl || wiki?.thumbnailUrl || extra?.info?.photoThumb;
+  if (src) { img.classList.toggle("ad-thumb", src === extra?.info?.photoThumb); img.onload = () => { img.style.display = "block"; credit.set(src); }; img.src = src; }
   if (extra?.info && !ac.description) name.textContent = prettyModel(`${extra.info.manufacturer} ${extra.info.model}`) || name.textContent;
 }

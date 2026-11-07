@@ -1,4 +1,5 @@
 // Données en ligne : avions ADS-B (via le relais Supabase), adsbdb, Wikipédia.
+import { photoCredit, safeLicense } from "./credits.js";
 import { LANG } from "./i18n.js";
 import { Supa } from "./supa.js";
 import { distanceKm, bearingDeg, ls, sleep } from "./util.js";
@@ -79,7 +80,9 @@ export const AdsbDb = {
     const info = a && typeof a === "object" ? {
       manufacturer: a.manufacturer || "", model: a.type || "", owner: a.registered_owner || "",
       countryName: a.registered_owner_country_name || "", countryIso: a.registered_owner_country_iso_name || "",
-      photoUrl: a.url_photo || null,
+      // photoUrl (grande photo) ne sert qu'à vérifier les photos des joueurs (verify.js) ; à l'écran, seulement la
+      // miniature photoThumb, avec le crédit airport-data.com (le site réserve les grandes photos à ses pages)
+      photoUrl: a.url_photo || null, photoThumb: a.url_photo_thumbnail || null,
     } : null;
     infoCache.set(key, info);
     return info;
@@ -184,30 +187,35 @@ async function langLink(lang, title, target) {
   for (const p of Object.values(j.query?.pages || {})) if (p.langlinks?.length) return p.langlinks[0]["*"];
   return null;
 }
-export async function commonsPhoto(query) {
+/**
+ * Photos JPEG d'une recherche sur Wikimedia Commons, avec leur licence : [{ thumb, license, title }] dans l'ordre de
+ * la recherche. Vues de détail (cockpit, cabine, moteur…), maquettes et schémas écartées.
+ */
+const NOT_A_PLANE = /cockpit|cabin|cabine|interior|int[ée]rieur|seat|si[èe]ge|engine|moteur|logo|maquette|model|diagram|drawing|sch[ée]ma|map|carte|galley|lavatory|wheel|landing.gear|tail|d[ée]rive|wing|aile/i;
+async function commonsSearch(query, limit, width) {
   const q = (query || "").trim();
-  if (!q) return null;
-  const j = await wget(`https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=8&gsrsearch=${enc(q + " filetype:bitmap")}&prop=imageinfo&iiprop=url|mime&iiurlwidth=400`);
-  const pages = Object.values(j.query?.pages || {}).sort((a, b) => (a.index ?? 99) - (b.index ?? 99));
-  for (const p of pages) {
-    const info = p.imageinfo?.[0];
-    if (info?.mime !== "image/jpeg" || !info.thumburl) continue;
-    return [info.thumburl, info.thumburl.replace(/\/\d+px-/, "/1024px-")];
-  }
-  return null;
+  if (!q) return [];
+  const j = await wget(`https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=${limit}&gsrsearch=${enc(q + " filetype:bitmap")}`
+    + `&prop=imageinfo&iiprop=url|mime|extmetadata&iiextmetadatafilter=LicenseShortName&iiurlwidth=${width}`);
+  return Object.values(j.query?.pages || {}).sort((a, b) => (a.index ?? 99) - (b.index ?? 99))
+    .filter((p) => p.imageinfo?.[0]?.mime === "image/jpeg" && p.imageinfo[0].thumburl && !NOT_A_PLANE.test(p.title || ""))
+    .map((p) => ({ thumb: p.imageinfo[0].thumburl, title: p.title, license: p.imageinfo[0].extmetadata?.LicenseShortName?.value || "" }));
+}
+/** Photos sous licence sans risque (credits.js) d'abord, les autres ensuite (affichées avec leur crédit complet). */
+const safeFirst = (list) => [...list.filter((x) => safeLicense(x.license)), ...list.filter((x) => !safeLicense(x.license))];
+
+/** Une photo du modèle sur Commons : [miniature 400 px, grande 1024 px] ; safeOnly = seulement licence sans risque. */
+export async function commonsPhoto(query, { safeOnly = false } = {}) {
+  const list = safeFirst(await commonsSearch(query, 8, 400));
+  const p = safeOnly ? list.find((x) => safeLicense(x.license)) : list[0];
+  return p ? [p.thumb, p.thumb.replace(/\/\d+px-/, "/1024px-")] : null;
 }
 /**
  * Plusieurs photos d'un modèle sur Wikimedia Commons (JPEG, 800 px), pour remplacer une photo du quiz signalée
- * ou introuvable. On écarte les vues de détail (cockpit, cabine, moteur…), les maquettes et les schémas.
+ * ou introuvable ; licences sans risque d'abord.
  */
-const NOT_A_PLANE = /cockpit|cabin|cabine|interior|int[ée]rieur|seat|si[èe]ge|engine|moteur|logo|maquette|model|diagram|drawing|sch[ée]ma|map|carte|galley|lavatory|wheel|landing.gear|tail|d[ée]rive|wing|aile/i;
 export async function commonsPhotos(query, limit = 15) {
-  const q = (query || "").trim();
-  if (!q) return [];
-  const j = await wget(`https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrnamespace=6&gsrlimit=${limit}&gsrsearch=${enc(q + " filetype:bitmap")}&prop=imageinfo&iiprop=url|mime&iiurlwidth=800`);
-  return Object.values(j.query?.pages || {}).sort((a, b) => (a.index ?? 99) - (b.index ?? 99))
-    .filter((p) => p.imageinfo?.[0]?.mime === "image/jpeg" && p.imageinfo[0].thumburl && !NOT_A_PLANE.test(p.title || ""))
-    .map((p) => p.imageinfo[0].thumburl);
+  return safeFirst(await commonsSearch(query, limit, 800)).map((x) => x.thumb);
 }
 const altMem = new Map();
 
@@ -222,7 +230,22 @@ async function withPhoto(s) {
   return p ? { ...s, thumbnailUrl: p[0], imageUrl: p[1] } : s;
 }
 
-const WIKI_KEY = "wiki_cache_v3" + (LANG === "en" ? "_en" : ""), RETRY_MS = 7 * 86400e3;
+/**
+ * Photo de l'article sous une licence ancienne (CC BY-SA 2.0, 3.0…) : on prend plutôt une photo du même modèle sous
+ * licence sans risque (domaine public, CC0, Creative Commons 4.0) si Commons en a une ; sinon on garde celle de
+ * l'article, affichée avec son crédit complet (credits.js). Licence inconnue (hors ligne) : on garde.
+ */
+async function preferSafePhoto(s) {
+  if (!s?.thumbnailUrl) return s;
+  const c = await photoCredit(s.thumbnailUrl).catch(() => null);
+  if (!c?.license || safeLicense(c.license)) return s;
+  const p = await safe(commonsPhoto(s.title, { safeOnly: true }));
+  return p ? { ...s, thumbnailUrl: p[0], imageUrl: p[1] } : s;
+}
+
+// v4 : photos choisies selon leur licence (preferSafePhoto) ; l'ancien cache est effacé
+const WIKI_KEY = "wiki_cache_v4" + (LANG === "en" ? "_en" : ""), RETRY_MS = 7 * 86400e3;
+try { localStorage.removeItem("wiki_cache_v3" + (LANG === "en" ? "_en" : "")); } catch { /* stockage bloqué */ }
 const wikiMem = new Map(), inflight = new Map();
 let running = 0; const queue = [];
 const gate = () => new Promise((res) => { if (running < 3) { running++; res(); } else queue.push(res); });
@@ -251,7 +274,7 @@ export const Wiki = {
       try {
         const queries = modelQueries(type, model, military, null);
         let s = (await findExact(queries)) || (await findModel(queries));
-        if (s) s = await withPhoto(s);
+        if (s) s = await preferSafePhoto(await withPhoto(s));
         if (!s) {
           const name = title || model || type;
           const photo = await safe(commonsPhoto(name));
