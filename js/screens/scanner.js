@@ -5,7 +5,7 @@ import { h, icon, meters, modal, toast, rarityMark, cardinal, dec, dragSlider } 
 import { compassRose, nextMark } from "../compass.js";
 import { Radar, showAircraftNotification, approachOf, approxPlace, approxLabel, mayBeVisible } from "../radar.js";
 import { Prefs, Collection } from "../store.js";
-import { Adsb, Wiki } from "../net.js";
+import { Adsb, Wiki, aircraftPhotos } from "../net.js";
 import { wikiQuery, locationBadge, defaultLocationAlert } from "../ui.js";
 import { KINDS, MODELS, filterMatches, UNCERTAIN_TEXT, rarityOf, rarityOfAc, approach, approachSortKey, acLabel, fmtDistance, fmtAltitude, fmtSpeed, prettyModel } from "../game.js";
 import { go } from "../app.js";
@@ -191,9 +191,9 @@ export function scanner(view) {
       txt(nm, model);
       const rText = caught.has(ac.hex) ? `${r.label} · ✓ attrapé` : `${r.label} · ${r.xp} XP`;
       if (rarKey !== r.label + rText) { rarKey = r.label + rText; rar.replaceChildren(rarityMark(r, rText)); }
-      // Photo cherchée une fois, puis seulement si la fiche de l'appareil arrive avec sa propre photo
-      const pk = extra?.info?.photoThumb || "";
-      if (photoKey !== pk) { photoKey = pk; setPhoto(thumb, ac, extra); }
+      // Photo du modèle (Wikipédia) cherchée une fois, ou de nouveau si le modèle de l'avion change
+      const pk = ac.type || ac.description || "";
+      if (photoKey !== pk) { photoKey = pk; setPhoto(thumb, ac); }
       return el;
     } };
   }
@@ -247,23 +247,15 @@ function arrow(deg) {
 // ---------- Photos des avions de la liste ----------
 // Par avion : photo de l'appareil (adsbdb), sinon photo Wikipédia du modèle. Gardée en mémoire
 // pour ne pas clignoter à chaque rafraîchissement du radar.
-const photos = new Map(); // hex -> { url, from: "adsbdb" | "wiki" }
-
-function setPhoto(img, ac, extra) {
+// Vignettes de la liste : photo du modèle, tirée de l'article Wikipédia (Wikimedia, licence libre, crédit dans la fiche).
+// Pas de recherche Commons de l'appareil précis ici : il y aurait une recherche par avion de la liste.
+const photos = new Map(); // hex -> adresse de la miniature
+function setPhoto(img, ac) {
   const show = (url) => { if (url && img.getAttribute("src") !== url) img.src = url; };
-  const own = extra?.info?.photoThumb;
-  const known = photos.get(ac.hex);
-  if (own && known?.from !== "adsbdb") photos.set(ac.hex, { url: own, from: "adsbdb" });
+  img.onerror = () => { img.removeAttribute("src"); photos.delete(ac.hex); };
   const cur = photos.get(ac.hex);
-  const wiki = () => Wiki.find(wikiQuery.ac(ac)).then((s) => {
-    if (s?.thumbnailUrl && photos.get(ac.hex)?.from !== "adsbdb") { photos.set(ac.hex, { url: s.thumbnailUrl, from: "wiki" }); show(s.thumbnailUrl); }
-  }).catch(() => {});
-  // Si la photo de l'appareil ne se charge pas, on se rabat sur celle du modèle
-  img.onerror = () => {
-    img.removeAttribute("src");
-    if (photos.get(ac.hex)?.from === "adsbdb") { photos.delete(ac.hex); wiki(); }
-  };
-  if (cur) show(cur.url); else wiki();
+  if (cur) { show(cur); return; }
+  Wiki.find(wikiQuery.ac(ac)).then((s) => { if (s?.thumbnailUrl) { photos.set(ac.hex, s.thumbnailUrl); show(s.thumbnailUrl); } }).catch(() => {});
 }
 
 /** Réglage de distance : on fait glisser le rond (un toucher sur la barre ne change rien, voir dragSlider). */
@@ -433,7 +425,7 @@ async function showNearest(ac, loc) {
   Radar.pin(ac);
   const r = rarityOfAc(ac);
   const name = h("div", { style: { fontWeight: 800, fontSize: "18px" } }, prettyModel(ac.description || ac.type) || "Type inconnu");
-  const img = h("img.cover", { alt: "", style: { display: "none", borderRadius: "12px", maxHeight: "180px" } });
+  const img = h("img.cover", { alt: "", style: { display: "none", objectFit: "contain", maxHeight: "200px" } });
   const lines = [
     ac.military ? "Avion militaire" : null,
     `${r.stars} ${r.label}`,
@@ -450,9 +442,18 @@ async function showNearest(ac, loc) {
   const credit = creditLine();
   modal({ title: `${acLabel(ac)}`, body: [img, credit, name, h("div.kv.small.mt", lines.join("\n"))], buttons });
   const extra = await Radar.extra(ac).catch(() => null);
-  const wiki = await Wiki.find(wikiQuery.ac(ac)).catch(() => null);
-  // Photo du modèle (Wikimedia, en grand) ; sinon la miniature de l'appareil (airport-data), à sa taille
-  const src = wiki?.imageUrl || wiki?.thumbnailUrl || extra?.info?.photoThumb;
-  if (src) { img.classList.toggle("ad-thumb", src === extra?.info?.photoThumb); img.onload = () => { img.style.display = "block"; credit.set(src); }; img.src = src; }
+  // Photo libre de cet appareil (ou du modèle aux couleurs de sa compagnie, Wikimedia Commons), sinon celle de l'article
+  // Wikipédia du modèle ; jamais airport-data (pas de licence libre). La recherche Commons attend 6 s au plus.
+  const [own, wiki] = await Promise.all([
+    Promise.race([aircraftPhotos({ registration: ac.registration, airline: extra?.route?.airline || ac.operator || extra?.info?.owner,
+      model: prettyModel(ac.description || "") }).catch(() => null), new Promise((r) => setTimeout(() => r(null), 6000))]),
+    Wiki.find(wikiQuery.ac(ac)).catch(() => null),
+  ]);
+  const srcs = [...(own?.urls || []).slice(0, 2), wiki?.imageUrl, wiki?.thumbnailUrl].filter(Boolean);
+  let i = 0;
+  const next = () => { if (i < srcs.length) img.src = srcs[i++]; };
+  img.onload = () => { img.style.display = "block"; credit.set(srcs[i - 1]); };
+  img.onerror = next;
+  next();
   if (extra?.info && !ac.description) name.textContent = prettyModel(`${extra.info.manufacturer} ${extra.info.model}`) || name.textContent;
 }

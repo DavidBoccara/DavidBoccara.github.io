@@ -8,7 +8,7 @@ import { Wiki } from "../net.js";
 import { Collection, Prefs, entryPhotoItems, ALBUM_MAX } from "../store.js";
 import { spottedFrom, computeXp, describeXp, approach, approachLabel, UNCERTAIN_TEXT, acLabel, countryFromHex, modelKey,
   fmtDistance, fmtAltitude, fmtSpeed, prettyModel } from "../game.js";
-import { addPhoto, wikiQuery, photoStrip } from "../ui.js";
+import { addPhoto, wikiQuery, photoStrip, aircraftPhotoBlock } from "../ui.js";
 import { back } from "../app.js";
 import { Camera, claimPhotos, photoFile, liveThumb } from "../camera.js";
 
@@ -29,8 +29,8 @@ export function aircraftPage(view, [hex]) {
     return () => { done = true; stopWait(); inner?.(); };
   }
   let extra = Radar.extras.get(hex) || null;
-  const photo = h("img.ad-thumb", { alt: "Photo de l'appareil", style: { display: "none" } });
-  const credit = creditLine();
+  // Photo libre de cet appareil (ou du modèle aux couleurs de sa compagnie) : Wikimedia Commons, jamais airport-data
+  const photo = aircraftPhotoBlock();
   const name = h("h2", { style: { margin: "12px 0 0" } });
   const prov = h("div.kv.small");
   const appr = h("div", { style: { fontWeight: 700, color: "var(--green)", whiteSpace: "pre-line" } });
@@ -53,7 +53,7 @@ export function aircraftPage(view, [hex]) {
   const wikiBtn = h("a.btn.outline", { target: "_blank", rel: "noopener", style: { display: "none", textDecoration: "none" } }, "Lire l'article complet");
 
   view.append(
-    h("div.row", ac.military && h("span.badge.mil", "MILITAIRE")), photo, credit, name, prov,
+    h("div.row", ac.military && h("span.badge.mil", "MILITAIRE")), photo, name, prov,
     h("div.section", "Où regarder"), h("div.row", { style: { alignItems: "center", gap: "14px" } }, rose.el, where),
     h("div.section", "Approche"), appr, apprSub,
     h("div.section", "Collection"), rarityText, collectText, myPhotos, camInfo, camStrip,
@@ -137,7 +137,7 @@ export function aircraftPage(view, [hex]) {
 
   Radar.extra(ac).then((x) => {
     extra = x; renderHeader(); renderCollection();
-    if (x?.info?.photoThumb) { photo.onload = () => { photo.style.display = "block"; credit.set(x.info.photoThumb); }; photo.src = x.info.photoThumb; }
+    photo.load({ registration: ac.registration, airline: x?.route?.airline || ac.operator || x?.info?.owner, model: prettyModel(ac.description || "") });
   });
   Wiki.find(wikiQuery.ac(ac)).then((s) => {
     if (!s) { wikiText.textContent = "Aucun article Wikipédia trouvé pour ce modèle."; return; }

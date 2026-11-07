@@ -170,7 +170,6 @@ input[type=range] { width: 100%; accent-color: var(--accent); }
 .list > * + * { margin-top: 8px; }
 img.cover { width: 100%; display: block; object-fit: cover; background: var(--card-2); border-radius: 6px; }
 /* Miniature d'une photo d'appareil airport-data.com (via adsbdb) : affichée à sa taille, jamais agrandie (credits.js) */
-img.ad-thumb { width: auto; max-width: 100%; height: auto; max-height: 200px; object-fit: contain; display: block; border-radius: 6px; background: var(--card-2); }
 /* Crédit d'une photo ou d'une source de données (auteur, licence, liens) : petit, discret */
 .photo-credit { font-size: 11px; line-height: 1.4; color: var(--faint); margin-top: 4px; overflow-wrap: anywhere; }
 .photo-credit a { color: var(--dim); text-decoration: underline; text-underline-offset: 2px; }

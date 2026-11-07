@@ -2,8 +2,9 @@
 // - Wikimedia Commons / Wikipédia : auteur + licence + lien vers la page du fichier. Les licences Creative Commons
 //   l'exigent (sans ce crédit, la photo n'est plus utilisable). Lus dans les métadonnées du fichier (API imageinfo,
 //   extmetadata, origin=*), gardés 30 jours (clé `photo_credits_v1`).
-// - airport-data.com : photos des appareils fournies par adsbdb. Seulement les miniatures (le site réserve les
-//   grandes photos à ses propres pages), avec le crédit.
+// - Plus aucune photo airport-data.com à l'écran (photos de photographes, sans licence libre) : fiches et vignettes
+//   montrent des photos Wikimedia (aircraftPhotos et Wiki.find de net.js). adsbdb les fournit encore, mais elles ne
+//   servent qu'à vérifier les photos des joueurs (verify.js), sans être affichées.
 // - Données des avions : adsb.fi (ses conditions demandent de le citer avec un lien vers son site), adsb.lol, adsbdb ;
 //   recherche de lieux : OpenStreetMap (mention obligatoire).
 import { h, ls } from "./util.js";
@@ -23,9 +24,6 @@ export function wikimediaFile(url) {
   return { host: m[2] === "commons" ? "commons.wikimedia.org" : `${m[2]}.${m[1]}.org`, file: file.replace(/_/g, " ") };
 }
 
-/** Photo d'appareil d'airport-data.com (fournie par adsbdb) ? */
-export const isAirportData = (url) => /^https?:\/\/([a-z0-9-]+\.)*airport-data\.com\//i.test(url || "");
-
 // Texte sans balises (l'auteur est donné en HTML) : DOMParser ne charge rien et n'exécute rien
 const plain = (html) => (html ? new DOMParser().parseFromString(String(html), "text/html").body.textContent.replace(/\s+/g, " ").trim() : "");
 const cut = (s, n) => (s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s);
@@ -34,7 +32,6 @@ const stored = () => { const o = ls.get(KEY, null); return o && typeof o === "ob
 /** Crédit d'une photo : { author, license, licenseUrl, site, pageUrl }, ou null (photo du joueur…). */
 export async function photoCredit(url) {
   if (!url) return null;
-  if (isAirportData(url)) return { author: "", license: "", licenseUrl: "", site: "airport-data.com", pageUrl: "https://www.airport-data.com/" };
   const f = wikimediaFile(url);
   if (!f) return null;
   const k = f.host + "|" + f.file;

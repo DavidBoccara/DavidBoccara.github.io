@@ -219,7 +219,7 @@ export async function pickQuestion(list, { avoid = null, tries = 8, onFail = nul
     const name = quizName(ac, extra);
     if (!name) { onFail?.(ac.hex); continue; }
     const url = await questionPhoto(null, wikiQuery.ac(ac), name,
-      { registration: ac.registration, airline: extra?.route?.airline || extra?.info?.owner || ac.operator, model: prettyModel(ac.description || "") });
+      { registration: ac.registration, airline: extra?.route?.airline || ac.operator || extra?.info?.owner, model: prettyModel(ac.description || "") });
     if (!url) { onFail?.(ac.hex); continue; }
     const q = buildQuestion(ac, extra, url);
     if (!q) { onFail?.(ac.hex); continue; }

@@ -469,7 +469,7 @@ export function flybyGame(view) {
       if (!company.textContent && info?.owner) company.textContent = info.owner;
       const wiki = await Wiki.find(wikiQuery.ac(ac)).catch(() => null);
       const name = prettyModel(ac.description) || ac.type || "";
-      const list = await quizPhotos({ registration: ac.registration, airline: route.airline || info?.owner || ac.operator, model: name, name,
+      const list = await quizPhotos({ registration: ac.registration, airline: route.airline || ac.operator || info?.owner, model: name, name,
         article: wiki && !wiki.searchOnly ? wiki.title : "" }).catch(() => []);
       showPhoto(list.length ? list.slice(0, 3) : [wiki?.imageUrl, wiki?.thumbnailUrl].filter(Boolean));
     }).catch(() => {});

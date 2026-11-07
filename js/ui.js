@@ -2,7 +2,7 @@
 import { creditLine, osmCredit } from "./credits.js";
 import { LOCALE, LANG } from "./i18n.js";
 import { h, modal, toast, icon, infoButton, pickImage, toJpeg, imageKind, exifDate, confirmBox, choose, dateTime, dateDay, dec, rarityMark } from "./util.js";
-import { Wiki, AdsbDb, Places } from "./net.js";
+import { Wiki, AdsbDb, Places, aircraftPhotos } from "./net.js";
 import { shareCard } from "./sharecard.js";
 import { Supa } from "./supa.js";
 import { ensurePhotoRules, requireAccount } from "./photorules.js";
@@ -56,15 +56,41 @@ export function showWiki(q) {
 // ---------- Fiche d'un avion photographié (publication du feed) ----------
 
 /**
+ * Photo libre de cet avion (Wikimedia Commons, `aircraftPhotos` de net.js : cet appareil, sinon le même modèle aux
+ * couleurs de sa compagnie) avec une petite légende et son crédit ; caché tant qu'il n'y a pas de photo. Jamais de photo
+ * airport-data (pas de licence libre). `box.load(ctx)` lance la recherche ({ registration, airline, model }).
+ */
+export function aircraftPhotoBlock(ctx = null) {
+  const img = h("img.cover", { alt: "Photo de l'appareil", style: { objectFit: "contain", maxHeight: "260px" } });
+  const note = h("div.small.dim", { style: { marginTop: "4px" } });
+  const credit = creditLine();
+  const box = h("div.ac-photo", { hidden: true }, img, note, credit);
+  let urls = [], i = 0, cur = null;
+  const next = () => { if (i >= urls.length) { box.hidden = true; return; } cur = urls[i++]; img.src = cur; };
+  img.onload = () => { box.hidden = false; credit.set(cur); };
+  img.onerror = next; // fichier introuvable : photo suivante
+  box.load = (c) => aircraftPhotos(c).then((p) => {
+    if (!p) return;
+    urls = p.urls; i = 0;
+    note.replaceChildren(p.exact ? "Cet appareil" : h("span", h("span", "Même modèle, aux couleurs de"), " ", h("span", { "data-notr": "" }, p.company)));
+    next();
+  }).catch(() => {});
+  if (ctx) box.load(ctx);
+  return box;
+}
+
+/**
  * Infos de l'avion d'une capture, comme dans le Scanner : modèle, rareté, XP, immatriculation, opérateur,
- * pays, trajet, distances, puis la fiche de l'appareil (adsbdb : constructeur, propriétaire, photo)
- * et le résumé Wikipédia du modèle. c : capture (catchFrom) ou objet aux mêmes champs.
+ * pays, trajet, distances, puis la fiche de l'appareil (adsbdb : constructeur, propriétaire), sa photo libre
+ * (Wikimedia Commons) et le résumé Wikipédia du modèle. c : capture (catchFrom) ou objet aux mêmes champs.
  */
 export function aircraftInfoCard(c) {
   const r = c.rarity, model = prettyModel(c.model || c.type) || "Type inconnu";
   const owner = h("div.kv.small");
-  const acPhoto = h("img.ad-thumb", { alt: "Photo de l'appareil", style: { display: "none", marginTop: "8px" } });
-  const credit = creditLine();
+  const acPhoto = aircraftPhotoBlock();
+  acPhoto.style.marginTop = "8px";
+  const photoCtx = (airline) => ({ registration: c.registration, airline, model: c.model || c.type });
+  if (c.operator || !c.hex) acPhoto.load(photoCtx(c.operator));
   const wImg = h("img.cover", { alt: "", style: { display: "none", maxHeight: "200px", borderRadius: "12px" } });
   const wCredit = creditLine();
   const wTitle = h("h3", { style: { margin: "8px 0 0" } });
@@ -84,18 +110,18 @@ export function aircraftInfoCard(c) {
     h("div.section", { style: { marginTop: 0 } }, "L'avion"),
     h("h2", { style: { margin: "4px 0 2px" } }, model, c.military ? " · militaire" : ""),
     h("div", rarityMark(r, `${r.label}${c.xp != null ? ` · ${c.xp > 0 ? "+" + c.xp : 0} XP` : ""}`)),
-    h("div.kv.small.mt", lines.join("\n")), owner, acPhoto, credit,
+    h("div.kv.small.mt", lines.join("\n")), owner, acPhoto,
     live && h("button.btn.primary.block.mt", { onclick: () => go("ac/" + c.hex) }, "Il vole près de vous en ce moment : voir où il est"),
     c.hex && h("a.btn.outline.small.mt", { href: `https://globe.airplanes.live/?icao=${c.hex.toLowerCase().replace(/^~/, "")}`, target: "_blank", rel: "noopener",
       style: { display: "inline-block", textDecoration: "none" } }, "Voir sur la carte en direct"),
     h("div.section", "Wikipédia"), wImg, wCredit, wTitle, wText, wBtn);
-  // Fiche de l'appareil (constructeur, propriétaire, photo de cet avion précis)
+  // Fiche de l'appareil (constructeur, propriétaire) ; sans opérateur connu, la photo attend son propriétaire (compagnie)
   if (c.hex) AdsbDb.aircraft(c.hex).then((info) => {
+    if (!c.operator) acPhoto.load(photoCtx(info?.owner || ""));
     if (!info) return;
     owner.textContent = [info.manufacturer && `Constructeur : ${info.manufacturer}${info.model ? ` ${info.model}` : ""}`,
       info.owner && info.owner !== c.operator && `Propriétaire : ${info.owner}`].filter(Boolean).join("\n");
-    if (info.photoThumb) { acPhoto.onload = () => { acPhoto.style.display = "block"; credit.set(info.photoThumb); }; acPhoto.src = info.photoThumb; }
-  }).catch(() => {});
+  }).catch(() => { if (!c.operator) acPhoto.load(photoCtx("")); });
   Wiki.find({ type: c.type, model: c.model, military: c.military, title: model }).then((s) => {
     if (!s) { wText.textContent = "Aucun article Wikipédia trouvé pour ce modèle."; return; }
     wTitle.textContent = s.title; wText.textContent = s.extract;

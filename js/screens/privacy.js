@@ -10,7 +10,7 @@ import { CONTACT_EMAIL, LEGAL } from "../config.js";
 import { adsOn, adChoices } from "../ads.js";
 import { legalLinks } from "./legal.js";
 
-const UPDATED = "3 novembre 2026";
+const UPDATED = "7 novembre 2026";
 
 export function privacyPage(view) {
   const sec = (title, ...items) => h("div.card.pad.mt.privacy",
@@ -68,7 +68,7 @@ export function privacyPage(view) {
         "Supabase : comptes, base de données et photos, stockés en France, à Paris (serveurs Amazon Web Services « Europe – Paris »).",
         "Cloudflare : hébergement du site plane-go.com (société américaine ; elle voit passer ton adresse internet pour t'envoyer les pages).",
         "GitHub (GitHub Pages) : hébergement de la copie du site davidboccara.github.io (société américaine ; elle voit passer ton adresse internet pour t'envoyer les pages).",
-        "adsb.fi et adsb.lol (positions des avions), adsbdb (fiches des avions), Wikipédia et Wikimedia Commons (articles et photos des modèles) : ils ne reçoivent que des codes d'avions ou une position arrondie.",
+        "adsb.fi et adsb.lol (positions des avions), adsbdb et airport-data.com (fiches des avions ; la photo d'airport-data sert seulement à vérifier que ta photo n'en est pas une copie, elle n'est jamais affichée), Wikipédia et Wikimedia Commons (articles et photos des avions) : ils ne reçoivent que des codes d'avions ou une position arrondie.",
         "OpenAI : écrit les questions bonus du quiz à partir des articles Wikipédia des avions. Il ne reçoit que le texte de l'article, jamais de donnée des joueurs.",
         ads && "Google (régie Google AdSense) : les annonces du feed, voir « Publicité et cookies » ci-dessous.",
       ),

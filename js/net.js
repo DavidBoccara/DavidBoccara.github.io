@@ -80,9 +80,9 @@ export const AdsbDb = {
     const info = a && typeof a === "object" ? {
       manufacturer: a.manufacturer || "", model: a.type || "", owner: a.registered_owner || "",
       countryName: a.registered_owner_country_name || "", countryIso: a.registered_owner_country_iso_name || "",
-      // photoUrl (grande photo) ne sert qu'à vérifier les photos des joueurs (verify.js) ; à l'écran, seulement la
-      // miniature photoThumb, avec le crédit airport-data.com (le site réserve les grandes photos à ses pages)
-      photoUrl: a.url_photo || null, photoThumb: a.url_photo_thumbnail || null,
+      // Photo airport-data.com (photographes, pas de licence libre) : jamais affichée ; sert seulement à vérifier que la
+      // photo d'un joueur n'est pas une copie de celle-ci (verify.js). À l'écran : photos Wikimedia (aircraftPhotos).
+      photoUrl: a.url_photo || null,
     } : null;
     infoCache.set(key, info);
     return info;
@@ -241,6 +241,43 @@ const airlineWord = (s) => (String(s || "").toLowerCase().split(/[^a-z0-9]+/).fi
 const airlineName = (s) => String(s || "").replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/)
   .filter((w) => w && !/^(corporation|company|group|limited|ltd|inc|sa|ag|spa|plc|gmbh|as|asa|ab|nv|bv|srl|llc)$/i.test(w)).join(" ");
 
+// Recherches Commons gardées pour la session (le quiz et les fiches d'un même avion font les mêmes) ; un échec
+// (hors ligne…) n'est pas gardé, pour pouvoir réessayer.
+const searchMem = new Map();
+function searchOnce(q) {
+  if (!searchMem.has(q)) searchMem.set(q, safe(commonsSearch(q, 20, 960)).then((r) => { if (!r) searchMem.delete(q); return r; }));
+  return searchMem.get(q);
+}
+const shuffled = (list) => list.map((x) => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+const pageOf = (title) => `https://commons.wikimedia.org/wiki/${encodeURIComponent(title.replace(/ /g, "_")).replace("%3A", ":")}`;
+/** Garde le crédit lu avec la recherche (credits.js) et renvoie l'adresse de la photo (960 px, taille standard). */
+const credited = (x) => {
+  rememberCredit(x.thumb, { author: x.author.length > 70 ? x.author.slice(0, 69).trimEnd() + "…" : x.author, license: x.license,
+    licenseUrl: x.licenseUrl, site: "Wikimedia Commons", pageUrl: pageOf(x.title) });
+  return x.thumb;
+};
+/**
+ * Recherches Commons d'un avion : cet appareil (immatriculation et désignation du modèle dans le nom du fichier), le même
+ * modèle aux couleurs de sa compagnie, et (withModel) le modèle. Photos sous licence sans risque avec un auteur connu.
+ */
+async function commonsSets({ registration = "", airline = "", model = "", name = "", article = "" }, withModel) {
+  const core = modelCore(model) || modelCore(name) || modelCore(article);
+  const ok = (x) => safeLicense(x.license) && x.author;
+  const hasCore = (x) => !core || flat(x.title).includes(core);
+  const reg = flat(registration), word = airlineWord(airline), company = airlineName(airline);
+  const [byReg, byAirline, byModel] = await Promise.all([
+    reg.length >= 4 ? searchOnce(`"${registration}"`) : null,
+    word && core ? searchOnce(`(${company} OR ${company.replace(/\s+/g, "")}) ${core}`) : null,
+    withModel ? searchOnce(article || model || name) : null,
+  ]);
+  return {
+    reg: (byReg || []).filter((x) => ok(x) && flat(x.title).includes(reg) && hasCore(x)),
+    airline: (byAirline || []).filter((x) => ok(x) && flat(x.title).includes(word) && hasCore(x)),
+    model: (byModel || []).filter((x) => ok(x) && hasCore(x)),
+    company,
+  };
+}
+
 const quizMem = new Map();
 /**
  * Photos libres de l'avion du quiz sur Wikimedia Commons, de la plus précise à la plus générale :
@@ -250,33 +287,33 @@ const quizMem = new Map();
  * Le crédit lu ici est gardé (credits.js) : il s'affiche sous la photo sans nouvelle requête.
  * ctx = { registration, airline, model (désignation ADS-B, ex. « Airbus A220-300 »), name (réponse du quiz), article }.
  */
-export async function quizPhotos({ registration = "", airline = "", model = "", name = "", article = "" }) {
+export async function quizPhotos(ctx) {
+  const { registration = "", airline = "", model = "", name = "", article = "" } = ctx;
   const key = [registration, airline, model, name, article].join("|");
   if (!quizMem.has(key)) quizMem.set(key, (async () => {
-    const core = modelCore(model) || modelCore(name) || modelCore(article);
-    const ok = (x) => safeLicense(x.license) && x.author && !revealsAnswer(x.author, name) && !revealsAnswer(x.author, model);
-    const hasCore = (x) => !core || flat(x.title).includes(core);
-    const reg = flat(registration), word = airlineWord(airline);
-    const [byReg, byAirline, byModel] = await Promise.all([
-      reg.length >= 4 ? safe(commonsSearch(`"${registration}"`, 20, 960)) : null,
-      word && core ? safe(commonsSearch(`(${airlineName(airline)} OR ${airlineName(airline).replace(/\s+/g, "")}) ${core}`, 20, 960)) : null,
-      safe(commonsSearch(article || model || name, 20, 960)),
-    ]);
-    const tiers = [
-      (byReg || []).filter((x) => ok(x) && flat(x.title).includes(reg) && hasCore(x)),
-      (byAirline || []).filter((x) => ok(x) && flat(x.title).includes(word) && hasCore(x)),
-      (byModel || []).filter((x) => ok(x) && hasCore(x)).slice(0, 10),
-    ];
+    const sets = await commonsSets(ctx, true);
+    const fair = (x) => !revealsAnswer(x.author, name) && !revealsAnswer(x.author, model);
     const out = [];
-    for (const t of tiers) for (const x of t.sort(() => Math.random() - 0.5)) {
-      const url = x.thumb; // largeur choisie par l'API (960 px, taille standard)
-      rememberCredit(url, { author: x.author.length > 70 ? x.author.slice(0, 69).trimEnd() + "…" : x.author, license: x.license,
-        licenseUrl: x.licenseUrl, site: "Wikimedia Commons", pageUrl: `https://commons.wikimedia.org/wiki/${encodeURIComponent(x.title.replace(/ /g, "_")).replace("%3A", ":")}` });
+    for (const t of [sets.reg.filter(fair), sets.airline.filter(fair), sets.model.filter(fair).slice(0, 10)]) for (const x of shuffled(t)) {
+      const url = credited(x);
       if (!out.includes(url)) out.push(url);
     }
     return out;
   })());
   return quizMem.get(key);
+}
+
+/**
+ * Photos libres d'un avion pour sa fiche (Scanner, fiche en direct, publication du feed) : cet appareil précis, sinon le
+ * même modèle aux couleurs de sa compagnie. Mêmes règles que le quiz (licence sans risque, auteur connu, crédit gardé).
+ * { urls, exact, company } (exact = photos de cet appareil), ou null s'il n'y en a pas (la fiche montre alors
+ * seulement la photo de l'article Wikipédia du modèle). Remplace les photos airport-data, qui n'ont pas de licence libre.
+ */
+export async function aircraftPhotos(ctx) {
+  const sets = await commonsSets(ctx, false);
+  const exact = sets.reg.length > 0, list = exact ? sets.reg : sets.airline;
+  if (!list.length) return null;
+  return { urls: [...new Set(list.slice(0, 10).map(credited))], exact, company: sets.company };
 }
 /** Photos sous licence sans risque (credits.js) d'abord, les autres ensuite (affichées avec leur crédit complet). */
 const safeFirst = (list) => [...list.filter((x) => safeLicense(x.license)), ...list.filter((x) => !safeLicense(x.license))];

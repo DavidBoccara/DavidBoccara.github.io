@@ -324,7 +324,7 @@ export async function showAircraftNotification(ac, a = approachOf(ac), { silent 
   const title = ac.military ? `Avion militaire : ${acLabel(ac)}` : `Avion : ${acLabel(ac)}`;
   const body = [count, `${name} — ${fmtDistance(ac)}, ${fmtAltitude(ac)}`, origin].filter(Boolean).join("\n");
   const opts = { body, tag: ac.hex, renotify: !silent, silent, icon: "icons/icon-192.png", badge: "icons/badge-96.png",
-    image: wiki?.imageUrl || extra?.info?.photoThumb || undefined, data: { hex: ac.hex } };
+    image: wiki?.imageUrl || undefined, data: { hex: ac.hex } }; // photo libre du modèle (Wikimedia), jamais airport-data
   try {
     const reg = await navigator.serviceWorker?.getRegistration();
     if (reg) await reg.showNotification(title, opts); else new Notification(title, opts);
