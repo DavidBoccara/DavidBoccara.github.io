@@ -23,6 +23,17 @@ export const wikiQuery = {
   ac: (ac) => ({ type: ac.type, model: ac.description, military: ac.military, title: prettyModel(ac.description || ac.type) }),
 };
 
+/**
+ * Ce qu'il faut pour chercher la photo libre d'un avion du radar (`aircraftPhotos` de net.js) : immatriculation, compagnie
+ * (trajet, puis opérateur ADS-B, puis propriétaire adsbdb, souvent un loueur) et modèle. Le même pour la vignette du
+ * Scanner, la fiche et « Le plus proche » : ils montrent la même photo (et la fiche son crédit).
+ */
+export const photoCtx = (ac, x) => ({
+  registration: ac.registration || "",
+  airline: x?.route?.airline || ac.operator || x?.info?.owner || "",
+  model: prettyModel(ac.description || (x?.info ? `${x.info.manufacturer} ${x.info.model}` : "")),
+});
+
 /** Pastille ronde « W » qui affiche la photo Wikipédia et ouvre la fiche. */
 export function wikiDot(q) {
   const dot = h("button.wiki-dot", { "aria-label": "Fiche Wikipédia du modèle", onclick: (e) => { e.stopPropagation(); showWiki(q); } }, "W");

@@ -241,11 +241,27 @@ const airlineWord = (s) => (String(s || "").toLowerCase().split(/[^a-z0-9]+/).fi
 const airlineName = (s) => String(s || "").replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/)
   .filter((w) => w && !/^(corporation|company|group|limited|ltd|inc|sa|ag|spa|plc|gmbh|as|asa|ab|nv|bv|srl|llc)$/i.test(w)).join(" ");
 
-// Recherches Commons gardées pour la session (le quiz et les fiches d'un même avion font les mêmes) ; un échec
-// (hors ligne…) n'est pas gardé, pour pouvoir réessayer.
-const searchMem = new Map();
-function searchOnce(q) {
-  if (!searchMem.has(q)) searchMem.set(q, safe(commonsSearch(q, 20, 960)).then((r) => { if (!r) searchMem.delete(q); return r; }));
+// Recherches Commons gardées pour la session (le quiz, les fiches et les vignettes d'un même avion font les mêmes) ; un
+// échec (hors ligne…) n'est pas gardé, pour pouvoir réessayer. Deux recherches à la fois au plus (les vignettes du
+// Scanner en lancent des dizaines) ; celles des fiches et du quiz passent avant celles des vignettes (low), et une
+// recherche de vignette encore en attente passe devant si une fiche la demande.
+const searchMem = new Map(), waiting = new Map(), lanes = { high: [], low: [] };
+let searching = 0;
+function pump() {
+  while (searching < 2) {
+    const task = lanes.high.shift() || lanes.low.shift();
+    if (!task) return;
+    waiting.delete(task.q); searching++;
+    safe(commonsSearch(task.q, 20, 960)).then((r) => { searching--; if (!r) searchMem.delete(task.q); task.done(r); pump(); });
+  }
+}
+function searchOnce(q, low = false) {
+  const w = waiting.get(q);
+  if (w && !low && lanes.low.includes(w)) { lanes.low.splice(lanes.low.indexOf(w), 1); lanes.high.push(w); }
+  if (!searchMem.has(q)) searchMem.set(q, new Promise((done) => {
+    const task = { q, done };
+    waiting.set(q, task); (low ? lanes.low : lanes.high).push(task); pump();
+  }));
   return searchMem.get(q);
 }
 const shuffled = (list) => list.map((x) => [Math.random(), x]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
@@ -257,24 +273,41 @@ const credited = (x) => {
   return x.thumb;
 };
 /**
- * Recherches Commons d'un avion : cet appareil (immatriculation et désignation du modèle dans le nom du fichier), le même
- * modèle aux couleurs de sa compagnie, et (withModel) le modèle. Photos sous licence sans risque avec un auteur connu.
+ * Licences acceptées pour les photos des fiches : celles sans risque (credits.js), puis Creative Commons BY / BY-SA 2.0,
+ * 2.5 et 3.0, affichées avec leur crédit complet (titre, auteur, licence, lien). Pas la GFDL (texte de la licence à
+ * joindre). Le quiz garde seulement les licences sans risque.
  */
-async function commonsSets({ registration = "", airline = "", model = "", name = "", article = "" }, withModel) {
+const usableLicense = (l) => safeLicense(l) || /^cc[ -]?by(-sa)?[ -](2\.0|2\.5|3\.0)\b/i.test(String(l || "").trim());
+/**
+ * Recherches Commons d'un avion : cet appareil (immatriculation et désignation du modèle dans le nom du fichier), le même
+ * modèle aux couleurs de sa compagnie (« TAP Portugal a320 » ; aussi le nom collé, « airBaltic », s'il y a peu de photos
+ * sans risque), et (withModel) le modèle. Photos avec un auteur connu et une licence acceptée ; `safe` = sans risque.
+ * `failed` : une recherche n'a pas abouti (résultat à ne pas garder).
+ */
+async function commonsSets({ registration = "", airline = "", model = "", name = "", article = "" }, withModel, low = false) {
   const core = modelCore(model) || modelCore(name) || modelCore(article);
-  const ok = (x) => safeLicense(x.license) && x.author;
   const hasCore = (x) => !core || flat(x.title).includes(core);
   const reg = flat(registration), word = airlineWord(airline), company = airlineName(airline);
+  const mark = (list, keep) => (list || []).filter((x) => x.author && usableLicense(x.license) && keep(x))
+    .map((x) => ({ ...x, safe: safeLicense(x.license) }));
+  const inAirline = (x) => flat(x.title).includes(word) && hasCore(x);
   const [byReg, byAirline, byModel] = await Promise.all([
-    reg.length >= 4 ? searchOnce(`"${registration}"`) : null,
-    word && core ? searchOnce(`(${company} OR ${company.replace(/\s+/g, "")}) ${core}`) : null,
-    withModel ? searchOnce(article || model || name) : null,
+    reg.length >= 4 ? searchOnce(`"${registration}"`, low) : [],
+    word && core ? searchOnce(`${company} ${core}`, low) : [],
+    withModel ? searchOnce(article || model || name, low) : [],
   ]);
+  let airlineSet = mark(byAirline, inAirline), byCompact = [];
+  const compact = company.replace(/\s+/g, "");
+  if (word && core && compact !== company && airlineSet.filter((x) => x.safe).length < 3) {
+    byCompact = await searchOnce(`${compact} ${core}`, low);
+    airlineSet = [...airlineSet, ...mark(byCompact, inAirline).filter((x) => !airlineSet.some((y) => y.title === x.title))];
+  }
   return {
-    reg: (byReg || []).filter((x) => ok(x) && flat(x.title).includes(reg) && hasCore(x)),
-    airline: (byAirline || []).filter((x) => ok(x) && flat(x.title).includes(word) && hasCore(x)),
-    model: (byModel || []).filter((x) => ok(x) && hasCore(x)),
+    reg: mark(byReg, (x) => flat(x.title).includes(reg) && hasCore(x)),
+    airline: airlineSet,
+    model: mark(byModel, hasCore),
     company,
+    failed: [byReg, byAirline, byModel, byCompact].includes(null),
   };
 }
 
@@ -294,7 +327,8 @@ export async function quizPhotos(ctx) {
     const sets = await commonsSets(ctx, true);
     const fair = (x) => !revealsAnswer(x.author, name) && !revealsAnswer(x.author, model);
     const out = [];
-    for (const t of [sets.reg.filter(fair), sets.airline.filter(fair), sets.model.filter(fair).slice(0, 10)]) for (const x of shuffled(t)) {
+    const ok = (x) => x.safe && fair(x); // quiz : licences sans risque seulement
+    for (const t of [sets.reg.filter(ok), sets.airline.filter(ok), sets.model.filter(ok).slice(0, 10)]) for (const x of shuffled(t)) {
       const url = credited(x);
       if (!out.includes(url)) out.push(url);
     }
@@ -304,16 +338,37 @@ export async function quizPhotos(ctx) {
 }
 
 /**
- * Photos libres d'un avion pour sa fiche (Scanner, fiche en direct, publication du feed) : cet appareil précis, sinon le
- * même modèle aux couleurs de sa compagnie. Mêmes règles que le quiz (licence sans risque, auteur connu, crédit gardé).
- * { urls, exact, company } (exact = photos de cet appareil), ou null s'il n'y en a pas (la fiche montre alors
- * seulement la photo de l'article Wikipédia du modèle). Remplace les photos airport-data, qui n'ont pas de licence libre.
+ * Photos libres d'un avion pour sa fiche et sa vignette du Scanner (même photo en premier : le crédit de la vignette est
+ * celui de la fiche ouverte au toucher), la fiche en direct, la publication du feed : cet appareil précis, sinon le même
+ * modèle aux couleurs de sa compagnie. Licences sans risque d'abord, puis CC 2.0–3.0 (usableLicense), auteur connu,
+ * crédit gardé. { urls, exact, company } (exact = photos de cet appareil), ou null s'il n'y en a pas (la fiche montre
+ * alors seulement la photo de l'article Wikipédia du modèle). Remplace les photos airport-data (pas de licence libre).
+ * Résultat gardé 7 jours (2 jours s'il n'y a rien) dans `aircraft_photos_v1` ; low = recherche de vignette (moins pressée).
  */
-export async function aircraftPhotos(ctx) {
-  const sets = await commonsSets(ctx, false);
-  const exact = sets.reg.length > 0, list = exact ? sets.reg : sets.airline;
-  if (!list.length) return null;
-  return { urls: [...new Set(list.slice(0, 10).map(credited))], exact, company: sets.company };
+const AP_KEY = "aircraft_photos_v1", AP_MAX = 250;
+const apMem = new Map();
+export function aircraftPhotos(ctx, { low = false } = {}) {
+  const key = [flat(ctx.registration), flat(airlineName(ctx.airline)), modelCore(ctx.model) || ""].join("|");
+  if (apMem.has(key)) return apMem.get(key);
+  const hit = ls.get(AP_KEY, {})?.[key];
+  if (hit && Date.now() - (hit.at || 0) < (hit.r ? 7 : 2) * 864e5) { const p = Promise.resolve(hit.r); apMem.set(key, p); return p; }
+  const p = (async () => {
+    const sets = await commonsSets(ctx, false, low);
+    const exact = sets.reg.length > 0, list = exact ? sets.reg : sets.airline;
+    const sorted = [...list.filter((x) => x.safe), ...list.filter((x) => !x.safe)];
+    const r = sorted.length ? { urls: [...new Set(sorted.slice(0, 3).map(credited))], exact, company: sets.company } : null;
+    if (sets.failed) apMem.delete(key); // hors ligne : on réessaiera
+    else {
+      const all = ls.get(AP_KEY, {}) || {};
+      all[key] = { at: Date.now(), r };
+      const keys = Object.keys(all);
+      if (keys.length > AP_MAX) keys.sort((a, b) => all[a].at - all[b].at).slice(0, keys.length - AP_MAX).forEach((k) => delete all[k]);
+      ls.set(AP_KEY, all);
+    }
+    return r;
+  })();
+  apMem.set(key, p);
+  return p;
 }
 /** Photos sous licence sans risque (credits.js) d'abord, les autres ensuite (affichées avec leur crédit complet). */
 const safeFirst = (list) => [...list.filter((x) => safeLicense(x.license)), ...list.filter((x) => !safeLicense(x.license))];

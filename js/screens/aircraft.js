@@ -8,7 +8,7 @@ import { Wiki } from "../net.js";
 import { Collection, Prefs, entryPhotoItems, ALBUM_MAX } from "../store.js";
 import { spottedFrom, computeXp, describeXp, approach, approachLabel, UNCERTAIN_TEXT, acLabel, countryFromHex, modelKey,
   fmtDistance, fmtAltitude, fmtSpeed, prettyModel } from "../game.js";
-import { addPhoto, wikiQuery, photoStrip, aircraftPhotoBlock } from "../ui.js";
+import { addPhoto, wikiQuery, photoStrip, aircraftPhotoBlock, photoCtx } from "../ui.js";
 import { back } from "../app.js";
 import { Camera, claimPhotos, photoFile, liveThumb } from "../camera.js";
 
@@ -137,7 +137,7 @@ export function aircraftPage(view, [hex]) {
 
   Radar.extra(ac).then((x) => {
     extra = x; renderHeader(); renderCollection();
-    photo.load({ registration: ac.registration, airline: x?.route?.airline || ac.operator || x?.info?.owner, model: prettyModel(ac.description || "") });
+    photo.load(photoCtx(ac, x));
   });
   Wiki.find(wikiQuery.ac(ac)).then((s) => {
     if (!s) { wikiText.textContent = "Aucun article Wikipédia trouvé pour ce modèle."; return; }

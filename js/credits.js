@@ -8,6 +8,7 @@
 // - Données des avions : adsb.fi (ses conditions demandent de le citer avec un lien vers son site), adsb.lol, adsbdb ;
 //   recherche de lieux : OpenStreetMap (mention obligatoire).
 import { h, ls } from "./util.js";
+import { LANG } from "./i18n.js";
 
 const KEY = "photo_credits_v1", KEEP = 30 * 864e5, MAX = 400;
 const mem = new Map();
@@ -84,6 +85,16 @@ export function rememberCredit(url, c) {
   s[k] = { at: Date.now(), c }; ls.set(KEY, s);
 }
 
+/**
+ * Titre d'une photo Wikimedia, tiré du nom du fichier (sans extension ni numéro Flickr) : les licences Creative Commons
+ * 2.0 et 3.0 demandent de citer le titre de l'œuvre ; affiché pour celles-ci seulement (les 4.0 ne l'exigent pas).
+ */
+export function photoTitle(url) {
+  const f = wikimediaFile(url)?.file || "";
+  return f.replace(/\.(jpe?g|png|gif|tiff?|webp)$/i, "").replace(/\s*\(\d{6,}\)$/, "").replace(/\s+/g, " ").trim();
+}
+const quoted = (t) => (LANG === "en" ? `“${t}”` : `« ${t} »`);
+
 const link = (href, text, open = true) => (href && open ? h("a", { href, target: "_blank", rel: "noopener" }, text) : h("span", text));
 
 /**
@@ -95,11 +106,14 @@ const link = (href, text, open = true) => (href && open ? h("a", { href, target:
  */
 export function creditLine(url = null, { hold = false } = {}) {
   const el = h("div.photo-credit");
-  let cur = null, open = !hold, token = 0;
+  let cur = null, curUrl = null, open = !hold, token = 0;
   const draw = () => {
     el.hidden = !cur;
     if (!cur) { el.replaceChildren(); return; }
     const parts = [h("span", "Photo :"), " "];
+    // Titre (licences 2.0 / 3.0) : jamais avant la réponse du quiz, il la donnerait
+    const title = open && cur.license && !safeLicense(cur.license) ? photoTitle(curUrl) : "";
+    if (title) parts.push(h("span", { "data-notr": "" }, quoted(title)), " · ");
     if (cur.author) parts.push(h("span", { "data-notr": "" }, cur.author), " · ");
     if (cur.license) parts.push(h("span", { "data-notr": "" }, link(cur.licenseUrl, cur.license)), " · ");
     parts.push(link(cur.pageUrl, cur.site, open));
@@ -107,7 +121,7 @@ export function creditLine(url = null, { hold = false } = {}) {
   };
   el.set = (u) => {
     const my = ++token;
-    cur = null; draw();
+    cur = null; curUrl = u; draw();
     if (u) photoCredit(u).then((c) => { if (my === token) { cur = c; draw(); } }).catch(() => {});
   };
   el.reveal = () => { open = true; draw(); };
