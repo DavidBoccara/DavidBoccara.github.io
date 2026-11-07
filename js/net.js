@@ -284,9 +284,16 @@ const usableLicense = (l) => safeLicense(l) || /^cc[ -]?by(-sa)?[ -](2\.0|2\.5|3
  * sans risque), et (withModel) le modèle. Photos avec un auteur connu et une licence acceptée ; `safe` = sans risque.
  * `failed` : une recherche n'a pas abouti (résultat à ne pas garder).
  */
+// Versions d'un modèle qui ne lui ressemblent pas : un BelugaXL est un « A330-743L », un ravitailleur un « A330 MRTT »,
+// le Dreamlifter un « 747-400 LCF »… Leurs photos sont écartées (quiz et fiches), sauf si l'avion cherché est lui-même
+// cette version. Pas pour les photos de l'appareil précis (immatriculation) : c'est bien lui.
+const VARIANTS = /beluga|mrtt|voyager|ph[eé]nix|\bkc[- ]?(10|30|46|135|767)\b|dreamlifter|\blcf\b|guppy|shuttle|tanker|ravitailleur/i;
+
 async function commonsSets({ registration = "", airline = "", model = "", name = "", article = "" }, withModel, low = false) {
   const core = modelCore(model) || modelCore(name) || modelCore(article);
-  const hasCore = (x) => !core || flat(x.title).includes(core);
+  // L'avion cherché est une de ces versions (« beluga »…) : seulement ses photos à elle ; sinon, aucune de ces versions
+  const variant = (`${model} ${name} ${article}`.match(VARIANTS) || [])[0];
+  const hasCore = (x) => (!core || flat(x.title).includes(core)) && (variant ? flat(x.title).includes(flat(variant)) : !VARIANTS.test(x.title));
   const reg = flat(registration), word = airlineWord(airline), company = airlineName(airline);
   const mark = (list, keep) => (list || []).filter((x) => x.author && usableLicense(x.license) && keep(x))
     .map((x) => ({ ...x, safe: safeLicense(x.license) }));
@@ -303,7 +310,7 @@ async function commonsSets({ registration = "", airline = "", model = "", name =
     airlineSet = [...airlineSet, ...mark(byCompact, inAirline).filter((x) => !airlineSet.some((y) => y.title === x.title))];
   }
   return {
-    reg: mark(byReg, (x) => flat(x.title).includes(reg) && hasCore(x)),
+    reg: mark(byReg, (x) => flat(x.title).includes(reg) && (!core || flat(x.title).includes(core))),
     airline: airlineSet,
     model: mark(byModel, hasCore),
     company,
@@ -343,9 +350,10 @@ export async function quizPhotos(ctx) {
  * modèle aux couleurs de sa compagnie. Licences sans risque d'abord, puis CC 2.0–3.0 (usableLicense), auteur connu,
  * crédit gardé. { urls, exact, company } (exact = photos de cet appareil), ou null s'il n'y en a pas (la fiche montre
  * alors seulement la photo de l'article Wikipédia du modèle). Remplace les photos airport-data (pas de licence libre).
- * Résultat gardé 7 jours (2 jours s'il n'y a rien) dans `aircraft_photos_v1` ; low = recherche de vignette (moins pressée).
+ * Résultat gardé 7 jours (2 jours s'il n'y a rien) dans `aircraft_photos_v2` ; low = recherche de vignette (moins pressée).
  */
-const AP_KEY = "aircraft_photos_v1", AP_MAX = 250;
+const AP_KEY = "aircraft_photos_v2", AP_MAX = 250; // v2 : sans les versions trompeuses (Beluga…)
+try { localStorage.removeItem("aircraft_photos_v1"); } catch { /* stockage bloqué */ }
 const apMem = new Map();
 export function aircraftPhotos(ctx, { low = false } = {}) {
   const key = [flat(ctx.registration), flat(airlineName(ctx.airline)), modelCore(ctx.model) || ""].join("|");

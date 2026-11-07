@@ -299,7 +299,7 @@ export const EN = [
   ["Quel est cet avion ?", "What aircraft is this?"],
   ["Bonne réponse ! +{1} XP{2} · série de {3}", "Right! +{1} XP{2} · streak of {3}"],
   ["Série de {1} : les prochaines réponses rapportent ×{2} !", "Streak of {1}: your next answers earn ×{2}!"],
-  ["Raté : c'était « {1} ». La série repart de zéro.", "Missed: it was « {1} ». The streak starts over."],
+  ["Raté : c'était « {1} ». La série repart de zéro.", "Missed: it was “{1}”. The streak starts over."],
   ["{1} — rayon de jeu : {2}", "{1} — game radius: {2}"],
   ["Rayon de jeu · grade {1}", "Game radius · rank {1}"],
   ["Au grade {1} : {2}{3}{4}", "At rank {1}: {2}{3}{4}"],
@@ -310,7 +310,7 @@ export const EN = [
   ["Signaler cette question", "Report this question"],
   ["Bonne réponse ! +{1} XP", "Right! +{1} XP"],
   ["Bonne réponse !", "Right!"],
-  ["Raté : c'était « {1} ».", "Missed: it was « {1} »."],
+  ["Raté : c'était « {1} ».", "Missed: it was “{1}”."],
   ["Bonus : {1} bonne{2} réponse{3} sur {4} ·", "Bonus: {1} right answer(s) out of {4} ·"],
   ["Lire l'article Wikipédia", "Read the Wikipedia article"],
   ["Photo de l'avion à reconnaître", "Photo of the aircraft to identify"],
@@ -1396,4 +1396,5 @@ export const EN = [
   ["Les messages envoyés avec le formulaire de contact (nom, e-mail, message) : un an au plus, puis effacés automatiquement.", "Messages sent with the contact form (name, email, message): one year at most, then deleted automatically."],
   ["Les journaux techniques des hébergeurs (adresse internet, page demandée) : gardés par eux pour la sécurité, selon leurs propres règles.", "The hosts' technical logs (IP address, page requested): kept by them for security, under their own rules."],
   ["CC BY-SA 4.0", "CC BY-SA 4.0"],
+  ["Passé au-dessus de toi aujourd'hui à {1}", "Flew over you today at {1}"],
 ];

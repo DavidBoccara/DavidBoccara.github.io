@@ -227,8 +227,9 @@ export function dailyQuiz(box) {
       h("div.small.dim", `Question ${st.index + 1} / ${total} · ${st.correct} bonne(s) réponse(s)`),
       h("div.xpbar", h("i", { style: { width: `${(st.index / total) * 100}%` } })),
       photo,
-      h("p", ["Passé au-dessus de toi aujourd'hui" + (q.seenAt ? ` à ${hourOf(q.seenAt)}` : ""),
-        q.distanceKm != null && `à ${q.distanceKm.toFixed(1).replace(".", DEC)} km`].filter(Boolean).join(" · ")),
+      // Deux morceaux séparés : le traducteur anglais traduit chacun (en une seule phrase, il ne trouvait que « Passé {1} »)
+      h("p", h("span", q.seenAt ? `Passé au-dessus de toi aujourd'hui à ${hourOf(q.seenAt)}` : "Passé au-dessus de toi aujourd'hui"),
+        ...(q.distanceKm != null ? [" · ", h("span", `à ${q.distanceKm.toFixed(1).replace(".", DEC)} km`)] : [])),
       h("h3", { style: { margin: "4px 0" } }, "Quel est cet avion ?"), ...opts, result, tipBox, bonusBox, next);
 
     function answer(choice) {
