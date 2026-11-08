@@ -1397,4 +1397,7 @@ export const EN = [
   ["Les journaux techniques des hébergeurs (adresse internet, page demandée) : gardés par eux pour la sécurité, selon leurs propres règles.", "The hosts' technical logs (IP address, page requested): kept by them for security, under their own rules."],
   ["CC BY-SA 4.0", "CC BY-SA 4.0"],
   ["Passé au-dessus de toi aujourd'hui à {1}", "Flew over you today at {1}"],
+  ["Trajets :", "Routes:"],
+  ["David Taylor & Jim Mason", "David Taylor & Jim Mason"],
+  ["Données et images d'autres sources, propriété de leurs auteurs : positions des avions (adsb.fi, adsb.lol), fiches des appareils (adsbdb), trajets des vols (David Taylor et Jim Mason, via adsbdb, avec leur accord), articles et photos de Wikipédia et Wikimedia Commons (licences libres : auteur et licence indiqués sous chaque photo), recherche de lieux (© les contributeurs d'OpenStreetMap, licence ODbL).", "Data and images from other sources, property of their authors: aircraft positions (adsb.fi, adsb.lol), aircraft records (adsbdb), flight routes (David Taylor and Jim Mason, via adsbdb, with their permission), Wikipedia and Wikimedia Commons articles and photos (free licences: author and licence shown under each photo), place search (© OpenStreetMap contributors, ODbL licence)."],
 ];

@@ -147,8 +147,10 @@ export function textCredit(pageUrl = null) {
 
 /** Ligne « Données des avions : adsb.fi · adsb.lol · adsbdb » avec les liens (adsb.fi demande d'être cité avec un lien). */
 export function dataSources() {
+  // Trajets des vols (adsbdb) : travail de David Taylor et Jim Mason, cités avec leur accord (réponse du 8/11/2026)
   return h("div.photo-credit", h("span", "Données des avions :"), " ", link("https://adsb.fi/", "adsb.fi"), " · ",
-    link("https://adsb.lol/", "adsb.lol"), " · ", link("https://adsbdb.com/", "adsbdb"));
+    link("https://adsb.lol/", "adsb.lol"), " · ", link("https://adsbdb.com/", "adsbdb"), " · ",
+    h("span", "Trajets :"), " ", h("span", { "data-notr": "" }, "David Taylor & Jim Mason"));
 }
 
 /** Mention obligatoire sous les résultats de la recherche de lieux (OpenStreetMap / Nominatim). */
