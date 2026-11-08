@@ -109,6 +109,7 @@ export const Radar = {
   /** Met à jour un avion épinglé qui n'est pas dans la liste du radar (fiche ouverte) ; renvoie true s'il a été retrouvé. */
   async refreshPinned(hex) {
     const old = Radar.pinned.get(hex), me = Radar.location;
+    if (document.visibilityState === "hidden") return false; // fiche pas à l'écran : inutile d'interroger le relais
     if (!old || !me || Radar.aircraft.some((a) => a.hex === hex)) return false;
     const ac = await Adsb.track(old, me).catch(() => null);
     if (!ac) return false;
@@ -176,7 +177,11 @@ function watchGps() {
 
 // Le verrou d'écran saute quand l'onglet passe en arrière-plan : on le reprend au retour
 document.addEventListener("visibilitychange", async () => {
-  if (document.visibilityState === "visible") syncNative();
+  if (document.visibilityState === "visible") {
+    syncNative();
+    // Retour à l'écran : liste remise à jour tout de suite (la page ne cherchait plus, ou plus lentement, en arrière-plan)
+    if (Radar.running && Date.now() - Radar.lastUpdate > 5000) poll();
+  }
   if (!Native && document.visibilityState === "visible" && Radar.running && !wakeLock) {
     try { wakeLock = await navigator.wakeLock?.request("screen"); } catch { /* ignoré */ }
   }
@@ -199,10 +204,22 @@ function nativeAircraft() {
   return { at: o.at, list: o.ac.map((a) => ({ ...a, fetchedAt: o.at })) };
 }
 
+/**
+ * Appli Android, page cachée (écran éteint, autre appli au premier plan) : le radar du téléphone fait déjà les
+ * recherches (adsb.fi en direct, avec l'adresse internet du téléphone) et envoie les alertes lui-même. La page ne
+ * questionne donc plus le relais Supabase `adsb`, partagé par tous les joueurs ; elle reprend dès qu'elle revient à
+ * l'écran. Sauf position choisie à la main : le service du téléphone n'a alors pas de position, la page reste seule.
+ * Dans un navigateur, rien ne change (c'est la page qui envoie les notifications).
+ */
+function nativeCovers() {
+  if (!Native || document.visibilityState !== "hidden" || Radar.location?.manual) return false;
+  try { return !!Native.isRunning(); } catch { return false; }
+}
+
 let polling = false, lastNativeAt = 0;
 async function poll() {
   const loc = Radar.location;
-  if (!Radar.running || !loc || polling) return;
+  if (!Radar.running || !loc || polling || nativeCovers()) return;
   // Fin du scan rapide : retour à la fréquence choisie
   if (fastOn && Radar.fastUntil() <= Date.now()) { schedule(); Radar.emit(); }
   polling = true;
