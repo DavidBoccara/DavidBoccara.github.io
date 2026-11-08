@@ -5,6 +5,7 @@ import { h, ls, dateTime, dateDay, weekStart, icon, rarityMark, infoButton } fro
 import { Collection, Sightings, entryPhoto, entryRarity, entryModel, entryLabel } from "../store.js";
 import { computeXp, spottedRarity, flagOf, prettyModel, MAX_PHOTO_KM } from "../game.js";
 import { askPhotoSource, showEntry, showWiki, wikiDot, wikiImg, wikiQuery } from "../ui.js";
+import { dataSources } from "../credits.js";
 
 /**
  * Affiche la liste des avions passés au-dessus de vous dans `box` (mode « seen »).
@@ -43,7 +44,7 @@ export function hangarList(box, mode, onChange) {
 
 Lance le radar dans l'onglet Scanner : les avions qui passent près de toi apparaîtront ici.`);
   const list = h("div.list.mt");
-  box.replaceChildren(hint, sortRow, dayRow, empty, list);
+  box.replaceChildren(hint, sortRow, dayRow, empty, list, h("div.mt", dataSources())); // passages = positions d'adsb.fi / adsb.lol
 
   const changed = () => { render(); onChange?.(); };
   const bestOf = (l) => l.reduce((b, e) => (!b || e.xp > b.xp || (e.xp === b.xp && e.takenAt > b.takenAt) ? e : b), null);

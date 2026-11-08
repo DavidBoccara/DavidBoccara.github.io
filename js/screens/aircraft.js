@@ -1,5 +1,5 @@
 // Fiche d'un avion du radar : photo, provenance, vol en direct, approche, capture, Wikipédia.
-import { creditLine, textCredit } from "../credits.js";
+import { creditLine, textCredit, dataSources } from "../credits.js";
 import { DEC } from "../i18n.js";
 import { h, meters, cardinal, direction, dec, rarityMark } from "../util.js";
 import { compassRose, nextMark } from "../compass.js";
@@ -59,7 +59,7 @@ export function aircraftPage(view, [hex]) {
     h("div.section", "Approche"), appr, apprSub,
     h("div.section", "Collection"), rarityText, collectText, myPhotos, camInfo, camStrip,
     h("div.row.mt", camBtn, h("button.btn.outline", { onclick: () => capture(false) }, "Galerie")),
-    h("div.section", "Vol en direct"), flight,
+    h("div.section", "Vol en direct"), flight, dataSources(), // sources des positions (ODbL d'adsb.lol : mention visible + lien)
     h("a.btn.outline.mt", { href: `https://globe.airplanes.live/?icao=${hex.toLowerCase()}`, target: "_blank", rel: "noopener", style: { display: "inline-block", textDecoration: "none" } }, "Voir sur la carte"),
     h("div.section", "Wikipédia"), wikiImg, wikiCredit, wikiTitle, wikiKind, wikiText, wikiTextCredit, wikiBtn,
   );

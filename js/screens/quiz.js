@@ -17,6 +17,7 @@ import { prefetchBonus } from "../wikiquiz.js";
 import { dailyQuiz, DailyStore, dailyQuestionCount, dailyRules } from "./daily.js";
 import { practiceQuiz, practiceRules } from "./practice.js";
 import { flybyGame, flybyRules } from "./flyby.js";
+import { dataSources } from "../credits.js";
 
 // Les 4 jeux, présentés en cartes (nom, ce qu'on y fait, ce que ça rapporte) pour qu'on comprenne d'un coup d'œil
 const MODES = [
@@ -45,7 +46,9 @@ export function quiz(view, [sub]) {
   const body = h("div.mt");
   const infoBtn = h("button.cam-btn", { type: "button", "aria-label": "Règle du jeu", title: "Règle du jeu",
     onclick: () => modal({ title: MODES.find((m) => m.id === current).label, body: RULES[current]() }) }, icon("info", 18));
-  view.append(h("div.scan-head", h("div.grow", h("div.kicker", "Jeux"), h("h1.title", "Choisis ton jeu")), h("div.scan-tools", infoBtn)), seg, body);
+  // Sources des positions sous chacun des jeux (ODbL d'adsb.lol : mention visible tout de suite + lien cliquable)
+  view.append(h("div.scan-head", h("div.grow", h("div.kicker", "Jeux"), h("h1.title", "Choisis ton jeu")), h("div.scan-tools", infoBtn)), seg, body,
+    h("div.mt", dataSources()));
   /** Onglets ; pastille du quiz du jour : fait (✅) ou nombre de questions (un modèle différent par question, 10 au plus). */
   function renderSeg() {
     const st = DailyStore.get();
