@@ -6,7 +6,7 @@ import { Wiki, AdsbDb, Places, aircraftPhotos } from "./net.js";
 import { shareCard } from "./sharecard.js";
 import { Supa } from "./supa.js";
 import { ensurePhotoRules, requireAccount } from "./photorules.js";
-import { Collection, Sightings, createCatch, addAlbumPhoto, removeEntryPhoto, setMainEntryPhoto, entryPhotoItems, entryPhotos, ALBUM_MAX, catchMessage, entryPhoto, entryLabel, entryModel, entryRarity, Player } from "./store.js";
+import { Collection, Sightings, createCatch, createOldPhoto, isOld, addAlbumPhoto, removeEntryPhoto, setMainEntryPhoto, entryPhotoItems, entryPhotos, ALBUM_MAX, catchMessage, entryPhoto, entryLabel, entryModel, entryRarity, Player } from "./store.js";
 import { Cloud, sync } from "./cloud.js";
 import { flagOf, distanceBonus, MAX_PHOTO_KM, computeXp, spottedRarity, prettyModel } from "./game.js";
 import { renderHud, install, isStandalone, isIos, isAndroid, go } from "./app.js";
@@ -117,12 +117,13 @@ export function aircraftInfoCard(c) {
     c.route && `Trajet : ${c.route}`,
     c.flightKm != null && `Distance du vol : ${Math.round(c.flightKm).toLocaleString(LOCALE)} km (${distanceBonus(c.flightKm).label})`,
     c.distanceKm != null && `Distance au moment de la photo : ${dec(c.distanceKm)} km`,
-    c.takenAt && `Photographié le ${dateTime(c.takenAt)}`, c.source === "import" && "Photo ajoutée après coup",
+    c.takenAt && `Photographié le ${c.source === "old" ? dateDay(c.takenAt) : dateTime(c.takenAt)}`, c.source === "import" && "Photo ajoutée après coup",
+    c.source === "old" && "Photo ancienne : sans vérification ni XP",
   ].filter(Boolean);
   const card = h("div.card.pad.mt",
     h("div.section", { style: { marginTop: 0 } }, "L'avion"),
     h("h2", { style: { margin: "4px 0 2px" } }, model, c.military ? " · militaire" : ""),
-    h("div", rarityMark(r, `${r.label}${c.xp != null ? ` · ${c.xp > 0 ? "+" + c.xp : 0} XP` : ""}`)),
+    h("div", rarityMark(r, `${r.label}${c.source === "old" ? " · photo ancienne" : c.xp != null ? ` · ${c.xp > 0 ? "+" + c.xp : 0} XP` : ""}`)),
     h("div.kv.small.mt", lines.join("\n")), owner, acPhoto,
     live && h("button.btn.primary.block.mt", { onclick: () => go("ac/" + c.hex) }, "Il vole près de vous en ce moment : voir où il est"),
     c.hex && h("a.btn.outline.small.mt", { href: `https://globe.airplanes.live/?icao=${c.hex.toLowerCase().replace(/^~/, "")}`, target: "_blank", rel: "noopener",
@@ -419,6 +420,91 @@ async function unreadablePhoto(file, err, camera) {
     h("p.small.dim", `Détails pour le dépannage : ${camera ? "caméra" : "galerie"} · format ${kind}${file.type ? ` (${file.type})` : ""} · ${mo} Mo · ${err?.details?.join(" / ") || err?.message || "erreur inconnue"}`)] });
 }
 
+// ---------- Photos anciennes (Catalogue) ----------
+const dayInput = (ms) => { const d = new Date(ms); return new Date(ms - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+
+/**
+ * Photo ancienne d'un modèle du catalogue (c), prise avant Plane GO ou sans le radar : aucune vérification, aucun XP,
+ * jamais au concours ; publiée dans le feed avec la mention « Photo ancienne ». Plusieurs photos d'un coup = une seule
+ * publication en carrousel. entry : photo ancienne déjà dans la collection → les photos rejoignent son album.
+ */
+export async function addOldPhoto(c, { entry = null, onChange } = {}) {
+  if (!requireAccount()) return null; // pas de photo en mode invité (photorules.js)
+  if (!(await ensurePhotoRules())) return null; // engagement « lieux publics » (photorules.js)
+  const room = ALBUM_MAX - (entry ? entryPhotoItems(entry).length : 0);
+  if (room <= 0) { toast(`Album complet (${ALBUM_MAX} photos)`); return null; }
+  const files = [].concat((await pickImage({ multiple: true })) || []).filter(Boolean).slice(0, room);
+  if (!files.length) return null;
+  const wait = modal({ title: "Préparation des photos…", body: "", buttons: [] });
+  const blobs = [], dates = [];
+  for (const f of files) {
+    try { blobs.push(await toJpeg(f)); dates.push(await exifDate(f).catch(() => null)); } catch { /* illisible : ignorée */ }
+  }
+  wait.close();
+  if (!blobs.length) {
+    if (files.length === 1) await unreadablePhoto(files[0], null, false);
+    else modal({ title: "Impossible de lire ces photos", body: "Aucune des photos choisies n'a pu être ouverte. Réessaie, ou choisis d'autres photos." });
+    return null;
+  }
+  const skipped = files.length - blobs.length;
+
+  if (entry) {
+    // Photo ancienne déjà dans la collection : les nouvelles photos rejoignent son album
+    let added = 0;
+    for (let i = 0; i < blobs.length; i++) {
+      try { await addAlbumPhoto(entry, blobs[i], dates[i] || entry.takenAt, null); added++; } catch { break; }
+    }
+    toast(added > 1 ? `${added} photos ajoutées` : "Photo ajoutée");
+    afterSync(); onChange?.();
+    return Collection.get(entry.id);
+  }
+
+  // Date (celle de la photo si l'appareil l'a notée) et immatriculation facultative
+  const shot = dates.find(Boolean) || null;
+  const date = h("input.input", { type: "date", value: shot ? dayInput(shot) : "", max: dayInput(Date.now()) });
+  const reg = h("input.input", { type: "text", maxLength: 12, autocapitalize: "characters", autocomplete: "off", placeholder: "F-GKXA" });
+  const thumbs = h("div.old-thumbs", blobs.slice(0, 5).map((b) => h("img", { alt: "", src: URL.createObjectURL(b) })),
+    blobs.length > 5 ? h("span", `+${blobs.length - 5}`) : null);
+  const answer = await new Promise((res) => modal({ title: `Photo ancienne · ${c.name}`, onClose: () => res(null),
+    body: [thumbs,
+      h("label.small", { style: { display: "block", fontWeight: 700, marginTop: "10px" } }, "Date de la photo"), date,
+      h("label.small", { style: { display: "block", fontWeight: 700, marginTop: "10px" } }, "Immatriculation (facultatif)"), reg,
+      h("p.small.dim", "Sans vérification et sans XP. Publiée dans le feed avec la mention « Photo ancienne », jamais au concours."),
+      skipped > 0 && h("p.small", { style: { color: "var(--red)" } }, `${skipped} photo${skipped > 1 ? "s" : ""} illisible${skipped > 1 ? "s" : ""}, non ajoutée${skipped > 1 ? "s" : ""}.`)].filter(Boolean),
+    buttons: [
+      { label: "Annuler", onClick: () => res(null) },
+      { label: "Ajouter", primary: true, onClick: () => {
+        if (!date.value) { toast("Indique la date de la photo"); date.focus(); return false; }
+        res({ day: date.value, registration: reg.value });
+      } },
+    ] }));
+  if (!answer) return null;
+  // Date choisie : l'heure de la photo si c'est le même jour, sinon midi
+  const takenAt = shot && dayInput(shot) === answer.day ? shot : new Date(answer.day + "T12:00:00").getTime();
+  const e = await createOldPhoto(c, blobs, takenAt, answer.registration);
+  Sound.catch(0);
+  const n = entryPhotoItems(e).length;
+  modal({ title: "Photo ancienne ajoutée", body: n > 1
+      ? `Tes ${n} photos sont ajoutées à ta collection et publiées dans le feed, avec la mention « Photo ancienne ». Elles ne rapportent pas d'XP.`
+      : "Ta photo est ajoutée à ta collection et publiée dans le feed, avec la mention « Photo ancienne ». Elle ne rapporte pas d'XP.",
+    buttons: [{ label: "Voir", onClick: () => { showEntry(e, { onChange }); } }, { label: "Super", primary: true }] });
+  afterSync(); onChange?.();
+  return e;
+}
+
+/**
+ * Partage d'une photo ancienne : la photo et un petit texte (pas d'image « attrapé avec Plane GO » : rien n'a été attrapé).
+ * player : null = ma photo, sinon le pseudo de son auteur.
+ */
+export function shareOld(model, photoUrl, player = null) {
+  const en = LANG === "en", what = en ? (model ? "a " + model : "a plane") : (model ? "d'un " + model : "d'un avion");
+  const text = (player == null
+    ? (en ? `My photo of ${what}, in my Plane GO collection ✈️` : `Ma photo ${what}, dans ma collection Plane GO ✈️`)
+    : (en ? `A photo of ${what} shared by ${player || "a spotter"} on Plane GO ✈️` : `Une photo ${what} partagée par ${player || "un spotter"} sur Plane GO ✈️`))
+    + `\n👉 ${SITE_URL}`;
+  return share(text, photoUrl);
+}
+
 /** Petit badge « 3 photos » sur la vignette d'un avion qui a un album (sinon null). */
 export function albumBadge(e) {
   const n = entryPhotoItems(e).length;
@@ -432,7 +518,7 @@ export function photoStrip(entries, { onChange } = {}) {
     entryPhoto(e).then((u) => { if (u) img.src = u; });
     const r = entryRarity(e);
     return h("button.ps-item", { style: { borderColor: e.rejected ? "var(--red)" : "" }, onclick: () => showEntry(e, { onChange }) },
-      img, albumBadge(e), h("span", e.rejected ? "non validée" : `${dateDay(e.takenAt)} · +${e.xp} XP`));
+      img, albumBadge(e), h("span", e.rejected ? "non validée" : isOld(e) ? `${dateDay(e.takenAt)} · ancienne` : `${dateDay(e.takenAt)} · +${e.xp} XP`));
   }));
 }
 
@@ -560,8 +646,10 @@ export async function showEntry(e, { onChange } = {}) {
   const car = carousel(items.map((it) => entryPhoto(it)), { fit: "contain", onChange: (i) => { cur = i; paint(); } });
   const about = h("div.small.dim"), tools = h("div.row.album-tools");
   const checks = h("div.kv");
+  const old = isOld(e);
   const lines = [
-    e.rejected ? `PHOTO NON VALIDÉE — ${r.stars} ${r.label} — 0 XP` : `ATTRAPÉ — ${r.stars} ${r.label} — ${e.xp} XP${e.newModel ? " (nouveau modèle)" : ""}`, entryModel(e),
+    old ? `PHOTO ANCIENNE — ${r.stars} ${r.label} — sans XP` : e.rejected ? `PHOTO NON VALIDÉE — ${r.stars} ${r.label} — 0 XP` : `ATTRAPÉ — ${r.stars} ${r.label} — ${e.xp} XP${e.newModel ? " (nouveau modèle)" : ""}`, entryModel(e),
+    old && "Ajoutée depuis le Catalogue, sans vérification : jamais au concours",
     e.registration && `Immatriculation : ${e.registration}`, e.callsign && `Indicatif : ${e.callsign}`,
     e.operator && `Opérateur : ${e.operator}`, e.countryName && `Pays : ${flagOf(e.countryIso)} ${e.countryName}`,
     e.route && `Trajet : ${e.route}`,
@@ -573,10 +661,12 @@ export async function showEntry(e, { onChange } = {}) {
   // Infos de la photo affichée : date, vérification, et (album) photo principale / retirer
   function paint() {
     const it = items[cur], t = cur === 0 ? e.takenAt : it.takenAt;
-    about.textContent = (n > 1 ? `Photo ${cur + 1} sur ${n}${cur === 0 ? " (principale)" : ""} · ` : "") + (t ? `Photographié le ${dateTime(t)}` : "");
+    // Photo ancienne : la date avec l'année (l'heure n'est souvent pas connue)
+    about.textContent = (n > 1 ? `Photo ${cur + 1} sur ${n}${cur === 0 ? " (principale)" : ""} · ` : "") + (t ? `Photographié le ${old ? dateDay(t) : dateTime(t)}` : "");
     checks.textContent = it.checks ? "Vérification de la photo :\n" + checksText(it) : "";
     tools.replaceChildren(...[
-      !e.rejected && n < ALBUM_MAX && h("button.btn.small.outline", { title: "Ajouter des photos de cet avion (sans XP en plus)", onclick: () => { m?.close(); morePhotos(e, { onChange }); } },
+      !e.rejected && n < ALBUM_MAX && h("button.btn.small.outline", { title: old ? "Ajouter d'autres photos anciennes de ce modèle" : "Ajouter des photos de cet avion (sans XP en plus)",
+        onclick: () => { m?.close(); if (old) addOldPhoto(null, { entry: e, onChange }); else morePhotos(e, { onChange }); } },
         icon("camera", 16), " Ajouter"),
       n > 1 && cur > 0 && h("button.btn.small.outline", { onclick: () => {
         setMainEntryPhoto(e, cur); toast("Photo principale changée"); afterSync(); onChange?.(); m?.close(); reopen();
@@ -592,8 +682,8 @@ export async function showEntry(e, { onChange } = {}) {
   paint();
   m = modal({ title: entryLabel(e), body: [car, about, tools, h("div.kv.mt", lines.join("\n")), checks], buttons: [
     { label: "Supprimer", danger: true, onClick: async () => {
-      const what = n > 1 ? `cet avion, ses ${n} photos` : "cette photo";
-      const ok = await confirmBox(`Supprimer ${what} et ses ${e.xp} XP ?${e.remoteId ? "\n\nElle sera aussi retirée de votre compte et du feed." : ""}`, "Supprimer", true);
+      const what = old ? (n > 1 ? `ces ${n} photos anciennes` : "cette photo ancienne") : n > 1 ? `cet avion, ses ${n} photos` : "cette photo";
+      const ok = await confirmBox(`Supprimer ${what}${old ? "" : ` et ses ${e.xp} XP`} ?${e.remoteId ? "\n\nElle sera aussi retirée de votre compte et du feed." : ""}`, "Supprimer", true);
       if (!ok) return false;
       try {
         if (e.remoteId) await Cloud.deleteCatch(e.remoteId, entryPhotoItems(Collection.get(e.id) || e).map((it) => it.remotePhoto));
@@ -607,7 +697,7 @@ export async function showEntry(e, { onChange } = {}) {
       if (u) savePhoto(u, photoName(entryModel(e), (cur === 0 ? e.takenAt : items[cur].takenAt) || e.takenAt)); else toast("Photo introuvable");
       return false;
     } },
-    { label: "Partager", primary: true, onClick: () => shareEntry(e) },
+    { label: "Partager", primary: true, onClick: async () => { if (old) shareOld(entryModel(e), await entryPhoto(items[cur])); else shareEntry(e); } },
   ] });
 }
 

@@ -4,12 +4,12 @@
 // (photo de la semaine, voir contest.js). Chaque publication d'un autre joueur peut être signalée (🚩, report.js).
 import { Blocked } from "../blocks.js";
 import { LOCALE } from "../i18n.js";
-import { h, timeAgo, toast, modal, icon, rarityMark } from "../util.js";
+import { h, timeAgo, toast, modal, icon, rarityMark, dateDay } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, sync } from "../cloud.js";
 import { Player } from "../store.js";
 import { flagOf } from "../game.js";
-import { shareCatch, installCard, savePhoto, photoName, carousel } from "../ui.js";
+import { shareCatch, shareOld, installCard, savePhoto, photoName, carousel } from "../ui.js";
 import { go, loginGate, renderHud } from "../app.js";
 import { contestFeed } from "./contest.js";
 import { todayKey } from "./daily.js";
@@ -238,16 +238,20 @@ function post(c) {
   const flag = reportButton(c, (r) => r?.blocked ? document.querySelectorAll(`[data-author="${c.userId}"]`).forEach((x) => x.remove()) : card?.remove());
   const details = [c.countryName && `${flagOf(c.countryIso)} ${c.countryName}`, c.operator, c.route && `${c.route}`,
     c.flightKm != null && `${Math.round(c.flightKm).toLocaleString(LOCALE)} km parcourus`, c.source === "import" && "photo ajoutée après coup"].filter(Boolean).join(" • ");
+  // Photo ancienne (ajoutée depuis le Catalogue) : pas d'avion attrapé ni d'XP, date de la photo
+  const old = c.source === "old";
   card = h("div.card.post", { "data-author": c.userId || "" },
     h("div.head", av, h("div.grow",
-      h("div", h("b", c.user?.username || "Un spotter"), " a attrapé ", h("b", c.modelName ? "un " + c.modelName : "un avion"), c.military ? " (militaire)" : ""),
-      h("div.small.dim", timeAgo(c.takenAt) + (c.user ? ` · ${c.user.level.emblem} ${c.user.level.name}` : ""))), flag),
+      old ? h("div", h("b", c.user?.username || "Un spotter"), " a partagé une photo ancienne : ", h("b", c.modelName || "un avion"), c.military ? " (militaire)" : "")
+        : h("div", h("b", c.user?.username || "Un spotter"), " a attrapé ", h("b", c.modelName ? "un " + c.modelName : "un avion"), c.military ? " (militaire)" : ""),
+      h("div.small.dim", (old ? `photo du ${dateDay(c.takenAt)}` : timeAgo(c.takenAt)) + (c.user ? ` · ${c.user.level.emblem} ${c.user.level.name}` : ""))), flag),
     car,
-    h("div.tags", rarityMark(c.rarity), h("span.chip.small", c.xp > 0 ? `+${c.xp} XP` : "0 XP")),
+    h("div.tags", rarityMark(c.rarity), old ? h("span.chip.small.old-chip", "Photo ancienne") : h("span.chip.small", c.xp > 0 ? `+${c.xp} XP` : "0 XP")),
     details && h("div.det", details),
     // Commentaires réservés aux amis : pas de compteur sur la publication d'un joueur qui n'est pas mon ami
     h("div.acts", likeBtn, h("button", { onclick: open, "aria-label": "Commentaires" }, icon("comment", 18), c.isFriend ? ` ${c.commentCount}` : ""),
-      h("button", { onclick: () => shareCatch({ mine: c.userId === Supa.userId, player: c.user?.username, model: c.modelName,
+      h("button", { onclick: () => old ? shareOld(c.modelName, current(), c.userId === Supa.userId ? null : c.user?.username || "")
+        : shareCatch({ mine: c.userId === Supa.userId, player: c.user?.username, model: c.modelName,
         rarity: c.rarity, xp: c.xp, route: c.route, military: c.military }, current()) }, icon("share", 18), " Partager"),
       h("button", { onclick: () => savePhoto(current(), photoName(c.modelName, c.takenAt)), "aria-label": "Enregistrer la photo sur le téléphone", title: "Enregistrer la photo" }, icon("download", 18))));
   return card;

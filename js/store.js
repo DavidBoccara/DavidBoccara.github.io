@@ -47,8 +47,10 @@ const all = () => ls.get(CKEY, []);
 const saveAll = (l) => ls.set(CKEY, l);
 const mine = () => { const u = uid(); return all().filter((e) => !e.ownerId || e.ownerId === u); };
 
-export const entryLabel = (e) => e.callsign || e.registration || (e.hex || "").toUpperCase();
+/** Photo ancienne (ajoutée depuis le Catalogue) : sans vérification, 0 XP, pas d'avion précis, jamais au concours. */
+export const isOld = (e) => e?.source === "old";
 export const entryModel = (e) => prettyModel(e.model || e.type);
+export const entryLabel = (e) => e.callsign || e.registration || (isOld(e) ? entryModel(e) || "Photo ancienne" : (e.hex || "").toUpperCase());
 export const entryRarity = (e) => rarityByName(e.rarity);
 export const entryPhoto = async (e) => (e.photoId ? await Photos.url(e.photoId) : null) || (e.remotePhoto ? Supa.publicUrl("photos", e.remotePhoto) : null);
 
@@ -81,7 +83,7 @@ export async function addAlbumPhoto(entry, blob, takenAt, verdict = null) {
   const it = { photoId, remotePhoto: null, takenAt, checks: verdict?.checks || null, phash: verdict?.print.phash || null,
     pstrength: verdict?.print.pstrength ?? null, shotAt: verdict?.print.shotAt ?? null, fileHash: verdict?.print.fileHash || null };
   const out = Collection.update(e.id, { album: [...(e.album || []), it], albumPending: true });
-  if (!verdict || verdict.ok) Hunts.photo(e.hex, takenAt);
+  if ((!verdict || verdict.ok) && !isOld(e)) Hunts.photo(e.hex, takenAt);
   return out;
 }
 /** Retire la photo n° index (0 = principale : la suivante prend sa place). Il en reste toujours au moins une. */
@@ -104,16 +106,16 @@ export const albumSynced = (id, items) => Collection.update(id, { ...fromItems(i
 export const Collection = {
   all: () => mine().sort((a, b) => b.takenAt - a.takenAt),
   totalXp: () => mine().reduce((s, e) => s + (e.xp || 0), 0),
-  // Une photo non validée (sans XP) ne bloque pas les XP d'une vraie photo du même avion ou modèle
-  countForHex: (hex) => mine().filter((e) => e.hex === hex && !e.rejected).length,
-  hasModel: (key) => !!key && mine().some((e) => !e.rejected && modelKey(e) === key.toUpperCase()),
+  // Une photo non validée (sans XP) ou ancienne ne bloque pas les XP d'une vraie photo du même avion ou modèle
+  countForHex: (hex) => mine().filter((e) => e.hex === hex && !e.rejected && !isOld(e)).length,
+  hasModel: (key) => !!key && mine().some((e) => !e.rejected && !isOld(e) && modelKey(e) === key.toUpperCase()),
   /** Empreintes des photos déjà ajoutées (détection des doublons). */
   prints: () => mine().flatMap(entryPhotoItems).filter((e) => e.phash || e.fileHash).map((e) => ({ phash: e.phash, pstrength: e.pstrength, shotAt: e.shotAt, fileHash: e.fileHash })),
-  hexes: () => new Set(mine().filter((e) => !e.rejected).map((e) => e.hex)),
+  hexes: () => new Set(mine().filter((e) => !e.rejected && !isOld(e)).map((e) => e.hex)),
   /** Mes photos d'un avion précis (même code ICAO 24 bits) : les validées d'abord, la plus récente en tête. */
   forHex: (hex) => mine().filter((e) => e.hex === hex).sort((a, b) => (a.rejected ? 1 : 0) - (b.rejected ? 1 : 0) || b.takenAt - a.takenAt),
   /** La capture qui compte pour cet avion (photo validée), ou null : un avion ne s'attrape qu'une fois. */
-  caughtFor: (hex) => mine().filter((e) => e.hex === hex && !e.rejected).sort((a, b) => b.xp - a.xp || a.id - b.id)[0] || null,
+  caughtFor: (hex) => mine().filter((e) => e.hex === hex && !e.rejected && !isOld(e)).sort((a, b) => b.xp - a.xp || a.id - b.id)[0] || null,
   get: (id) => all().find((e) => e.id === id),
   add(e) { const l = all(); l.push(e); saveAll(l); },
   update(id, patch) { const l = all(), e = l.find((x) => x.id === id); if (e) { Object.assign(e, patch); saveAll(l); } return e || null; },
@@ -180,6 +182,25 @@ export async function createCatch(s, blob, source, takenAt, verdict = null) {
   const total = Player.xp();
   return { entry, xp, levelBefore: before, levelAfter: levelOf(total), total };
 }
+/**
+ * Photo(s) ancienne(s) d'un modèle du catalogue (c) : aucune vérification, 0 XP, pas d'avion précis (hex vide).
+ * Plusieurs photos d'un coup = une seule publication (la première + l'album, 10 au plus). Envoyée à la prochaine synchronisation.
+ */
+export async function createOldPhoto(c, blobs, takenAt, registration = "") {
+  const id = Date.now(), stamp = (i) => "p" + id + (i ? "_" + i : "");
+  const list = blobs.slice(0, ALBUM_MAX);
+  for (let i = 0; i < list.length; i++) await Photos.put(stamp(i), list[i]);
+  const entry = {
+    id, hex: "", callsign: "", registration: (registration || "").trim().toUpperCase(), type: c.codes[0], model: c.name,
+    operator: "", countryIso: "", countryName: "", military: !!c.military, rarity: c.rarity.key, xp: 0, newModel: false,
+    photoId: stamp(0), takenAt, distanceKm: null, route: "", flightKm: null, source: "old", ownerId: uid(), remoteId: null,
+    remotePhoto: null, album: list.slice(1).map((_, i) => ({ photoId: stamp(i + 1), remotePhoto: null, takenAt })),
+  };
+  if (entry.album.length) entry.albumPending = true;
+  Collection.add(entry);
+  return entry;
+}
+
 export function catchMessage(o) {
   let m = o.xp.zeroReason
     ? `${o.xp.rarity.stars} ${o.xp.rarity.label}\n\n${o.xp.zeroReason} : la photo est ajoutée à votre collection, sans XP.`

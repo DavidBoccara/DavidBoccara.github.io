@@ -1,7 +1,7 @@
 // Onglet Collection : grade et XP, puis trois vues — mes photos, avions passés au-dessus, catalogue complet.
 import { LOCALE } from "../i18n.js";
 import { h, ls, rarityMark, infoButton } from "../util.js";
-import { Collection, Player, entryPhoto, entryPhotoItems, entryRarity, entryModel, entryLabel } from "../store.js";
+import { Collection, Player, entryPhoto, entryPhotoItems, entryRarity, entryModel, entryLabel, isOld } from "../store.js";
 import { Supa } from "../supa.js";
 import { sync } from "../cloud.js";
 import { RARITIES, flagOf, modelKey } from "../game.js";
@@ -59,11 +59,14 @@ export function collection(view, [sub]) {
 
   function photos() {
     const entries = Collection.all();
-    const models = new Set(entries.map(modelKey).filter(Boolean)).size;
-    const mil = new Set(entries.filter((e) => e.military).map((e) => e.hex)).size;
-    const byR = [...RARITIES].reverse().map((r) => [r, entries.filter((e) => e.rarity === r.key).length]).filter(([, n]) => n).map(([r, n]) => `${r.label} : ${n}`);
+    // Les photos anciennes (Catalogue) ne comptent ni comme avions, ni comme modèles attrapés
+    const caught = entries.filter((e) => !isOld(e)), olds = entries.length - caught.length;
+    const models = new Set(caught.map(modelKey).filter(Boolean)).size;
+    const mil = new Set(caught.filter((e) => e.military).map((e) => e.hex)).size;
+    const byR = [...RARITIES].reverse().map((r) => [r, caught.filter((e) => e.rarity === r.key).length]).filter(([, n]) => n).map(([r, n]) => `${r.label} : ${n}`);
     const photos = entries.reduce((s, e) => s + entryPhotoItems(e).length, 0);
-    const stats = `${photos} photo(s) • ${new Set(entries.map((e) => e.hex)).size} avion(s) • ${models} modèle(s) • ${mil} militaire(s)` + (byR.length ? "\n" + byR.join(" • ") : "");
+    const stats = `${photos} photo(s) • ${new Set(caught.map((e) => e.hex)).size} avion(s) • ${models} modèle(s) • ${mil} militaire(s)`
+      + (olds ? ` • ${olds} ancienne(s)` : "") + (byR.length ? "\n" + byR.join(" • ") : "");
     body.replaceChildren(
       h("div.small.dim", { style: { whiteSpace: "pre-line" } }, stats),
       entries.length ? h("div.grid.mt", entries.map(tile))
@@ -77,7 +80,7 @@ export function collection(view, [sub]) {
       h("div.ph", img, albumBadge(e), wikiDot(wikiQuery.entry(e))),
       h("div.strip", { style: { background: r.color } }),
       h("div.nm", (e.countryIso.length === 2 ? flagOf(e.countryIso) + " " : "") + (entryModel(e) || entryLabel(e))),
-      h("div.rr", rarityMark(r, `${r.label} · ${e.rejected ? "non validée" : e.xp + " XP"}`)));
+      h("div.rr", rarityMark(r, `${r.label} · ${e.rejected ? "non validée" : isOld(e) ? "ancienne" : e.xp + " XP"}`)));
   }
 
   async function doSync() {

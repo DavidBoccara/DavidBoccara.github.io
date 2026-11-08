@@ -8,7 +8,7 @@ import { LOCALE } from "../i18n.js";
 import { h, modal, toast, confirmBox, timeAgo, rarityMark, infoButton } from "../util.js";
 import { Supa } from "../supa.js";
 import { Weekly, Cloud, profileFrom, sync } from "../cloud.js";
-import { Collection, entryPhoto, entryModel, entryRarity } from "../store.js";
+import { Collection, entryPhoto, entryModel, entryRarity, isOld } from "../store.js";
 import { rarityByName, prettyModel, flagOf } from "../game.js";
 import { renderHud } from "../app.js";
 import { aircraftInfoCard } from "../ui.js";
@@ -205,7 +205,7 @@ export function contestFeed(box) {
 
   /** Choisir parmi mes photos prises cette semaine (envoyées sur mon compte et validées). */
   function choose(start, endsAt) {
-    const list = Collection.all().filter((x) => x.remoteId && !x.rejected && x.takenAt >= start && x.takenAt < endsAt);
+    const list = Collection.all().filter((x) => x.remoteId && !x.rejected && !isOld(x) && x.takenAt >= start && x.takenAt < endsAt); // photos anciennes : jamais au concours
     if (!list.length) {
       modal({ title: "Aucune photo cette semaine", body: "Seules les photos prises cette semaine (depuis lundi) peuvent participer. Attrape un avion et reviens ici !" });
       return;

@@ -61,7 +61,8 @@ export function commentsPage(view, [id]) {
       car && h("div.row.mt", { style: { justifyContent: "flex-end" } },
         h("button.btn.small.outline", { onclick: () => savePhoto(photos[car.index()] || photos[0], photoName(model, c.takenAt)) }, icon("download", 16),
           photos.length > 1 ? " Enregistrer cette photo" : " Enregistrer la photo")),
-      h("h3", { style: { marginBottom: 0 } }, `${user?.username || "Un spotter"} a attrapé ${model ? "un " + model : "un avion"}`),
+      h("h3", { style: { marginBottom: 0 } }, c.source === "old" ? `${user?.username || "Un spotter"} a partagé une photo ancienne : ${model || "un avion"}`
+        : `${user?.username || "Un spotter"} a attrapé ${model ? "un " + model : "un avion"}`),
       h("div.small.dim", [user && `${user.level.emblem} ${user.level.name}`, c.takenAt && timeAgo(c.takenAt)].filter(Boolean).join(" · ")),
       aircraftInfoCard({ ...c, rarity }),
     ].filter(Boolean));
