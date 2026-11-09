@@ -534,6 +534,13 @@ b.player-link:hover, .player-link b:hover, h3.player-link:hover { text-decoratio
 .adm-thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; background: var(--card-2); flex: none; cursor: pointer; }
 .adm-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .adm-actions .btn { text-decoration: none; }
+.adm-meter { padding: 6px 0 10px; border-bottom: 1px solid var(--line); }
+.adm-meter:last-of-type { border-bottom: 0; }
+.adm-meter .v { font-family: var(--mono); font-size: 13px; }
+.adm-meter .bar { height: 6px; border-radius: 3px; background: var(--line); margin: 6px 0 4px; overflow: hidden; }
+.adm-meter .bar i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+.adm-meter.hot .bar i { background: var(--red); }
+.adm-meter.hot .v { color: var(--red); }
 .adm-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
 .adm-table th { font: 500 10px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
 .adm-table th, .adm-table td { padding: 6px 4px; border-bottom: 1px solid var(--line); text-align: right; }

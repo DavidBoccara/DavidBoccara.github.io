@@ -1,7 +1,7 @@
 // Console d'administration (Profil › Admin), réservée aux administrateurs : table private.admins de la base
 // (pour l'instant le joueur Toshley). L'écran ne fait qu'afficher : chaque lecture et chaque action est vérifiée par le
 // serveur (fonctions admin_* de supabase/admin.sql ; suppressions par la fonction serveur « admin »).
-// Vues : Résumé (chiffres, appels aux services), Joueurs (fiche, XP, pseudo, photo, suspension, suppression du compte),
+// Vues : Résumé (chiffres, appels aux services), Serveur (place prise, mémoire vive, processeur, disque), Joueurs (fiche, XP, pseudo, photo, suspension, suppression du compte),
 // Signalements (publications, photos du quiz, questions de l'IA, publications retirées), Publications (photos et
 // commentaires de tous les joueurs, profils privés compris) et Messages (formulaire de contact).
 // En français seulement : data-notr (jamais traduit), fichier ignoré par tools/i18n_check.py.
@@ -21,6 +21,7 @@ const VIEWS = [
   { id: "reports", label: "Signalements" },
   { id: "posts", label: "Publications" },
   { id: "messages", label: "Messages" },
+  { id: "server", label: "Serveur" },
 ];
 
 // ---------- Petits outils ----------
@@ -99,7 +100,7 @@ export function adminConsole(view, sub, onRoute = () => {}) {
     paint();
     body.replaceChildren();
     const ctx = { show, changed: refreshCounts, ...opts };
-    ({ summary, players, reports, posts, messages })[id](body, ctx);
+    ({ summary, players, reports, posts, messages, server })[id](body, ctx);
   }
   // « Ses publications » / « Ses commentaires » depuis la fiche d'un joueur
   const onPosts = (e) => show("posts", e.detail || {});
@@ -574,6 +575,90 @@ export function openPost(id, onChange = () => {}) {
       comments.length ? h("div.list", comments.reverse().map((cm) => commentRow(cm, changed))) : h("div.small.dim", "Aucun commentaire."));
   }
   render();
+}
+
+// ---------- Serveur : place prise, mémoire vive, processeur, disque ----------
+// Limites du plan gratuit de Supabase (à changer si le projet passe à un plan payant)
+const FREE = { db: 500e6, storage: 1e9 };
+const BUCKET_NAMES = { photos: "Photos des captures", avatars: "Photos de profil" };
+
+/** Taille lisible : 14,1 Mo, 1,25 Go… (unités décimales, comme les limites de Supabase). */
+function bytes(b) {
+  if (b == null || !isFinite(b)) return "—";
+  const f = (v, d) => v.toLocaleString(LOCALE, { maximumFractionDigits: d });
+  return b >= 1e9 ? `${f(b / 1e9, 2)} Go` : b >= 1e6 ? `${f(b / 1e6, 1)} Mo` : `${f(b / 1e3, 0)} Ko`;
+}
+/** Jauge : libellé, « utilisé / total », barre (rouge au-delà de 85 %), pourcentage et détail. */
+function meter(label, used, total, detail = "") {
+  const ok = used != null && total;
+  const pct = ok ? Math.max(0, Math.min(100, (used / total) * 100)) : 0;
+  return h("div.adm-meter" + (pct >= 85 ? ".hot" : ""),
+    h("div.row", h("span.grow", label), h("span.v", ok ? `${bytes(used)} / ${bytes(total)}` : "—")),
+    h("div.bar", h("i", { style: { width: `${pct}%` } })),
+    h("div.small.dim", [ok && `${pct.toLocaleString(LOCALE, { maximumFractionDigits: pct < 10 ? 1 : 0 })} %`, detail].filter(Boolean).join(" · ")));
+}
+/** Jauge sans unité (connexions, processeur en %). */
+function gauge(label, value, max, text, detail = "") {
+  const pct = max ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
+  return h("div.adm-meter" + (pct >= 85 ? ".hot" : ""),
+    h("div.row", h("span.grow", label), h("span.v", text)),
+    h("div.bar", h("i", { style: { width: `${pct}%` } })),
+    detail && h("div.small.dim", detail));
+}
+
+async function server(body, { show }) {
+  body.append(spinner());
+  const [res, st] = await Promise.all([Admin.resources().catch((e) => ({ error: e.message })),
+    Admin.serverStats().catch((e) => ({ error: e.message }))]);
+  const pct = (v) => `${(v * 100).toLocaleString(LOCALE, { maximumFractionDigits: v < 0.1 ? 1 : 0 })} %`;
+  const dec2 = (v) => (v == null ? "—" : Number(v).toLocaleString(LOCALE, { maximumFractionDigits: 2 }));
+  const parts = [h("div.row", h("div.section.grow", "Place utilisée (plan gratuit)"),
+    infoButton("Serveur", [
+      "Plane GO tourne sur le plan gratuit de Supabase : une petite machine (environ 0,5 Go de mémoire vive, 2 cœurs partagés), une base de données de 500 Mo au plus et 1 Go pour les photos.",
+      "Base de données : comptes, captures, commentaires, questions de l'IA… (sans les photos). Photos : les fichiers envoyés par les joueurs, déjà allégés (environ 200 Ko chacune).",
+      "Mémoire vive : elle paraît souvent bien remplie, c'est normal (le serveur garde des choses en mémoire pour aller plus vite). La mémoire d'appoint (swap) sert quand la mémoire vive manque : si elle se remplit et que l'appli devient lente, il faudra une machine plus grosse (plan payant).",
+      "Processeur : charge moyenne sur 1, 5 et 15 minutes ; 100 % = les 2 cœurs occupés en permanence.",
+      "Pas visible ici : la bande passante (5 Go par mois sur le plan gratuit, surtout les photos affichées) et le total des appels de fonctions. Ils se trouvent dans le tableau de bord Supabase, rubrique Usage.",
+    ], { small: true }), h("button.btn.small.outline", { onclick: () => show("server"), title: "Actualiser" }, icon("refresh", 16)))];
+
+  if (res?.error) parts.push(h("div.card.pad", res.error));
+  else {
+    const photos = res.buckets || [];
+    const storageBytes = photos.reduce((a, b) => a + Number(b.bytes || 0), 0);
+    parts.push(h("div.card.adm-card",
+      meter("Base de données", Number(res.db_bytes), FREE.db, "comptes, captures, commentaires… sans les photos"),
+      meter("Photos (stockage)", storageBytes, FREE.storage,
+        photos.map((b) => `${BUCKET_NAMES[b.bucket] || b.bucket} : ${num(b.files)} (${bytes(Number(b.bytes))})`).join(" · ") || "aucune photo")));
+  }
+
+  parts.push(h("div.section", "Machine du serveur"));
+  if (st?.error) parts.push(h("div.card.pad", `Mesures indisponibles pour l'instant (${st.error}).`));
+  else {
+    const ram = st.ram || {}, swap = st.swap || {}, cpu = st.cpu || {}, disk = st.disk || {};
+    const cores = cpu.count || 1;
+    parts.push(h("div.card.adm-card",
+      meter("Mémoire vive (RAM)", ram.total != null && ram.available != null ? ram.total - ram.available : null, ram.total,
+        ram.available != null ? `${bytes(ram.available)} libres` : ""),
+      meter("Mémoire d'appoint (swap)", swap.total != null && swap.free != null ? swap.total - swap.free : null, swap.total),
+      gauge("Processeur", cpu.load1 ?? 0, cores, cpu.load1 != null ? pct(cpu.load1 / cores) : "—",
+        `${cores} cœur${cores > 1 ? "s" : ""} · charge ${dec2(cpu.load1)} / ${dec2(cpu.load5)} / ${dec2(cpu.load15)} (1, 5, 15 min)`
+          + (cpu.avg != null ? ` · ${pct(cpu.avg)} en moyenne depuis le démarrage` : "")),
+      meter("Disque de la base", disk.size != null && disk.available != null ? disk.size - disk.available : null, disk.size,
+        "s'agrandit tout seul quand il se remplit"),
+      res && !res.error ? gauge("Connexions à la base", Number(res.connections), Number(res.connections_max),
+        `${num(res.connections)} / ${num(res.connections_max)}`) : null,
+      h("div.small.dim.mt", [st.boot && `Machine démarrée le ${when(new Date(st.boot * 1000).toISOString())}`,
+        res?.postgres && `PostgreSQL ${res.postgres}`,
+        st.network?.sent != null && `réseau depuis le démarrage : ${bytes(st.network.sent)} envoyés, ${bytes(st.network.received)} reçus`].filter(Boolean).join(" · "))));
+  }
+
+  if (res && !res.error && res.tables?.length) {
+    parts.push(h("div.section", "Plus grosses tables"),
+      h("table.adm-table", h("thead", h("tr", h("th", "Table"), h("th", "Lignes"), h("th", "Taille"))),
+        h("tbody", res.tables.map((t) => h("tr", h("td", t.name.replace(/^public\./, "")),
+          h("td.v", Number(t.rows) >= 0 ? num(t.rows) : "—"), h("td.v", bytes(Number(t.bytes))))))));
+  }
+  fill(body, ...parts);
 }
 
 // ---------- Messages du formulaire de contact ----------
