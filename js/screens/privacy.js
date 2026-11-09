@@ -1,5 +1,6 @@
 // Page « Confidentialité » (#privacy) : quelles données Plane GO garde, pourquoi, où, combien de temps,
-// qui les voit (amis, ou tout le monde si le joueur partage ses publications dans le feed Monde),
+// qui les voit (amis, ou tout le monde si le joueur partage ses publications dans le feed Monde ; l'éditeur pour la
+// modération, console Admin),
 // et comment tout effacer (bouton « Supprimer mon compte », aussi dans le Profil). Section « Publicité et cookies »
 // (Google AdSense) affichée seulement quand la publicité est en service (ads.js).
 import { h, modal, toast, confirmBox } from "../util.js";
@@ -27,7 +28,7 @@ export function privacyPage(view) {
 
     sec("Sur ton compte (si tu en crées un)",
       list(
-        "Ton e-mail et ton mot de passe (chiffré) : uniquement pour te connecter. Les autres joueurs ne les voient jamais.",
+        "Ton e-mail et ton mot de passe (chiffré, illisible même pour l'éditeur) : pour te connecter. Les autres joueurs ne les voient jamais ; l'éditeur peut voir ton e-mail (voir « Modération »).",
         "Ton pseudo, ta photo de profil et ton XP : visibles par les joueurs (recherche d'amis, classement).",
         "Tes captures : tes photos de l'avion (allégées et sans leur position GPS), le modèle, l'immatriculation et le trajet de l'avion, la distance à laquelle il est passé et la date. Visibles par toi et tes amis, et par tous les joueurs seulement si tu choisis de les partager dans le feed Monde (voir plus bas).",
         "Tes likes, commentaires, amis, gains au quiz et résultats du Quiz du jour : visibles par toi et tes amis. Seule exception : sur une publication partagée avec tout le monde, les likes (et qui a liké) sont visibles par tous les joueurs.",
@@ -47,6 +48,13 @@ export function privacyPage(view) {
         "Tu peux signaler la publication d'un autre joueur : pas d'avion sur la photo, photo obscène ou choquante, photo qui n'est pas la sienne, ou autre contenu inapproprié.",
         "Les signalements sont anonymes : l'auteur ne sait pas qui l'a signalé. Seul Plane GO les garde, tant que la publication existe.",
         "Quand 5 joueurs différents ont signalé une publication, elle est supprimée pour tout le monde (la photo est effacée du serveur) et ses XP sont retirés à son auteur. L'auteur est prévenu dans l'appli (modèle de l'avion, XP retirés et raison principale).",
+      )),
+
+    sec("Modération",
+      list(
+        "L'éditeur de Plane GO peut consulter les données de ton compte : e-mail, dates d'inscription et de dernière connexion, XP, publications (même celles visibles par tes amis seulement), commentaires, signalements reçus et faits, messages envoyés avec le formulaire de contact. Il s'en sert uniquement pour modérer le jeu, répondre à une demande ou corriger un problème.",
+        "Il peut retirer une publication ou un commentaire contraire aux règles, corriger des XP gagnés en trichant, ou suspendre un compte (plus de photo, de commentaire ni de concours pendant la suspension). Pour une publication retirée ou une suspension, tu es prévenu dans l'appli, avec la raison.",
+        "Les autres joueurs ne voient jamais ces informations, ni qui a signalé quoi.",
       )),
 
     sec("Seulement sur ton téléphone",
@@ -93,21 +101,22 @@ export function privacyPage(view) {
     sec("Pourquoi Plane GO a le droit d'utiliser ces données",
       list(
         "Ton compte, tes captures, tes amis, le feed et le quiz : pour te fournir le jeu que tu as choisi d'utiliser (les Conditions d'utilisation).",
-        "Les signalements, la vérification des photos et la lutte contre la triche : pour garder le jeu honnête et sûr pour tous (intérêt légitime).",
+        "Les signalements, la modération (publication retirée, XP corrigés, suspension), la vérification des photos et la lutte contre la triche : pour garder le jeu honnête et sûr pour tous (intérêt légitime).",
         ads && "Les cookies publicitaires de Google : seulement avec ton accord, que tu peux retirer à tout moment.",
         "Ce que l'appli garde sur ton téléphone (réglages, collection, passages d'avions) sert uniquement à son fonctionnement : ce ne sont pas des traceurs.",
       )),
 
     sec("Combien de temps",
       list(
-        "Ton compte, tes captures et tes photos : jusqu'à ce que tu les supprimes.",
-        "Une photo retirée ou supprimée (par toi, ou après 5 signalements) est effacée du serveur.",
+        "Ton compte, tes captures et tes photos : jusqu'à ce que tu les supprimes, ou que la modération les retire.",
+        "Une photo retirée ou supprimée (par toi, après 5 signalements ou par la modération) est effacée du serveur.",
         "Tes signalements de publications : tant que la publication signalée existe (ils disparaissent avec elle, ou avec ton compte).",
-        "La trace d'une de tes publications retirée après 5 signalements (date, modèle, raison) : un an, pour pouvoir répondre si tu contestes, puis effacée automatiquement.",
+        "La trace d'une de tes publications retirée après 5 signalements ou par la modération (date, modèle, raison) : un an, pour pouvoir répondre si tu contestes, puis effacée automatiquement.",
         "Les joueurs que tu as bloqués : jusqu'à ce que tu les débloques ou que tu supprimes ton compte.",
         "Ton engagement sur les photos (date et version du texte accepté) : tant que ton compte existe, pour pouvoir le prouver.",
         "Tes signalements de photos ou de questions du quiz : tant que ton compte existe.",
         "Une suspension de ton compte décidée par la modération (dates et motif) : tant que ton compte existe.",
+        "Les corrections de tes XP par la modération (points et motif) : tant que ton compte existe.",
         "Les messages envoyés avec le formulaire de contact (nom, e-mail, message) : un an au plus, puis effacés automatiquement.",
         "Les journaux techniques des hébergeurs (adresse internet, page demandée) : gardés par eux pour la sécurité, selon leurs propres règles.",
         "Les passages d'avions sur ton téléphone : effacés chaque lundi à 0 h.",

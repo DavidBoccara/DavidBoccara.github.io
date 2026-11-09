@@ -8,7 +8,7 @@ import { CONTACT_EMAIL, LEGAL, SITE_URL, GITHUB_SITE_URL } from "../config.js";
 const SITES = `${SITE_URL.replace(/\/$/, "")}, sa copie ${GITHUB_SITE_URL.replace(/\/$/, "")}`;
 import { adsOn, legalComplete, adChoices } from "../ads.js";
 
-const UPDATED = "5 novembre 2026";
+const UPDATED = "9 novembre 2026";
 const sec = (title, ...items) => h("div.card.pad.mt.privacy",
   h("h3", title), ...items.filter(Boolean).map((t) => (t instanceof Node ? t : h("p", t))));
 const list = (...rows) => h("ul", ...rows.filter(Boolean).map((r) => h("li", r)));
@@ -114,8 +114,8 @@ export function termsPage(view) {
       list(
         "Chaque publication d'un autre joueur peut être signalée (bouton drapeau), avec une raison : pas d'avion sur la photo, contenu obscène ou choquant, photo qui n'est pas la sienne, autre contenu inapproprié. Le signalement est anonyme.",
         "Quand 5 joueurs différents ont signalé une publication, elle est supprimée automatiquement, sans examen par une personne, et ses XP sont retirés. Son auteur est prévenu dans l'appli, avec la raison principale.",
-        "Un contenu illicite peut aussi être signalé à l'éditeur (voir les Mentions légales), qui peut le retirer et, en cas d'abus répétés ou graves, suspendre ou supprimer le compte concerné.",
-        h("span", "Tu penses qu'une publication t'a été retirée par erreur ? Écris", CONTACT_EMAIL ? [" à ", mail()] : " à l'éditeur", " : ta demande sera examinée par une personne."),
+        "Un contenu illicite peut aussi être signalé à l'éditeur (voir les Mentions légales). L'éditeur peut retirer lui-même une publication ou un commentaire contraire à ces règles, corriger des XP et, en cas d'abus répétés ou graves, suspendre le compte (plus de photo, de commentaire ni de concours pendant la durée indiquée) ou le supprimer. Pour une publication retirée ou une suspension, l'auteur est prévenu dans l'appli, avec la raison.",
+        h("span", "Tu penses qu'une publication t'a été retirée, ou ton compte suspendu, par erreur ? Écris", CONTACT_EMAIL ? [" à ", mail()] : " à l'éditeur", " : ta demande sera examinée par une personne."),
       )),
 
     sec("6. XP, classement et concours",
