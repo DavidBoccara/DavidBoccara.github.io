@@ -4,6 +4,7 @@ import { LOCALE } from "../i18n.js";
 import { h, ls, toast } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, otherOf } from "../cloud.js";
+import { linkPlayer } from "./player.js";
 import { Player } from "../store.js";
 import { LEVELS, RARITIES, MAX_PHOTO_KM, Quiz } from "../game.js";
 
@@ -43,11 +44,12 @@ export function grades(view) {
       list.replaceChildren(...players.map((p, i) => {
         const av = h("img.avatar.sm", { alt: "", src: p.avatarUrl || "icons/avatar.svg" });
         av.onerror = () => { av.src = "icons/avatar.svg"; };
-        return h("div.card.pad.row", { style: { borderColor: p.id === Supa.userId ? "var(--cyan)" : "" } },
+        // Ligne cliquable : page du joueur (ses photos si son profil est public, ou si c'est un ami)
+        return linkPlayer(h("div.card.pad.row", { style: { borderColor: p.id === Supa.userId ? "var(--cyan)" : "" } },
           h("div", { style: { width: "38px", textAlign: "center", fontWeight: 800, fontSize: i < 3 ? "24px" : "15px" } }, `#${i + 1}`),
           av, h("div.grow", h("div", { style: { fontWeight: 700 } }, p.username + (p.id === Supa.userId ? "  (toi)" : "")),
             h("div.small.dim", `${p.level.emblem} Niv. ${p.level.number} · ${p.level.name}`)),
-          h("span.chip", `${p.xp.toLocaleString(LOCALE)} XP`));
+          h("span.chip", `${p.xp.toLocaleString(LOCALE)} XP`)), p.id);
       }));
     } catch (e) { list.replaceChildren(); toast(e.message); }
   }

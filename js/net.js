@@ -2,6 +2,7 @@
 import { photoCredit, safeLicense, rememberCredit, wikimediaFile } from "./credits.js";
 import { LANG } from "./i18n.js";
 import { Supa } from "./supa.js";
+import { hit as countCall } from "./usage.js";
 import { distanceKm, bearingDeg, ls, sleep } from "./util.js";
 import { looksMilitary, modelQueries } from "./game.js";
 
@@ -36,7 +37,7 @@ function phoneFetch(query) {
   return new Promise((resolve) => {
     const t = setTimeout(() => { phoneWaiting.delete(id); resolve(null); }, 35000);
     phoneWaiting.set(id, (o) => { clearTimeout(t); resolve(o); });
-    try { phone().adsbFetch(id, query); } catch { clearTimeout(t); phoneWaiting.delete(id); resolve(null); }
+    try { phone().adsbFetch(id, query); countCall("telephone"); } catch { clearTimeout(t); phoneWaiting.delete(id); resolve(null); }
   });
 }
 async function adsbQuery(query) {
@@ -150,7 +151,10 @@ export const AdsbDb = {
 // ---------- Wikipédia ----------
 const AVIATION = ["avion", "aéronef", "hélicoptère", "appareil", "chasseur", "bombardier", "ravitailleur", "aircraft", "airliner",
   "airplane", "aeroplane", "helicopter", "jet", "fighter", "transport", "tanker", "bomber", "trainer", "drone", "airlifter",
-  "turboprop", "biréacteur", "quadriréacteur", "monomoteur", "bimoteur", "planeur", "glider"];
+  "turboprop", "biréacteur", "quadriréacteur", "monomoteur", "bimoteur", "planeur", "glider",
+  // espagnol (Wikipédia en espagnol pour les joueurs hispanophones)
+  "avión", "aeronave", "helicóptero", "caza", "bombardero", "planeador", "birreactor", "cuatrimotor", "monomotor", "bimotor",
+  "turbohélice", "avioneta", "dron", "cisterna"];
 const norm = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 const enc = encodeURIComponent;
 
@@ -188,7 +192,7 @@ function isRelevant(title, query) {
   return keys.length > 0 && keys.some((k) => t.includes(k));
 }
 // Wikipédia dans la langue du joueur d'abord, l'autre ensuite
-const WIKI_ORDER = LANG === "en" ? ["en", "fr"] : ["fr", "en"];
+const WIKI_ORDER = { en: ["en", "fr"], es: ["es", "en", "fr"] }[LANG] || ["fr", "en"];
 const safe = async (p) => { try { return await p; } catch { return null; } };
 
 async function findExact(queries) {
@@ -229,7 +233,9 @@ async function langLink(lang, title, target) {
  */
 // Photos sans avion entier (d'après le nom du fichier) : intérieur, pièce, dessin… et, depuis le 8/11/2026, les photos de
 // personnes et d'événements (une conférence de presse Gulfstream illustrait une question du quiz).
-const NOT_A_PLANE = /cockpit|cabin|cabine|interior|int[ée]rieur|seat|si[èe]ge|engine|moteur|logo|maquette|model|diagram|drawing|sch[ée]ma|map|carte|galley|lavatory|wheel|landing.gear|tail|d[ée]rive|wing|aile|\bpress\b|konferenz|conference|conf[ée]rence|speech|speaker|podium|portrait|\bceo\b|\bpresident\b|\bpr[ée]sident\b|interview|ceremony|c[ée]r[ée]monie|employee|headquarter|building|b[âa]timent|\boffice\b|factory|usine|assembly line|cha[iî]ne d.assemblage/i;
+// Mots entiers seulement (\b) : « wing » trouvé dans « Eurowings » écartait toutes les photos Eurowings (vol Eurowings
+// illustré par un A320neo de Frontier le 8/11/2026), « seat » celles prises à Seattle, « tail » celles de Tailwind…
+const NOT_A_PLANE = /cockpit|\bcabins?\b|\bcabines?\b|interior|int[ée]rieur|\bseats?\b|\bsi[èe]ges?\b|\bengines?\b|\bmoteurs?\b|\blogos?\b|maquette|\bmodels?\b|diagram|drawing|sch[ée]ma|\bmaps?\b|\bcartes?\b|galley|lavatory|\bwheels?\b|landing.gear|\btails?\b|\bd[ée]rives?\b|\bwing(s|tips?|lets?)?\b|\bailes?\b|\bpress\b|konferenz|conference|conf[ée]rence|speech|speaker|podium|portrait|\bceo\b|\bpresident\b|\bpr[ée]sident\b|interview|ceremony|c[ée]r[ée]monie|employee|headquarter|building|b[âa]timent|\boffice\b|factory|usine|assembly line|cha[iî]ne d.assemblage/i;
 async function commonsSearch(query, limit, width) {
   const q = (query || "").trim();
   if (!q) return [];
@@ -384,6 +390,7 @@ export async function quizPhotos(ctx) {
   const key = [registration, airline, model, name, article].join("|");
   if (!quizMem.has(key)) quizMem.set(key, (async () => {
     const sets = await commonsSets(ctx, true);
+    if (sets.failed) quizMem.delete(key); // recherche ratée (réseau, Commons occupé) : pas gardée, on réessaiera
     const fair = (x) => !revealsAnswer(x.author, name) && !revealsAnswer(x.author, model);
     const out = [];
     const ok = (x) => x.safe && fair(x); // quiz : licences sans risque seulement
@@ -402,10 +409,10 @@ export async function quizPhotos(ctx) {
  * modèle aux couleurs de sa compagnie. Licences sans risque d'abord, puis CC 2.0–3.0 (usableLicense), auteur connu,
  * crédit gardé. { urls, exact, company } (exact = photos de cet appareil), ou null s'il n'y en a pas (la fiche montre
  * alors seulement la photo de l'article Wikipédia du modèle). Remplace les photos airport-data (pas de licence libre).
- * Résultat gardé 7 jours (2 jours s'il n'y a rien) dans `aircraft_photos_v2` ; low = recherche de vignette (moins pressée).
+ * Résultat gardé 7 jours (2 jours s'il n'y a rien) dans `aircraft_photos_v3` ; low = recherche de vignette (moins pressée).
  */
-const AP_KEY = "aircraft_photos_v2", AP_MAX = 250; // v2 : sans les versions trompeuses (Beluga…)
-try { localStorage.removeItem("aircraft_photos_v1"); } catch { /* stockage bloqué */ }
+const AP_KEY = "aircraft_photos_v3", AP_MAX = 250; // v3 : filtre NOT_A_PLANE par mots entiers (Eurowings, Seattle…)
+try { localStorage.removeItem("aircraft_photos_v1"); localStorage.removeItem("aircraft_photos_v2"); } catch { /* stockage bloqué */ }
 const apMem = new Map();
 export function aircraftPhotos(ctx, { low = false } = {}) {
   const key = [flat(ctx.registration), flat(airlineName(ctx.airline)), modelCore(ctx.model) || ""].join("|");
@@ -473,8 +480,8 @@ async function preferSafePhoto(s) {
 }
 
 // v4 : photos choisies selon leur licence (preferSafePhoto) ; l'ancien cache est effacé
-const WIKI_KEY = "wiki_cache_v4" + (LANG === "en" ? "_en" : ""), RETRY_MS = 7 * 86400e3;
-try { localStorage.removeItem("wiki_cache_v3" + (LANG === "en" ? "_en" : "")); } catch { /* stockage bloqué */ }
+const WIKI_KEY = "wiki_cache_v4" + (LANG === "fr" ? "" : "_" + LANG), RETRY_MS = 7 * 86400e3;
+try { localStorage.removeItem("wiki_cache_v3" + (LANG === "fr" ? "" : "_" + LANG)); } catch { /* stockage bloqué */ }
 const wikiMem = new Map(), inflight = new Map();
 let running = 0; const queue = [];
 const gate = () => new Promise((res) => { if (running < 3) { running++; res(); } else queue.push(res); });

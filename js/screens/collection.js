@@ -59,13 +59,14 @@ export function collection(view, [sub]) {
 
   function photos() {
     const entries = Collection.all();
-    // Les photos anciennes (Catalogue) ne comptent ni comme avions, ni comme modèles attrapés
-    const caught = entries.filter((e) => !isOld(e)), olds = entries.length - caught.length;
-    const models = new Set(caught.map(modelKey).filter(Boolean)).size;
-    const mil = new Set(caught.filter((e) => e.military).map((e) => e.hex)).size;
-    const byR = [...RARITIES].reverse().map((r) => [r, caught.filter((e) => e.rarity === r.key).length]).filter(([, n]) => n).map(([r, n]) => `${r.label} : ${n}`);
+    // Les photos anciennes (Catalogue) comptent comme avions et modèles attrapés (choix du propriétaire, 9/11/2026), sans XP ;
+    // elles n'ont pas d'avion précis (hex vide) : chacune compte pour un avion
+    const real = entries.filter((e) => !isOld(e)), olds = entries.length - real.length;
+    const models = new Set(entries.map(modelKey).filter(Boolean)).size;
+    const mil = new Set(entries.filter((e) => e.military).map((e) => e.hex || e.id)).size;
+    const byR = [...RARITIES].reverse().map((r) => [r, entries.filter((e) => e.rarity === r.key).length]).filter(([, n]) => n).map(([r, n]) => `${r.label} : ${n}`);
     const photos = entries.reduce((s, e) => s + entryPhotoItems(e).length, 0);
-    const stats = `${photos} photo(s) • ${new Set(caught.map((e) => e.hex)).size} avion(s) • ${models} modèle(s) • ${mil} militaire(s)`
+    const stats = `${photos} photo(s) • ${new Set(real.map((e) => e.hex)).size + olds} avion(s) • ${models} modèle(s) • ${mil} militaire(s)`
       + (olds ? ` • ${olds} ancienne(s)` : "") + (byR.length ? "\n" + byR.join(" • ") : "");
     body.replaceChildren(
       h("div.small.dim", { style: { whiteSpace: "pre-line" } }, stats),

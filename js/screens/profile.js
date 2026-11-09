@@ -1,8 +1,9 @@
 // Onglet Profil : mon profil (pseudo, photo, grade, statistiques), mes amis et le classement.
 import { blockedList } from "../blocks.js";
-import { h, ls, toast, prompt, pickImage, toJpeg, confirmBox, infoButton, modal } from "../util.js";
+import { h, ls, toast, prompt, pickImage, toJpeg, confirmBox, infoButton, modal, dateDay } from "../util.js";
 import { Supa } from "../supa.js";
-import { Cloud, sync } from "../cloud.js";
+import { Cloud, sync, MyStatus } from "../cloud.js";
+import { adminConsole } from "./admin.js";
 import { Collection, Player, entryModel, entryRarity, QuizStore } from "../store.js";
 import { levelOf, modelKey } from "../game.js";
 import { loginGate, renderHud, go } from "../app.js";
@@ -22,28 +23,58 @@ const VIEWS = [
   { id: "me", label: "Profil" },
   { id: "friends", label: "Amis" },
   { id: "ranking", label: "Classement" },
+  { id: "admin", label: "Admin", admin: true }, // console d'administration (screens/admin.js) : administrateurs seulement
 ];
 
-export function profile(view, [sub]) {
+export function profile(view, [sub, sub2]) {
   const seg = h("div.seg");
   const body = h("div.mt");
   view.append(seg, body);
-  const show = (id) => {
+  let current = null, stop = null;
+  const views = () => VIEWS.filter((v) => !v.admin || (MyStatus.admin && Supa.isLoggedIn));
+  const paint = () => seg.replaceChildren(...views().map((v) => h("button" + (v.id === current ? ".on" : ""), { onclick: () => show(v.id) }, v.label)));
+  const show = (id, adminView) => {
+    if (!views().some((v) => v.id === id)) id = "me";
+    stop?.(); stop = null;
+    current = id;
     ls.set("profile_view", id);
     history.replaceState(null, "", "#profile/" + id);
-    seg.replaceChildren(...VIEWS.map((v) => h("button" + (v.id === id ? ".on" : ""), { onclick: () => show(v.id) }, v.label)));
+    paint();
     body.replaceChildren();
     if (id === "friends") friends(body);
     else if (id === "ranking") grades(body);
+    else if (id === "admin") stop = adminConsole(body, adminView, (v) => history.replaceState(null, "", "#profile/admin/" + v));
     else me(body, show);
   };
-  show(VIEWS.some((v) => v.id === sub) ? sub : ls.get("profile_view", "me"));
+  show(VIEWS.some((v) => v.id === sub) ? sub : ls.get("profile_view", "me"), sub2);
+  // Administrateur ? (état relu sur le serveur : l'onglet Admin apparaît ou disparaît)
+  if (Supa.isLoggedIn) {
+    const was = MyStatus.admin, wasSusp = MyStatus.suspended;
+    MyStatus.refresh().then(() => {
+      if (MyStatus.suspended !== wasSusp && current === "me") { show("me"); return; } // suspension commencée ou levée
+      if (MyStatus.admin === was) return;
+      if (current === "admin" && !MyStatus.admin) show("me");
+      else if (sub === "admin" && MyStatus.admin && current === "me") show("admin", sub2); // adresse #profile/admin ouverte avant la réponse
+      else paint();
+    }).catch(() => {});
+  }
+  return () => stop?.();
+}
+
+/** Compte suspendu par l'administrateur : ce qui est bloqué, jusqu'à quand, pourquoi. */
+function suspendedCard() {
+  const until = MyStatus.until ? Date.parse(MyStatus.until) : 0;
+  return h("div.card.pad.mt.suspended-card", h("b", "Compte suspendu"),
+    h("p.small", until ? `Ton compte est suspendu jusqu'au ${dateDay(until)} : tu ne peux plus publier de photos, commenter ni participer au concours.`
+      : "Ton compte est suspendu : tu ne peux plus publier de photos, commenter ni participer au concours."),
+    MyStatus.reason ? h("p.small", `Motif : ${MyStatus.reason}`) : null,
+    h("p.small.dim", "Tu peux continuer à jouer et à utiliser le radar. Si tu penses que c'est une erreur, écris-nous depuis la page Contact."));
 }
 
 /** Langue de l'interface (i18n.js) : la page se recharge. Libellés écrits dans leur propre langue (jamais traduits). */
 function langRow() {
   const b = (code, label) => h("button" + (LANG === code ? ".on" : ""), { "data-notr": "", onclick: () => { if (LANG !== code) setLang(code); } }, label);
-  return h("div.card.pad.mt", h("div.row", h("span.grow", "Langue"), h("div.seg", { "data-notr": "", style: { marginTop: 0 } }, b("fr", "Français"), b("en", "English"))));
+  return h("div.card.pad.mt", h("div.row", h("span.grow", "Langue"), h("div.seg", { "data-notr": "", style: { marginTop: 0 } }, b("fr", "Français"), b("en", "English"), b("es", "Español"))));
 }
 
 /** Interrupteur « Sons et vibrations » (sound.js). */
@@ -77,6 +108,7 @@ function me(view, show) {
     view.append(soundRow(), langRow(), legalLinks(), versionLine());
     return;
   }
+  if (MyStatus.suspended) view.append(suspendedCard());
   const avatar = h("img.avatar.lg", { alt: "Ma photo de profil", src: "icons/avatar.svg", style: { cursor: "pointer" }, onclick: changeAvatar });
   avatar.onerror = () => { avatar.src = "icons/avatar.svg"; };
   const name = h("h2", { style: { margin: "10px 0 0" } }), email = h("div.small.dim");
@@ -91,8 +123,8 @@ function me(view, show) {
     if (saved == null) shareInput.checked = !want; // échec : on remet comme avant
   } });
   const shareRow = h("div.card.pad.mt", { style: { display: "none" } },
-    h("label.switch", h("span.row", { style: { gap: "8px" } }, "Mes publications visibles par tout le monde",
-      infoButton("Feed Monde", "Dans le feed Monde, tous les joueurs voient et peuvent liker tes publications (même les anciennes). Les commentaires restent entre amis. Décoché : seuls tes amis les voient.", { small: true })), shareInput));
+    h("label.switch", h("span.row", { style: { gap: "8px" } }, "Profil public",
+      infoButton("Profil public", "Coché : tous les joueurs voient tes publications (même les anciennes) dans le feed Monde et sur ta page de joueur, ouverte en touchant ton pseudo, et peuvent les liker. Les commentaires restent entre amis. Décoché : seuls tes amis les voient.", { small: true })), shareInput));
   view.append(h("div", { style: { textAlign: "center" } }, avatar, name, email,
     h("div.row.mt", { style: { justifyContent: "center", flexWrap: "wrap" } },
       h("button.btn.small.outline", { onclick: changeAvatar }, "Changer la photo"), h("button.btn.small.outline", { onclick: editName }, "Modifier le pseudo"))),

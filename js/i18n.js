@@ -1,22 +1,27 @@
-// Langue de l'interface : français (langue d'origine du site) ou anglais.
+// Langue de l'interface : français (langue d'origine du site), anglais ou espagnol (9/11/2026).
 //
-// Principe : le site reste écrit en français. En anglais, un traducteur surveille la page (MutationObserver) et
-// remplace chaque texte affiché par sa traduction tirée de `en.js` (texte français exact → anglais, ou modèle avec
-// des trous {1}, {2}… pour les phrases qui contiennent des nombres ou des noms). Une phrase sans traduction reste
-// en français : rien ne casse. En français, rien de tout ça ne tourne (en.js n'est même pas chargé).
+// Principe : le site reste écrit en français. En anglais ou en espagnol, un traducteur surveille la page
+// (MutationObserver) et remplace chaque texte affiché par sa traduction tirée de `en.js` ou `es.js` (texte français
+// exact → traduction, ou modèle avec des trous {1}, {2}… pour les phrases qui contiennent des nombres ou des noms).
+// Une phrase sans traduction reste en français : rien ne casse. En espagnol, une phrase absente de es.js est montrée
+// en anglais (en.js chargé aussi) plutôt qu'en français. En français, rien de tout ça ne tourne.
 //
-// Choix : réglage « Langue » du Profil (clé `lang`), sinon langue du téléphone (français si elle commence par « fr »).
+// Choix : réglage « Langue » du Profil (clé `lang`), sinon langue du téléphone (« fr… » → français, « es… » → espagnol,
+// le reste → anglais).
 
 const KEY = "lang";
+/** Langues proposées (réglage « Langue » du Profil). */
+export const LANGS = ["fr", "en", "es"];
 
 export const LANG = (() => {
-  try { const v = localStorage.getItem(KEY); if (v === "fr" || v === "en") return v; } catch { /* stockage bloqué */ }
-  return String(navigator.language || "fr").toLowerCase().startsWith("fr") ? "fr" : "en";
+  try { const v = localStorage.getItem(KEY); if (LANGS.includes(v)) return v; } catch { /* stockage bloqué */ }
+  const nav = String(navigator.language || "fr").toLowerCase();
+  return nav.startsWith("fr") ? "fr" : nav.startsWith("es") ? "es" : "en";
 })();
 
 /** Langue pour les dates et les nombres (Intl, toLocaleString…). */
-export const LOCALE = LANG === "en" ? "en-GB" : "fr-FR";
-/** Séparateur décimal (virgule en français, point en anglais). */
+export const LOCALE = { en: "en-GB", es: "es-ES" }[LANG] || "fr-FR";
+/** Séparateur décimal (virgule en français et en espagnol, point en anglais). */
 export const DEC = LANG === "en" ? "." : ",";
 /** Langue de Wikipédia et de Wikidata. */
 export const WIKI_LANG = LANG;
@@ -26,7 +31,7 @@ export function setLang(lang) {
   location.reload();
 }
 
-let EXACT = null;      // Map texte français → anglais
+let EXACT = null;      // Map texte français → traduction
 let PATTERNS = [];     // [{ re, en, size }] pour les phrases à trous
 const cache = new Map();
 
@@ -166,7 +171,7 @@ function walk(root) {
 }
 
 function start() {
-  document.documentElement.lang = "en";
+  document.documentElement.lang = LANG;
   const fixTitle = () => { const tt = translate(document.title); if (tt && tt !== document.title) document.title = tt; };
   walk(document.body); fixTitle();
   new MutationObserver((list) => {
@@ -179,12 +184,19 @@ function start() {
   new MutationObserver(fixTitle).observe(document.querySelector("title") || document.head, { childList: true, subtree: true, characterData: true });
 }
 
-if (LANG === "en") {
+if (LANG !== "fr") {
   try {
     const { EN } = await import("./en.js");
-    build(EN);
+    let entries = EN;
+    if (LANG === "es") {
+      // Espagnol : es.js d'abord ; un texte qui n'y est pas encore reste en anglais (en.js) plutôt qu'en français
+      const map = new Map(EN.map(([fr, tr]) => [fr, tr]));
+      try { for (const [fr, tr] of (await import("./es.js")).ES) map.set(fr, tr); } catch (e) { console.warn("Traduction espagnole indisponible", e); }
+      entries = [...map];
+    }
+    build(entries);
     if (document.body) start(); else document.addEventListener("DOMContentLoaded", start, { once: true });
   } catch (e) {
-    console.warn("Traduction anglaise indisponible", e); // le site reste en français
+    console.warn("Traduction indisponible", e); // le site reste en français
   }
 }

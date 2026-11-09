@@ -135,7 +135,7 @@ export function creditLine(url = null, { hold = false } = {}) {
  * `el.set(url)` (adresse de l'article) l'affiche ; sans adresse, la ligne reste cachée.
  */
 export function textCredit(pageUrl = null) {
-  const lic = LANG === "en" ? "https://creativecommons.org/licenses/by-sa/4.0/" : "https://creativecommons.org/licenses/by-sa/4.0/deed.fr";
+  const lic = { en: "https://creativecommons.org/licenses/by-sa/4.0/", es: "https://creativecommons.org/licenses/by-sa/4.0/deed.es" }[LANG] || "https://creativecommons.org/licenses/by-sa/4.0/deed.fr";
   const el = h("div.photo-credit");
   el.set = (u) => {
     el.hidden = !u;

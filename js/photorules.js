@@ -5,6 +5,7 @@
 // Pas de photo sans compte (mode invité) : voir requireAccount().
 import { h, ls, modal } from "./util.js";
 import { Supa } from "./supa.js";
+import { MyStatus } from "./cloud.js";
 
 // Version 2 (5 novembre 2026) : texte précisé (lieux où l'on peut être mais où la photo est interdite) → redemandé à tous
 export const PHOTO_RULES_VERSION = 2;
@@ -32,6 +33,11 @@ export function syncPhotoRules() {
 
 /** Mode invité : pas de photo sans compte. Vrai si connecté ; sinon fenêtre qui propose de créer un compte. */
 export function requireAccount() {
+  if (Supa.isLoggedIn && MyStatus.suspended) {
+    modal({ title: "Compte suspendu", body: ["Ton compte est suspendu : tu ne peux pas ajouter de photo pour l'instant.",
+      "Le détail est dans ton Profil. Tu peux continuer à jouer et à utiliser le radar."] });
+    return false;
+  }
   if (Supa.isLoggedIn) return true;
   modal({
     title: "Crée un compte pour photographier",

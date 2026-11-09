@@ -1,7 +1,8 @@
 // Signalement des publications des joueurs (feed, page de la publication, concours) : pas d'avion sur la photo,
 // photo obscène ou choquante, pas sa photo, autre. À 5 joueurs différents, la publication est supprimée pour tous
 // (photo effacée du serveur, XP retirés à son auteur) : voir supabase/reports.sql et la fonction serveur report-catch.
-// L'auteur est prévenu à son prochain passage dans l'appli (noticeRemovals).
+// L'auteur est prévenu à son prochain passage dans l'appli (noticeRemovals), comme pour une publication retirée par
+// l'administrateur (console Admin : raison « admin » dans catch_removals.reasons).
 import { h, ls, modal, toast, icon } from "./util.js";
 import { Supa } from "./supa.js";
 import { Cloud } from "./cloud.js";
@@ -86,6 +87,7 @@ export async function noticeRemovals() {
   if (!fresh.length) return;
   ls.set(SEEN, [...seen, ...fresh.map((r) => r.id)].slice(-200));
   const reasonOf = (r) => {
+    if (r.reasons?.admin) return REASONS.find((x) => x.id === r.reasons.admin)?.text || "contenu inapproprié"; // retirée par la modération
     const [top] = Object.entries(r.reasons || {}).sort((a, b) => b[1] - a[1]);
     return REASONS.find((x) => x.id === top?.[0])?.text || "contenu inapproprié";
   };
@@ -94,6 +96,7 @@ export async function noticeRemovals() {
     body: [
       ...fresh.map((r) => {
         const what = [prettyModel(r.model || r.type), r.registration].filter(Boolean).join(", ");
+        if (r.reasons?.admin) return `Ta photo${what ? ` (${what})` : ""} a été retirée par la modération (raison : ${reasonOf(r)}). Ses ${r.xp} XP ont été retirés.`;
         return `Ta photo${what ? ` (${what})` : ""} a été signalée par ${REPORT_MIN} joueurs (raison principale : ${reasonOf(r)}). Elle a été supprimée et ses ${r.xp} XP ont été retirés.`;
       }),
       "Pour que tout le monde s'amuse, publie seulement tes propres photos, où l'on voit bien l'avion.",

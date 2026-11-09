@@ -2,11 +2,13 @@
 import { Blocked, blockUser } from "../blocks.js";
 import { h, timeAgo, toast, confirmBox, icon } from "../util.js";
 import { Supa } from "../supa.js";
-import { Cloud, profileFrom } from "../cloud.js";
+import { Cloud, profileFrom, Admin, MyStatus } from "../cloud.js";
+import { deleteCatchFlow } from "./admin.js";
 import { rarityByName } from "../game.js";
 import { aircraftInfoCard, savePhoto, photoName, carousel } from "../ui.js";
 import { back } from "../app.js";
 import { reportButton } from "../report.js";
+import { linkPlayer } from "./player.js";
 
 export function commentsPage(view, [id]) {
   let meta = null;
@@ -19,6 +21,9 @@ export function commentsPage(view, [id]) {
   const writeRow = h("div.row.mt", input, send);
   const friendsOnly = h("div.card.pad.mt", { style: { display: "none" } }); // publication du feed Monde d'un joueur qui n'est pas mon ami
   const flagBox = h("div.mt2", { style: { textAlign: "center" } }); // « Signaler cette publication » (pas la mienne)
+  // Administrateur (console Admin) : supprimer cette publication, quel que soit son auteur
+  const adminBox = MyStatus.admin ? h("div.mt2", { style: { textAlign: "center" }, "data-notr": "" },
+    h("button.btn.small.danger", { onclick: async () => { if (await deleteCatchFlow(id)) back(); } }, "Supprimer la publication (admin)")) : null;
   const showFlag = (c) => {
     const b = reportButton({ id, userId: c.userId || c.user?.id, user: c.user }, () => {
       flagBox.replaceChildren(h("div.small.dim", "Publication signalée : merci ! Tu ne la verras plus dans le feed."));
@@ -27,7 +32,7 @@ export function commentsPage(view, [id]) {
   };
   view.append(
     h("div.page-head", h("button.back", { onclick: back, "aria-label": "Retour" }, "‹"), h("h1.title.grow", "Publication")),
-    top, h("div.section", "Commentaires"), likers, list, writeRow, friendsOnly, flagBox);
+    top, h("div.section", "Commentaires"), likers, list, writeRow, friendsOnly, flagBox, adminBox);
 
   /** Commentaires réservés aux amis de l'auteur : sinon, on propose de l'ajouter en ami. */
   async function checkFriend(c) {
@@ -61,8 +66,8 @@ export function commentsPage(view, [id]) {
       car && h("div.row.mt", { style: { justifyContent: "flex-end" } },
         h("button.btn.small.outline", { onclick: () => savePhoto(photos[car.index()] || photos[0], photoName(model, c.takenAt)) }, icon("download", 16),
           photos.length > 1 ? " Enregistrer cette photo" : " Enregistrer la photo")),
-      h("h3", { style: { marginBottom: 0 } }, c.source === "old" ? `${user?.username || "Un spotter"} a partagé une photo ancienne : ${model || "un avion"}`
-        : `${user?.username || "Un spotter"} a attrapé ${model ? "un " + model : "un avion"}`),
+      linkPlayer(h("h3", { style: { marginBottom: 0 } }, c.source === "old" ? `${user?.username || "Un spotter"} a partagé une photo ancienne : ${model || "un avion"}`
+        : `${user?.username || "Un spotter"} a attrapé ${model ? "un " + model : "un avion"}`), user?.id),
       h("div.small.dim", [user && `${user.level.emblem} ${user.level.name}`, c.takenAt && timeAgo(c.takenAt)].filter(Boolean).join(" · ")),
       aircraftInfoCard({ ...c, rarity }),
     ].filter(Boolean));
@@ -91,10 +96,13 @@ export function commentsPage(view, [id]) {
       list.replaceChildren(...(shown.length ? shown.map((c) => {
         const av = h("img.avatar.sm", { alt: "", src: c.user?.avatarUrl || "icons/avatar.svg" });
         av.onerror = () => { av.src = "icons/avatar.svg"; };
-        return h("div.row", { style: { alignItems: "flex-start" } }, av,
-          h("div.grow", h("div", h("b", c.user?.username || "?"), "  ", c.body), h("div.small.dim", timeAgo(c.createdAt))),
+        return h("div.row", { style: { alignItems: "flex-start" } }, linkPlayer(av, c.userId),
+          h("div.grow", h("div", linkPlayer(h("b", c.user?.username || "?"), c.userId), "  ", c.body), h("div.small.dim", timeAgo(c.createdAt))),
           c.userId === Supa.userId && h("button.btn.small.danger", { "aria-label": "Supprimer ce commentaire", onclick: async () => {
             if (await confirmBox("Supprimer ce commentaire ?", "Supprimer", true)) { await Cloud.deleteComment(c.id).catch((e) => toast(e.message)); reload(); }
+          } }, icon("trash", 16)),
+          c.userId !== Supa.userId && MyStatus.admin && h("button.btn.small.danger", { "aria-label": "Supprimer ce commentaire", title: "Supprimer (admin)", onclick: async () => {
+            if (await confirmBox("Supprimer ce commentaire d'un autre joueur ?", "Supprimer", true)) { await Admin.deleteComment(c.id).catch((e) => toast(e.message)); reload(); }
           } }, icon("trash", 16)),
           c.userId !== Supa.userId && Supa.isLoggedIn && h("button.btn.small.outline", { "aria-label": "Bloquer ce joueur", title: "Bloquer ce joueur",
             onclick: async () => { if (await blockUser(c.userId, c.user?.username)) reload(); } }, "Bloquer"));

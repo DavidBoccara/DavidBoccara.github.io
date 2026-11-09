@@ -469,7 +469,7 @@ export async function addOldPhoto(c, { entry = null, onChange } = {}) {
     body: [thumbs,
       h("label.small", { style: { display: "block", fontWeight: 700, marginTop: "10px" } }, "Date de la photo"), date,
       h("label.small", { style: { display: "block", fontWeight: 700, marginTop: "10px" } }, "Immatriculation (facultatif)"), reg,
-      h("p.small.dim", "Sans vérification et sans XP. Publiée dans le feed avec la mention « Photo ancienne », jamais au concours."),
+      h("p.small.dim", "Sans vérification et sans XP, mais le modèle compte comme attrapé dans ton Catalogue. Publiée dans le feed avec la mention « Photo ancienne », jamais au concours."),
       skipped > 0 && h("p.small", { style: { color: "var(--red)" } }, `${skipped} photo${skipped > 1 ? "s" : ""} illisible${skipped > 1 ? "s" : ""}, non ajoutée${skipped > 1 ? "s" : ""}.`)].filter(Boolean),
     buttons: [
       { label: "Annuler", onClick: () => res(null) },
@@ -497,10 +497,12 @@ export async function addOldPhoto(c, { entry = null, onChange } = {}) {
  * player : null = ma photo, sinon le pseudo de son auteur.
  */
 export function shareOld(model, photoUrl, player = null) {
-  const en = LANG === "en", what = en ? (model ? "a " + model : "a plane") : (model ? "d'un " + model : "d'un avion");
+  const en = LANG === "en", es = LANG === "es";
+  const what = en ? (model ? "a " + model : "a plane") : es ? (model ? "de un " + model : "de un avión") : (model ? "d'un " + model : "d'un avion");
   const text = (player == null
-    ? (en ? `My photo of ${what}, in my Plane GO collection ✈️` : `Ma photo ${what}, dans ma collection Plane GO ✈️`)
-    : (en ? `A photo of ${what} shared by ${player || "a spotter"} on Plane GO ✈️` : `Une photo ${what} partagée par ${player || "un spotter"} sur Plane GO ✈️`))
+    ? (en ? `My photo of ${what}, in my Plane GO collection ✈️` : es ? `Mi foto ${what}, en mi colección de Plane GO ✈️` : `Ma photo ${what}, dans ma collection Plane GO ✈️`)
+    : (en ? `A photo of ${what} shared by ${player || "a spotter"} on Plane GO ✈️` : es ? `Una foto ${what} compartida por ${player || "un spotter"} en Plane GO ✈️`
+      : `Une photo ${what} partagée par ${player || "un spotter"} sur Plane GO ✈️`))
     + `\n👉 ${SITE_URL}`;
   return share(text, photoUrl);
 }
@@ -704,22 +706,27 @@ export async function showEntry(e, { onChange } = {}) {
 // ---------- Partage ----------
 /** Texte qui accompagne le partage d'une capture : ce qui a été attrapé + l'accroche de l'appli + le lien. */
 export function shareMessage({ mine, player, model, rarity, xp, route, military }) {
-  const en = LANG === "en";
-  const what = en ? `${military ? "a military " : "a "}${model || "plane"}` : (model ? `un ${model}` : "un avion") + (military ? " militaire" : "");
-  const rl = en ? ({ COMMUN: "Common", PEU_COMMUN: "Uncommon", RARE: "Rare", EPIQUE: "Epic", LEGENDAIRE: "Legendary" }[rarity?.key] || rarity?.label) : rarity?.label;
-  let s = mine ? (en ? `I just caught ${what} with Plane GO ✈️` : `Je viens d'attraper ${what} avec Plane GO ✈️`)
-    : (en ? `${player || "A friend"} caught ${what} with Plane GO ✈️` : `${player || "Un ami"} a attrapé ${what} avec Plane GO ✈️`);
+  const en = LANG === "en", es = LANG === "es";
+  const what = en ? `${military ? "a military " : "a "}${model || "plane"}`
+    : es ? (model ? `un ${model}` : "un avión") + (military ? " militar" : "")
+    : (model ? `un ${model}` : "un avion") + (military ? " militaire" : "");
+  const rl = en ? ({ COMMUN: "Common", PEU_COMMUN: "Uncommon", RARE: "Rare", EPIQUE: "Epic", LEGENDAIRE: "Legendary" }[rarity?.key] || rarity?.label)
+    : es ? ({ COMMUN: "Común", PEU_COMMUN: "Poco común", RARE: "Raro", EPIQUE: "Épico", LEGENDAIRE: "Legendario" }[rarity?.key] || rarity?.label) : rarity?.label;
+  let s = mine ? (en ? `I just caught ${what} with Plane GO ✈️` : es ? `¡Acabo de atrapar ${what} con Plane GO! ✈️` : `Je viens d'attraper ${what} avec Plane GO ✈️`)
+    : (en ? `${player || "A friend"} caught ${what} with Plane GO ✈️` : es ? `${player || "Un amigo"} ha atrapado ${what} con Plane GO ✈️`
+      : `${player || "Un ami"} a attrapé ${what} avec Plane GO ✈️`);
   s += `\n${rarity?.stars || ""} ${rl || ""}${xp > 0 ? ` · +${xp} XP` : ""}`;
   if (route) s += `\n${route}`;
   s += en ? "\n\nThe app warns you before a plane flies over you and tells you where to look. Then snap it, collect it and challenge your friends"
+    : es ? "\n\nLa app te avisa antes de que un avión pase por encima de ti y te dice adónde mirar. Luego lo fotografías, lo coleccionas y retas a tus amigos"
     : "\n\nL'appli te prévient avant qu'un avion passe au-dessus de toi et te dit où regarder. Ensuite tu le photographies, tu le collectionnes et tu défies tes amis";
-  if (mine && player) s += en ? ` (my username: ${player})` : ` (mon pseudo : ${player})`;
+  if (mine && player) s += en ? ` (my username: ${player})` : es ? ` (mi nombre de usuario: ${player})` : ` (mon pseudo : ${player})`;
   return s + `\n👉 ${SITE_URL}`;
 }
 
 /** Partage d'une capture : image Plane GO (photo + bandeau, sharecard.js) et texte ; photo seule si l'image échoue. */
 export async function shareCatch(info, photoUrl) {
-  toast(LANG === "en" ? "Preparing the image…" : "Préparation de l'image…", 2500);
+  toast({ en: "Preparing the image…", es: "Preparando la imagen…" }[LANG] || "Préparation de l'image…", 2500);
   const card = await shareCard(photoUrl, info);
   await share(shareMessage(info), card || photoUrl);
   if (card) setTimeout(() => URL.revokeObjectURL(card), 60000);

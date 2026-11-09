@@ -22,9 +22,10 @@ const head = (title) => [
 /** Liens vers les pages légales (bas du Profil, pages légales, création de compte). */
 export function legalLinks() {
   return h("div.legal-links",
-    h("a", { href: LANG === "en" ? "/en/guides/" : "/guides/" }, "Guides"),
-    h("a", { href: LANG === "en" ? "/en/about/" : "/a-propos/" }, "À propos"),
-    h("a", { href: LANG === "en" ? "/en/contact/" : "/contact/" }, "Contact"),
+    // Pages publiques en français ou en anglais (pas encore de version espagnole : l'anglaise)
+    h("a", { href: LANG === "fr" ? "/guides/" : "/en/guides/" }, "Guides"),
+    h("a", { href: LANG === "fr" ? "/a-propos/" : "/en/about/" }, "À propos"),
+    h("a", { href: LANG === "fr" ? "/contact/" : "/en/contact/" }, "Contact"),
     h("a", { href: "#terms" }, "Conditions d'utilisation"),
     h("a", { href: "#privacy" }, "Confidentialité"),
     h("a", { href: "#legal" }, "Mentions légales"),

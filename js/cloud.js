@@ -3,6 +3,7 @@ import { Supa, ApiError } from "./supa.js";
 import { Collection, Photos, QuizStore, Player, entryPhotoItems, albumSynced } from "./store.js";
 import { levelOf, rarityByName, prettyModel } from "./game.js";
 import { uuid, compressForUpload, ls } from "./util.js";
+import { t } from "./i18n.js";
 
 const me = () => { if (!Supa.userId) throw new ApiError(401, "Connectez-vous d'abord"); return Supa.userId; };
 const iso = (ms) => new Date(ms).toISOString();
@@ -96,6 +97,14 @@ export const Cloud = {
     const o = (await Supa.select(`catches?id=eq.${id}&select=${CATCH_SELECT}`))[0];
     return o ? catchFrom(o) : null;
   },
+  /** Page d'un joueur : ses publications, 30 par page (le serveur ne renvoie rien d'un profil privé à un non-ami). */
+  PLAYER_PAGE: 30,
+  async playerCatches(userId, before) {
+    const filter = before ? `&created_at=lt.${Supa.enc(iso(before))}` : "";
+    return (await Supa.select(`catches?select=${CATCH_SELECT}&user_id=eq.${userId}&order=created_at.desc&limit=${Cloud.PLAYER_PAGE}${filter}`)).map(catchFrom);
+  },
+  /** Chiffres de la page d'un joueur : une ligne légère par publication. */
+  playerStats: (userId) => Supa.select(`catches?select=type,model,source&user_id=eq.${userId}&limit=5000`),
   /** Mes amis (acceptés) et moi. */
   async friendIds() {
     const rows = await Supa.select("friendships?status=eq.accepted&select=requester,addressee");
@@ -157,7 +166,10 @@ export const Cloud = {
     return (await Supa.select(`comments?catch_id=eq.${id}&select=*,profiles!comments_user_id_fkey(${PROFILE_SEL})&order=created_at.asc`))
       .map((o) => ({ id: o.id, userId: o.user_id, user: profileFrom(o.profiles), body: o.body, createdAt: Date.parse(o.created_at) || 0 }));
   },
-  addComment: (id, body) => Supa.insert("comments", { catch_id: id, body: body.trim() }),
+  async addComment(id, body) {
+    if (MyStatus.suspended) throw new ApiError(403, t("Ton compte est suspendu : tu ne peux pas commenter pour l'instant."));
+    return Supa.insert("comments", { catch_id: id, body: body.trim() });
+  },
   deleteComment: (id) => Supa.delete(`comments?id=eq.${id}`),
 
   async leaderboard(limit = 100) { return (await Supa.select(`profiles?select=*&order=xp.desc,created_at.asc&limit=${limit}`)).map(profileFrom); },
@@ -186,6 +198,62 @@ export const Cloud = {
   },
 };
 
+// ---------- Mon état : administrateur ? compte suspendu ? ----------
+/**
+ * Lu sur le serveur (RPC my_status) à chaque synchronisation, gardé sur le téléphone par compte pour afficher tout de
+ * suite l'onglet Admin. Le serveur vérifie lui-même chaque action : ceci ne sert qu'à l'affichage.
+ */
+export const MyStatus = {
+  admin: false, suspended: false, until: null, reason: "",
+  load() {
+    const s = Supa.userId ? ls.get("my_status:" + Supa.userId, null) : null;
+    Object.assign(MyStatus, { admin: !!s?.admin, suspended: !!s?.suspended && (!s.until || Date.parse(s.until) > Date.now()),
+      until: s?.until || null, reason: s?.reason || "" });
+    return MyStatus;
+  },
+  async refresh() {
+    if (!Supa.userId) { MyStatus.load(); return MyStatus; }
+    const s = await Supa.rpc("my_status", {});
+    if (s && typeof s === "object") { ls.set("my_status:" + Supa.userId, s); MyStatus.load(); }
+    return MyStatus;
+  },
+};
+MyStatus.load();
+
+// ---------- Console d'administration (Profil › Admin, screens/admin.js) ----------
+// Lectures et modifications : fonctions admin_* de la base ; suppressions : fonction serveur « admin ».
+// Toutes refusent un joueur qui n'est pas administrateur (supabase/admin.sql).
+const rpcList = async (name, args = {}) => { const r = await Supa.rpc(name, args); return Array.isArray(r) ? r : []; };
+export const Admin = {
+  overview: () => Supa.rpc("admin_overview", {}),
+  apiUsage: (days = 30) => rpcList("admin_api_usage", { p_days: days }),
+  players: (query, sort, offset = 0) => rpcList("admin_players", { p_query: query || null, p_sort: sort, p_limit: 50, p_offset: offset }),
+  player: (id) => Supa.rpc("admin_player", { p_user: id }),
+  setXp: (id, points, mode, reason) => Supa.rpc("admin_set_xp", { p_user: id, p_points: points, p_mode: mode, p_reason: reason || null }),
+  rename: (id, name) => Supa.rpc("admin_rename", { p_user: id, p_username: name }),
+  unsuspend: (id) => Supa.rpc("admin_unsuspend", { p_user: id }),
+  reports: () => rpcList("admin_reports"),
+  removals: () => rpcList("admin_removals", { p_limit: 50 }),
+  quizFlags: () => Supa.select("quiz_photo_flags?select=*&order=last_at.desc&limit=200"),
+  quizPhoto: (photo, action) => Supa.rpc("admin_quiz_photo", { p_photo: photo, p_action: action }),
+  aiFlags: () => rpcList("admin_ai_flags"),
+  aiRemove: (article, qid) => Supa.rpc("admin_ai_remove", { p_article: article, p_qid: qid }),
+  messages: () => rpcList("admin_messages", { p_limit: 200 }),
+  catches: ({ before = null, userId = null, id = null, limit = 30 } = {}) =>
+    rpcList("admin_catches", { p_before: before ? iso(before) : null, p_user: userId, p_id: id, p_limit: limit }),
+  comments: ({ before = null, userId = null, catchId = null, limit = 50 } = {}) =>
+    rpcList("admin_comments", { p_before: before ? iso(before) : null, p_user: userId, p_catch: catchId, p_limit: limit }),
+  // Suppressions (fonction serveur admin)
+  deleteCatch: (id, reason) => Supa.admin({ action: "delete_catch", catch_id: id, reason }),
+  dismissReports: (id) => Supa.admin({ action: "dismiss_reports", catch_id: id }),
+  deleteComment: (id) => Supa.admin({ action: "delete_comment", id: Number(id) }),
+  deleteMessage: (id) => Supa.admin({ action: "delete_message", id: Number(id) }),
+  aiKeep: (article, qid) => Supa.admin({ action: "ai_keep", article, qid }),
+  suspend: (id, days, reason) => Supa.admin({ action: "suspend", user_id: id, days: days || null, reason: reason || "" }),
+  clearAvatar: (id) => Supa.admin({ action: "clear_avatar", user_id: id }),
+  deleteAccount: (id) => Supa.admin({ action: "delete_account", user_id: id }),
+};
+
 // ---------- Concours de la semaine (photo de la semaine) ----------
 export const Weekly = {
   /** Semaine en cours : photos classées, ma participation, dernier gagnant (clôt aussi les semaines terminées). */
@@ -209,20 +277,22 @@ export function sync() {
   syncing ||= (async () => {
     try {
       Collection.claimOrphans(u);
-      for (const e of Collection.pending(u)) {
+      await MyStatus.refresh().catch(() => {}); // administrateur ? suspendu ?
+      // Compte suspendu : les photos restent sur le téléphone (le serveur les refuserait), envoyées après la suspension
+      if (!MyStatus.suspended) for (const e of Collection.pending(u)) {
         const blob = await Photos.get(e.photoId);
         if (!blob) continue;
         Collection.markSynced(e.id, await Cloud.uploadCatch(e, blob));
       }
       // Photos remplacées (même avion re-photographié) : on envoie la nouvelle version
-      for (const e of Collection.photoPending(u)) {
+      if (!MyStatus.suspended) for (const e of Collection.photoPending(u)) {
         const blob = await Photos.get(e.photoId);
         if (!blob) { Collection.update(e.id, { photoPending: false }); continue; }
         const path = await Cloud.replaceCatchPhoto(e.remoteId, blob, e.takenAt);
         Collection.update(e.id, { remotePhoto: path, photoPending: false });
       }
       // Albums modifiés (photos du même avion ajoutées, retirées, nouvelle photo principale)
-      for (const e of Collection.albumPending(u)) {
+      if (!MyStatus.suspended) for (const e of Collection.albumPending(u)) {
         try {
           const items = entryPhotoItems(e);
           for (const it of items) {

@@ -7,7 +7,7 @@ import { LANG } from "./i18n.js";
 const W = 1080, H = 1350, BAND = 480, PAD = 64;
 const C = { bg: "#0F1113", line: "#2A2E33", text: "#F2F3F5", dim: "#9AA1A9", soft: "#C9CDD2", accent: "#F2A93B", mil: "#E5484D", empty: "#2A2E33" };
 const SANS = '"IBM Plex Sans", system-ui, sans-serif', MONO = '"IBM Plex Mono", ui-monospace, monospace';
-const EN = LANG === "en";
+const EN = LANG === "en", ES = LANG === "es";
 
 /** Couleur d'une rareté (variable CSS → valeur), ambre si inconnue. */
 function rarityColor(r) {
@@ -53,8 +53,9 @@ export async function shareCard(photoUrl, info) {
     ctx.textBaseline = "top";
     // Étiquette : qui l'a attrapé
     ctx.font = `500 28px ${MONO}`; ctx.fillStyle = C.accent;
-    const who = info.mine ? (EN ? "CAUGHT WITH PLANE GO" : "ATTRAPÉ AVEC PLANE GO")
-      : (EN ? `CAUGHT BY ${String(info.player || "A FRIEND").toUpperCase()}` : `ATTRAPÉ PAR ${String(info.player || "UN AMI").toUpperCase()}`);
+    const who = info.mine ? (EN ? "CAUGHT WITH PLANE GO" : ES ? "ATRAPADO CON PLANE GO" : "ATTRAPÉ AVEC PLANE GO")
+      : (EN ? `CAUGHT BY ${String(info.player || "A FRIEND").toUpperCase()}` : ES ? `ATRAPADO POR ${String(info.player || "UN AMIGO").toUpperCase()}`
+        : `ATTRAPÉ PAR ${String(info.player || "UN AMI").toUpperCase()}`);
     ctx.letterSpacing = "4px"; ctx.fillText(fit(ctx, who, W - 2 * PAD), PAD, y); ctx.letterSpacing = "0px";
     y += 52;
 

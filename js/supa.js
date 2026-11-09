@@ -80,6 +80,8 @@ export const Supa = {
   deleteAccount: () => call("POST", "/functions/v1/delete-account", {}),
   /** Signalement d'une publication (fonction serveur report-catch, avec le jeton du joueur). */
   reportCatch: (catchId, reason) => call("POST", "/functions/v1/report-catch", { catch_id: catchId, reason }),
+  /** Console d'administration : actions qui suppriment (fonction serveur admin, jeton de l'administrateur). */
+  admin: (body) => call("POST", "/functions/v1/admin", body),
   /** Questions bonus d'un avion écrites par l'IA d'après son article Wikipédia (fonction serveur ai-questions). */
   aiQuestions: (lang, title, qlang = "fr") => call("POST", "/functions/v1/ai-questions", { lang, title, qlang }),
 

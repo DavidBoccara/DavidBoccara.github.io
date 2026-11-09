@@ -26,7 +26,8 @@ export function nativeConfig() {
     sets: { helicopters: D.helicopters, business: D.business, widebody: D.widebody, light: D.light, airliners: D.airliners,
       legendary: D.legendary, epic: D.epic, rareCivil: D.rareCivil },
     militaryCallsign: D.militaryCallsign,
-    lang: LANG, // langue des notifications de l'appli (1.25+)
+    // Langue des notifications de l'appli (1.25+) : l'appli connaît le français et l'anglais ; en espagnol, anglais
+    lang: LANG === "fr" ? "fr" : "en",
   });
 }
 

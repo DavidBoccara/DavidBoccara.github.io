@@ -3,6 +3,7 @@
 // commentaires, partage, et résultats du Quiz du jour, qu'on peut liker aussi) et « Concours de la semaine »
 // (photo de la semaine, voir contest.js). Chaque publication d'un autre joueur peut être signalée (🚩, report.js).
 import { Blocked } from "../blocks.js";
+import { linkPlayer } from "./player.js";
 import { LOCALE } from "../i18n.js";
 import { h, timeAgo, toast, modal, icon, rarityMark, dateDay } from "../util.js";
 import { Supa } from "../supa.js";
@@ -73,11 +74,11 @@ export function askShareWorld() {
       body: [
         "Le feed Monde montre les avions attrapés par tous les joueurs qui le souhaitent.",
         h("div.share-box", h("b", "Si tu dis oui"), h("ul",
-          h("li", "toutes tes publications, même les anciennes (photo de l'avion, modèle, trajet, date et ton pseudo), sont visibles par tous les joueurs ;"),
+          h("li", "toutes tes publications, même les anciennes (photo de l'avion, modèle, trajet, date et ton pseudo), sont visibles par tous les joueurs, dans le feed Monde et sur ta page de joueur ;"),
           h("li", "tout le monde peut les liker ;"),
           h("li", "les commentaires restent entre amis."))),
         h("div.share-box", h("b", "Si tu dis non"), h("ul", h("li", "rien ne change : seuls tes amis voient tes publications."))),
-        "Tu peux changer d'avis à tout moment dans ton Profil.",
+        "Tu peux changer d'avis à tout moment dans ton Profil (« Profil public »).",
       ],
       onClose: () => resolve(choice),
       buttons: [
@@ -209,8 +210,8 @@ function dailyPost(r) {
   const dayText = r.day === todayKey() ? "d'aujourd'hui"
     : "du " + new Date(r.day + "T12:00:00").toLocaleDateString(LOCALE, { weekday: "long", day: "numeric", month: "long" });
   return h("div.card.post.daily-post", { "data-author": r.userId || "" },
-    h("div.head", avatar(r.user), h("div.grow",
-      h("div", h("b", r.user?.username || "Un spotter"), " a fait le ", h("b", "Quiz du jour")),
+    h("div.head", linkPlayer(avatar(r.user), r.userId), h("div.grow",
+      h("div", linkPlayer(h("b", r.user?.username || "Un spotter"), r.userId), " a fait le ", h("b", "Quiz du jour")),
       h("div.small.dim", timeAgo(r.createdAt) + (r.user ? ` · ${r.user.level.emblem} ${r.user.level.name}` : "")))),
     h("div.daily-score", h("div.big", `${emoji} ${r.correct}/${r.total}`),
       h("div.small", `bonne${r.correct > 1 ? "s" : ""} réponse${r.correct > 1 ? "s" : ""} au quiz ${dayText}`)),
@@ -232,18 +233,20 @@ function post(c) {
   const urls = c.photoUrls?.length ? c.photoUrls : [c.photoUrl];
   const car = carousel(urls, { onTap: open });
   const current = () => urls[car.index()] || c.photoUrl;
-  const av = avatar(c.user);
+  // Avatar et pseudo : page du joueur (ses photos, si son profil est public ou si c'est un ami)
+  const av = linkPlayer(avatar(c.user), c.userId);
+  const who = () => linkPlayer(h("b", c.user?.username || "Un spotter"), c.userId);
   let card = null;
   // signalée : la publication disparaît de mon feed ; joueur bloqué : toutes ses publications affichées aussi
   const flag = reportButton(c, (r) => r?.blocked ? document.querySelectorAll(`[data-author="${c.userId}"]`).forEach((x) => x.remove()) : card?.remove());
   const details = [c.countryName && `${flagOf(c.countryIso)} ${c.countryName}`, c.operator, c.route && `${c.route}`,
     c.flightKm != null && `${Math.round(c.flightKm).toLocaleString(LOCALE)} km parcourus`, c.source === "import" && "photo ajoutée après coup"].filter(Boolean).join(" • ");
-  // Photo ancienne (ajoutée depuis le Catalogue) : pas d'avion attrapé ni d'XP, date de la photo
+  // Photo ancienne (ajoutée depuis le Catalogue) : compte comme attrapé dans la collection, mais sans XP ; date de la photo
   const old = c.source === "old";
   card = h("div.card.post", { "data-author": c.userId || "" },
     h("div.head", av, h("div.grow",
-      old ? h("div", h("b", c.user?.username || "Un spotter"), " a partagé une photo ancienne : ", h("b", c.modelName || "un avion"), c.military ? " (militaire)" : "")
-        : h("div", h("b", c.user?.username || "Un spotter"), " a attrapé ", h("b", c.modelName ? "un " + c.modelName : "un avion"), c.military ? " (militaire)" : ""),
+      old ? h("div", who(), " a partagé une photo ancienne : ", h("b", c.modelName || "un avion"), c.military ? " (militaire)" : "")
+        : h("div", who(), " a attrapé ", h("b", c.modelName ? "un " + c.modelName : "un avion"), c.military ? " (militaire)" : ""),
       h("div.small.dim", (old ? `photo du ${dateDay(c.takenAt)}` : timeAgo(c.takenAt)) + (c.user ? ` · ${c.user.level.emblem} ${c.user.level.name}` : ""))), flag),
     car,
     h("div.tags", rarityMark(c.rarity), old ? h("span.chip.small.old-chip", "Photo ancienne") : h("span.chip.small", c.xp > 0 ? `+${c.xp} XP` : "0 XP")),

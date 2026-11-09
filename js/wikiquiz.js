@@ -11,13 +11,16 @@ import { Supa } from "./supa.js";
 import { CATALOG } from "./game.js";
 import { Wiki } from "./net.js";
 
-const CACHE_KEY = "wikifacts_v1" + (LANG === "en" ? "_en" : ""), TTL = 30 * 86400e3;
+const CACHE_KEY = "wikifacts_v1" + (LANG === "fr" ? "" : "_" + LANG), TTL = 30 * 86400e3;
 const enc = encodeURIComponent;
 const shuffle = (a) => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const norm = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 const firstWord = (s) => norm(s).split(" ")[0] || "";
-const MONTHS = LANG === "en" ? ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"] : ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const MONTHS = {
+  en: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+  es: ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"],
+}[LANG] || ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 
 async function getJson(url, ms = 8000) {
   const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), ms);
@@ -70,7 +73,7 @@ export async function modelFacts(q) {
   const all = [...new Set([...refs.countries, ...refs.engines, ...refs.makers])].slice(0, 45);
   const labels = {};
   if (all.length) {
-    const lj = await getJson(`https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&origin=*&props=labels&languages=${LANG === "en" ? "en|fr" : "fr|en"}&ids=${all.join("|")}`);
+    const lj = await getJson(`https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&origin=*&props=labels&languages=${{ en: "en|fr", es: "es|en|fr" }[LANG] || "fr|en"}&ids=${all.join("|")}`);
     for (const [id, e] of Object.entries(lj?.entities || {})) labels[id] = e.labels?.[LANG]?.value || e.labels?.fr?.value || e.labels?.en?.value || null;
   }
   const named = (list) => [...new Set(list.map((id) => labels[id]).filter(Boolean))];
@@ -105,7 +108,9 @@ const ENGINES = ["CFM International CFM56", "CFM International LEAP", "Pratt & W
   "Safran Arriel", "Safran Makila", "Rolls-Royce BR700", "Honeywell TFE731", "Williams FJ44", "Lycoming O-360", "Continental O-200",
   "Snecma M88", "General Electric F404", "Pratt & Whitney F100", "Europrop TP400", "Rolls-Royce AE 2100", "Turbomeca Arrius"];
 
-const fmtDate = (t) => (t.precision >= 11 ? (LANG === "en" ? `${MONTHS[t.m - 1]} ${t.d}, ${t.y}` : `${t.d === 1 ? "1er" : t.d} ${MONTHS[t.m - 1]} ${t.y}`) : t.precision === 10 ? `${MONTHS[t.m - 1]} ${t.y}` : String(t.y));
+const fmtDate = (t) => (t.precision >= 11
+  ? (LANG === "en" ? `${MONTHS[t.m - 1]} ${t.d}, ${t.y}` : LANG === "es" ? `${t.d} de ${MONTHS[t.m - 1]} de ${t.y}` : `${t.d === 1 ? "1er" : t.d} ${MONTHS[t.m - 1]} ${t.y}`)
+  : t.precision === 10 ? (LANG === "es" ? `${MONTHS[t.m - 1]} de ${t.y}` : `${MONTHS[t.m - 1]} ${t.y}`) : String(t.y));
 const fmtMetres = (m) => `${m < 20 ? String(Math.round(m * 10) / 10).replace(".", DEC) : Math.round(m)} m`; // 6,5 m · 13 m · 36 m
 const nice = (n) => { const p = 10 ** Math.max(0, Math.floor(Math.log10(n)) - 1); return Math.max(1, Math.round(n / p) * p); };
 const fmtCount = (n) => nice(n).toLocaleString(LOCALE);
@@ -182,8 +187,8 @@ function aiRow(q) {
   if (!aiMem.has(key)) aiMem.set(key, (async () => {
     const art = await articleOf(q);
     if (!art) return null;
-    // Joueur anglophone : questions écrites en anglais (clé « en-q:… »)
-    const id = (LANG === "en" ? "en-q:" : "") + `${art.lang}:${art.title}`;
+    // Joueur anglophone ou hispanophone : questions écrites dans sa langue (clé « en-q:… » ou « es-q:… »)
+    const id = (LANG === "fr" ? "" : LANG + "-q:") + `${art.lang}:${art.title}`;
     const rows = await Supa.select(`quiz_ai_questions?article=eq.${Supa.enc(id)}&select=article,title,page_url,questions`).catch(() => []);
     if (rows?.[0]?.questions?.length) return rows[0];
     const made = await Supa.aiQuestions(art.lang, art.title, LANG).catch(() => null);
@@ -199,7 +204,7 @@ export function prefetchBonus(q) {
 const fromAi = (row) => row.questions.map((x) => ({
   id: `ai:${x.id}`, qid: x.id, article: row.article, ai: true, text: x.question,
   options: shuffle(x.options), answer: x.options[x.answer],
-  explain: [x.explanation, x.quote && (LANG === "en" ? `Wikipedia: « ${x.quote} »` : `Wikipédia : « ${x.quote} »`)].filter(Boolean).join(" — "),
+  explain: [x.explanation, x.quote && (LANG === "fr" ? `Wikipédia : « ${x.quote} »` : `Wikipedia: « ${x.quote} »`)].filter(Boolean).join(" — "),
   pageUrl: row.page_url, title: row.title,
 }));
 

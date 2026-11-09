@@ -97,7 +97,7 @@ export function scanner(view) {
       lines.push(!l ? (Radar.noLocation ? "Position inconnue : indique ta ville pour que le radar cherche les avions." : "Recherche de la position GPS…")
         : l.isDefault ? approxLabel(l)
         : `Position : ${l.lat.toFixed(4)}, ${l.lon.toFixed(4)} (± ${Math.round(l.accuracy)} m)`);
-      if (Radar.lastUpdate) lines.push(`${Radar.aircraft.length} avion(s), dont ${Radar.aircraft.filter((a) => a.military).length} militaire(s)${listFiltered() ? `, ${listed().length} dans la liste` : ""} — mis à jour à ${new Date(Radar.lastUpdate).toLocaleTimeString(LOCALE)}${Adsb.lastSource ? ` (source : ${Adsb.lastSource})` : ""}`);
+      if (Radar.lastUpdate) lines.push(`${Radar.aircraft.length} avion(s), dont ${Radar.aircraft.filter((a) => a.military).length} militaire(s)${listFiltered() ? `, ${listed().length} dans la liste` : ""} — mis à jour à ${new Date(Radar.lastUpdate).toLocaleTimeString(LOCALE)}${Adsb.lastSource ? " " + t(`(source : ${Adsb.lastSource})`) : ""}`);
     }
     if (Radar.error) lines.push("" + Radar.error);
     status.textContent = lines.join("\n");
@@ -324,7 +324,7 @@ export function filterSummary(f = NOTIF) {
   else if (k.length) parts.push(KINDS.filter((x) => k.includes(x.key)).map((x) => t(x.label.split(" (")[0])).join(", "));
   if (m.length) parts.push(m.length === 1 ? m[0] : t(`${m.length} modèles`));
   const vis = (f === NOTIF ? Prefs.notifyVisibleOnly : Prefs.listVisibleOnly) && parts.length ? t(", visibles à l'œil nu") : "";
-  return `${t(f.prefix)}${LANG === "en" ? ":" : " :"} ` + (parts.length ? parts.join(" + ") + vis : t("aucun"));
+  return `${t(f.prefix)}${LANG === "fr" ? " :" : ":"} ` + (parts.length ? parts.join(" + ") + vis : t("aucun"));
 }
 
 function checks(items, selected) {

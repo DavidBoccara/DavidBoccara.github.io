@@ -31,25 +31,20 @@ export function catalogView(box, onChange) {
   box.replaceChildren(h("div.row", summary, infoButton("Catalogue", [
       "Tous les modèles du jeu et les XP qu'ils rapportent.",
       "Touche un avion pour sa fiche, « Wikipédia » pour l'article. Un cadenas : pas encore attrapé.",
-      "Une photo d'avant Plane GO ? Dans la fiche du modèle, touche « Ajouter une photo ancienne » : elle rejoint ta collection et le feed avec la mention « Photo ancienne », sans vérification, sans XP et sans compter comme attrapé.",
+      "Une photo d'avant Plane GO ? Dans la fiche du modèle, touche « Ajouter une photo ancienne » : elle rejoint ta collection et le feed avec la mention « Photo ancienne », sans vérification et sans XP. Le modèle compte comme attrapé ; une vraie capture plus tard rapporte encore tous ses XP.",
     ], { small: true })), bar,
     search, h("div.row.mt", h("span.small", { style: { fontWeight: 700 } }, "Classer par :"), seg), chips, groups);
 
-  // Photos de la collection correspondant à chaque modèle (la meilleure en XP) ; les photos anciennes à part
-  // (elles ne comptent pas comme « attrapé » : seulement la vignette et la mention « photo ancienne »)
+  // Photo de la collection qui fait compter chaque modèle comme attrapé : la vraie capture qui a rapporté le plus d'XP,
+  // sinon la photo ancienne la plus récente (demandé par le propriétaire le 9/11/2026 : une photo ancienne compte comme
+  // attrapé, mais sans XP ; une vraie capture plus tard garde ses XP et son bonus de premier modèle, voir hasModel)
   function caughtMap() {
-    const entries = Collection.all().filter((e) => !e.rejected && !isOld(e)), map = new Map();
+    const entries = Collection.all().filter((e) => !e.rejected), map = new Map();
     for (const c of CATALOG) {
       const mine = entries.filter((e) => catalogMatches(c, e.type, e.military));
-      if (mine.length) map.set(c.id, mine.reduce((b, e) => (e.xp > b.xp ? e : b)));
-    }
-    return map;
-  }
-  function oldMap() {
-    const entries = Collection.all().filter(isOld), map = new Map(); // les plus récentes d'abord
-    for (const c of CATALOG) {
-      const old = entries.find((e) => catalogMatches(c, e.type, e.military));
-      if (old) map.set(c.id, old);
+      if (!mine.length) continue;
+      const real = mine.filter((e) => !isOld(e));
+      map.set(c.id, real.length ? real.reduce((b, e) => (e.xp > b.xp ? e : b)) : mine[0]);
     }
     return map;
   }
@@ -74,7 +69,7 @@ export function catalogView(box, onChange) {
       h("button.cat-chip" + (onlyFamous ? ".on" : ""), { onclick: () => { onlyFamous = !onlyFamous; render(); } }, "Célèbres"),
       h("button.cat-chip" + (onlyCaught ? ".on" : ""), { onclick: () => { onlyCaught = !onlyCaught; render(); } }, "Attrapés"));
 
-    const caught = caughtMap(), olds = oldMap();
+    const caught = caughtMap();
     summary.textContent = `${CATALOG.length} modèles · ${caught.size} attrapé(s)`;
     bar.firstChild.style.width = (caught.size / CATALOG.length) * 100 + "%";
 
@@ -91,7 +86,7 @@ export function catalogView(box, onChange) {
         h("summary", h("span.grow", { style: g.color ? { color: g.color } : null }, g.title),
           h("span.small.dim", `${g.items.length}${got ? ` · ${got}` : ""}`)), body);
       // Les lignes ne sont créées qu'à l'ouverture du groupe
-      const fill = () => { if (!body.childElementCount) body.append(...g.items.map((c) => row(c, caught.get(c.id), olds.get(c.id)))); };
+      const fill = () => { if (!body.childElementCount) body.append(...g.items.map((c) => row(c, caught.get(c.id)))); };
       if (det.open) fill();
       det.addEventListener("toggle", () => {
         if (det.open) { fill(); open.add(g.key); } else open.delete(g.key);
@@ -107,18 +102,19 @@ export function catalogView(box, onChange) {
     for (const it of items) if (it.isIntersecting) { io.unobserve(it.target); it.target._load?.(); }
   }, { rootMargin: "200px" }) : null;
 
-  function row(c, mine, old) {
+  function row(c, mine) {
+    const old = !!mine && isOld(mine); // attrapé avec une photo ancienne seulement : 0 XP
     const ph = h("div.cat-ph", icon("plane", 24));
     const img = h("img", { alt: "", loading: "lazy", style: { display: "none" } });
     ph.append(img);
     // On observe le cadre (l'image cachée n'a pas de taille, elle ne serait jamais « visible »)
     ph._load = () => {
-      if (mine || old) entryPhoto(mine || old).then((u) => { if (u) { img.src = u; img.style.display = ""; } });
+      if (mine) entryPhoto(mine).then((u) => { if (u) { img.src = u; img.style.display = ""; } });
       else wikiImg(img, wikiQ(c), (ok) => { if (ok) img.style.display = ""; });
     };
     if (io) io.observe(ph); else ph._load();
     const r = c.rarity;
-    return h("div.card.cat-row" + (mine ? "" : ".todo") + (!mine && old ? ".has-old" : ""), { style: { borderColor: mine ? "var(--green)" : "" }, onclick: () => details(c, mine) },
+    return h("div.card.cat-row" + (mine ? "" : ".todo"), { style: { borderColor: mine ? "var(--green)" : "" }, onclick: () => details(c, mine) },
       ph,
       h("div.cat-info",
         h("div.nm", h("span", { title: mine ? "Attrapé" : "Pas encore attrapé" }, mine ? "✓ " : ""), c.name),
@@ -127,7 +123,7 @@ export function catalogView(box, onChange) {
         old && h("div.sub.old-sub", icon("image", 12), "Photo ancienne"),
         h("div.row", { style: { marginTop: "4px", gap: "6px" } },
           h("span.small", rarityMark(r, "")),
-          h("span.chip.small", mine ? `+${mine.xp} XP` : `${c.baseXp} XP`),
+          h("span.chip.small", mine ? (old ? "0 XP" : `+${mine.xp} XP`) : `${c.baseXp} XP`),
           h("span.grow"),
           h("a.cat-wiki", { href: wikiLink(c.wiki), target: "_blank", rel: "noopener", onclick: (e) => e.stopPropagation() }, "Wikipédia "))));
   }
@@ -145,7 +141,8 @@ export function catalogView(box, onChange) {
       `Codes de type : ${c.codes.join(", ")}`,
       c.famous && `\n« ${c.famous.nickname} » — ${c.famous.description}`,
       "",
-      mine ? `Attrapé le ${dateDay(mine.takenAt)} (+${mine.xp} XP)`
+      mine ? (isOld(mine) ? `Attrapé avec une photo ancienne du ${dateDay(mine.takenAt)} (0 XP). Une vraie capture de ce modèle rapporte encore ses XP.`
+        : `Attrapé le ${dateDay(mine.takenAt)} (+${mine.xp} XP)`)
         + (recent.length ? `\nUn autre ${c.name} est passé près de vous le ${dateTime(recent[0].seenAt)} : il peut aussi être attrapé !` : "")
         : recent.length ? `Passé près de vous le ${dateTime(recent[0].seenAt)} : ajoutez votre photo !`
         : `Pas encore attrapé. Dès qu'il passera à moins de ${MAX_PHOTO_KM} km avec le radar actif, vous pourrez le photographier.`,

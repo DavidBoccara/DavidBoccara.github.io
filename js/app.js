@@ -1,11 +1,12 @@
 // Plane GO (PWA) : navigation par onglets, HUD du joueur, installation.
+import "./usage.js"; // compteur des appels aux services (console Admin), installé avant tout le reste
 import { syncBlocks } from "./blocks.js";
 import { LOCALE } from "./i18n.js";
 import { $, h, ls, modal, toast, icon } from "./util.js";
 import { Supa, emailLink } from "./supa.js";
 import { Player } from "./store.js";
 import { Sound } from "./sound.js";
-import { Cloud, sync } from "./cloud.js";
+import { Cloud, sync, MyStatus } from "./cloud.js";
 import { Radar } from "./radar.js";
 import { feed } from "./screens/feed.js";
 import { scanner } from "./screens/scanner.js";
@@ -14,6 +15,7 @@ import { collection } from "./screens/collection.js";
 import { profile } from "./screens/profile.js";
 import { aircraftPage } from "./screens/aircraft.js";
 import { commentsPage } from "./screens/comments.js";
+import { playerPage } from "./screens/player.js";
 import { authPage } from "./screens/auth.js";
 import { privacyPage } from "./screens/privacy.js";
 import { legalPage, termsPage } from "./screens/legal.js";
@@ -31,7 +33,7 @@ export const TABS = [
   { id: "collection", icon: "collection", label: "Collection", screen: collection },
   { id: "profile", icon: "profile", label: "Profil", screen: profile },
 ];
-const PAGES = { ac: aircraftPage, comments: commentsPage, auth: authPage, privacy: privacyPage, legal: legalPage, terms: termsPage };
+const PAGES = { ac: aircraftPage, comments: commentsPage, player: playerPage, auth: authPage, privacy: privacyPage, legal: legalPage, terms: termsPage };
 // Anciennes adresses (onglets regroupés)
 const ALIASES = { hangar: "collection/seen", friends: "profile/friends", grades: "profile/ranking" };
 
@@ -138,6 +140,7 @@ async function openEmailLink(l) {
 window.addEventListener("hashchange", route);
 Supa.onChange(async () => {
   Player.profile = null;
+  MyStatus.load(); // état (administrateur, suspension) du compte qui vient de se connecter, ou rien
   if (Supa.isLoggedIn) { syncPhotoRules(); await sync(); setTimeout(askPhotoRulesAtStart, 1500); }
   if (location.hash !== "#auth/reset") route(); // ne pas effacer le nouveau mot de passe en cours de saisie
 });

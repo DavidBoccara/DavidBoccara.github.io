@@ -4,6 +4,7 @@ import { h, toast, confirmBox, icon } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, otherOf, isIncoming } from "../cloud.js";
 import { loginGate } from "../app.js";
+import { linkPlayer } from "./player.js";
 
 export function friends(view) {
   if (loginGate(view, "Connecte-toi pour ajouter des amis et comparer vos collections.")) return;
@@ -26,8 +27,9 @@ export function friends(view) {
   function person(p, { note, action, onAction, secondary, onSecondary, onLong, onBlock } = {}) {
     const av = h("img.avatar.sm", { alt: "", src: p.avatarUrl || "icons/avatar.svg" });
     av.onerror = () => { av.src = "icons/avatar.svg"; };
-    const el = h("div.card.pad.row", av,
-      h("div.grow", h("div", { style: { fontWeight: 700 } }, p.username), h("div.small.dim", `${p.level.title} • ${p.xp} XP${note ? "  ·  " + note : ""}`)),
+    // Avatar et pseudo : page du joueur (les boutons de la ligne gardent leur rôle)
+    const el = h("div.card.pad.row", linkPlayer(av, p.id),
+      linkPlayer(h("div.grow", h("div", { style: { fontWeight: 700 } }, p.username), h("div.small.dim", `${p.level.title} • ${p.xp} XP${note ? "  ·  " + note : ""}`)), p.id),
       secondary && h("button.btn.small.outline", { onclick: onSecondary }, secondary),
       action && h("button.btn.small.primary", { onclick: onAction }, action));
     if (onBlock) el.append(h("button.btn.small.outline", { onclick: onBlock, "aria-label": "Bloquer", title: "Bloquer ce joueur" }, "Bloquer"));

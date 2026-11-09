@@ -37,9 +37,9 @@ export function privacyPage(view) {
     sec("Feed Monde : c'est toi qui choisis",
       list(
         "Au départ, tes publications ne sont visibles que par tes amis. L'appli te demande une seule fois si tu veux les partager avec tout le monde.",
-        "Si tu dis oui : toutes tes publications, même les anciennes (photo de l'avion, modèle, trajet, date et ton pseudo), apparaissent dans le feed Monde. Tous les joueurs connectés peuvent les voir et les liker.",
+        "Si tu dis oui : toutes tes publications, même les anciennes (photo de l'avion, modèle, trajet, date et ton pseudo), apparaissent dans le feed Monde et sur ta page de joueur (ouverte en touchant ton pseudo). Tous les joueurs connectés peuvent les voir et les liker.",
         "Les commentaires restent toujours entre amis.",
-        "Tu changes d'avis quand tu veux dans ton Profil (« Mes publications visibles par tout le monde ») : décoché, elles redeviennent visibles par tes amis seulement, tout de suite.",
+        "Tu changes d'avis quand tu veux dans ton Profil (« Profil public ») : décoché, elles redeviennent visibles par tes amis seulement, tout de suite. Ton pseudo, ta photo de profil, ton grade et tes XP restent visibles par tous, comme dans le classement.",
       )),
 
     sec("Signalements",
@@ -70,6 +70,7 @@ export function privacyPage(view) {
         "GitHub (GitHub Pages) : hébergement de la copie du site davidboccara.github.io (société américaine ; elle voit passer ton adresse internet pour t'envoyer les pages).",
         "adsb.fi et adsb.lol (positions des avions), adsbdb et airport-data.com (fiches des avions ; la photo d'airport-data sert seulement à vérifier que ta photo n'en est pas une copie, elle n'est jamais affichée), Wikipédia et Wikimedia Commons (articles et photos des avions) : ils ne reçoivent que des codes d'avions ou une position arrondie.",
         "OpenAI : écrit les questions bonus du quiz à partir des articles Wikipédia des avions. Il ne reçoit que le texte de l'article, jamais de donnée des joueurs.",
+        "Pour surveiller les limites de ces services, l'appli compte combien de fois elle les appelle chaque jour : ce sont seulement des nombres, sans ton identité ni ta position.",
         ads && "Google (régie Google AdSense) : les annonces du feed, voir « Publicité et cookies » ci-dessous.",
       ),
       ads ? "Aucune donnée de ton compte n'est vendue ni transmise aux annonceurs." : "Pas de publicité pour l'instant, pas de traceur, pas de cookie publicitaire, aucune donnée vendue."),
@@ -106,6 +107,7 @@ export function privacyPage(view) {
         "Les joueurs que tu as bloqués : jusqu'à ce que tu les débloques ou que tu supprimes ton compte.",
         "Ton engagement sur les photos (date et version du texte accepté) : tant que ton compte existe, pour pouvoir le prouver.",
         "Tes signalements de photos ou de questions du quiz : tant que ton compte existe.",
+        "Une suspension de ton compte décidée par la modération (dates et motif) : tant que ton compte existe.",
         "Les messages envoyés avec le formulaire de contact (nom, e-mail, message) : un an au plus, puis effacés automatiquement.",
         "Les journaux techniques des hébergeurs (adresse internet, page demandée) : gardés par eux pour la sécurité, selon leurs propres règles.",
         "Les passages d'avions sur ton téléphone : effacés chaque lundi à 0 h.",

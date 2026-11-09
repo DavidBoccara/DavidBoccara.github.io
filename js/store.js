@@ -47,7 +47,11 @@ const all = () => ls.get(CKEY, []);
 const saveAll = (l) => ls.set(CKEY, l);
 const mine = () => { const u = uid(); return all().filter((e) => !e.ownerId || e.ownerId === u); };
 
-/** Photo ancienne (ajoutée depuis le Catalogue) : sans vérification, 0 XP, pas d'avion précis, jamais au concours. */
+/**
+ * Photo ancienne (ajoutée depuis le Catalogue) : sans vérification, 0 XP, pas d'avion précis, jamais au concours.
+ * Compte comme attrapé dans la Collection et le Catalogue (9/11/2026), mais pas pour hasModel / countForHex / caughtFor :
+ * une vraie capture plus tard garde tous ses XP (dont le bonus de premier modèle).
+ */
 export const isOld = (e) => e?.source === "old";
 export const entryModel = (e) => prettyModel(e.model || e.type);
 export const entryLabel = (e) => e.callsign || e.registration || (isOld(e) ? entryModel(e) || "Photo ancienne" : (e.hex || "").toUpperCase());

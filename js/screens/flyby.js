@@ -7,13 +7,13 @@
 // Calcul : approach() de game.js (ligne droite à la vitesse sol, comme le Scanner), position exacte du téléphone.
 import { creditLine } from "../credits.js";
 import { LOCALE, LANG, DEC } from "../i18n.js";
-import { h, toast, cardinal, bearingDeg, distanceKm, ls } from "../util.js";
+import { h, toast, cardinal, bearingDeg, distanceKm, ls, sleep } from "../util.js";
 import { Radar } from "../radar.js";
-import { Adsb, AdsbDb, Wiki, quizPhotos } from "../net.js";
+import { Adsb, AdsbDb, Wiki, quizPhotos, aircraftPhotos } from "../net.js";
 import { QuizStore, Player, Prefs, Hunts, HUNT_XP } from "../store.js";
 import { Sound } from "../sound.js";
 import { approach, acLabel, prettyModel, fmtSpeed, fmtAltitude, isHelicopter } from "../game.js";
-import { locationBadge, wikiQuery, defaultLocationAlert } from "../ui.js";
+import { locationBadge, wikiQuery, defaultLocationAlert, photoCtx } from "../ui.js";
 import { renderHud } from "../app.js";
 import { sync } from "../cloud.js";
 import { loadMap, worldMap, ring, ahead, arc, cone } from "../worldmap.js";
@@ -295,8 +295,10 @@ export function flybyGame(view) {
     }
   }
 
+  // En anglais et en espagnol, pas d'espace avant « ? » (typographie française : « le plus haut ? ») ; morceaux traduits un à un
+  const tidy = (x) => (LANG !== "fr" && typeof x === "string" ? x.replace(/^\s+([?!:;])/, "$1") : x);
   const questionCard = (kicker, statement, hint) => h("div.card.pad.fly-question",
-    h("div.kicker", kicker), h("div.fly-statement", ...statement), hint ? h("div.small.dim", hint) : null);
+    h("div.kicker", kicker), h("div.fly-statement", ...statement.map(tidy)), hint ? h("div.small.dim", hint) : null);
   const nextButtons = (extra) => h("div.row.mt", { style: { gap: "8px" } }, extra, h("button.btn.primary.block", { onclick: () => start() }, "Défi suivant"));
 
   // ----- Passage et Altitude : toucher le bon avion -----
@@ -445,33 +447,41 @@ export function flybyGame(view) {
     const leftMin = (leftKm / (ac.speedKt * 1.852)) * 60 + 10; // + descente et approche
     let guess = null;
     const photo = h("img.dest-photo", { alt: "", referrerPolicy: "no-referrer", style: { display: "none", objectFit: "contain" } });
+    const photoNote = h("div.small.dim", { style: { marginTop: "4px" } });
     const photoCredit = creditLine();
     const model = h("div.dest-model", prettyModel(ac.description) || ac.type || "Avion");
     const company = h("div.small.dim", route.airline || ac.operator || "");
-    const card = h("div.card.pad.dest-card", photo, photoCredit, h("div.dest-cs", acLabel(ac)), model, company,
+    const card = h("div.card.pad.dest-card", photo, photoNote, photoCredit, h("div.dest-cs", acLabel(ac)), model, company,
       h("div.dest-facts",
         fact("Vient de", airport(o)),
         fact("Cap", `${Math.round(ac.trackDeg)}° (${cardinal(ac.trackDeg)})`),
         fact("Vitesse", fmtSpeed(ac)),
         fact("Altitude", fmtAltitude(ac).split(" (")[0]),
         fact("Vol restant", `≈ ${hm(leftMin)}`)));
-    // Photo libre et créditée, comme le quiz (quizPhotos de net.js) : cet avion précis (immatriculation), sinon le modèle
-    // aux couleurs de la compagnie (la livrée aide à deviner la destination), sinon le modèle ; jamais airport-data
-    const showPhoto = (list, i = 0) => {
+    // Photo libre et créditée, la même que sur la fiche de l'avion (aircraftPhotos de net.js) : cet avion précis
+    // (immatriculation), sinon le modèle aux couleurs de sa compagnie (la livrée aide à deviner la destination), avec la
+    // légende qui le dit. Sinon une photo du modèle, annoncée « autre compagnie » : le 8/11/2026, un A320neo de Frontier
+    // illustrait sans le dire un vol Eurowings. Jamais airport-data.
+    const showPhoto = (list, note, i = 0) => {
       const u = list[i];
       if (!u) return;
-      photo.onerror = () => showPhoto(list, i + 1);
-      photo.onload = () => { photo.style.display = ""; photoCredit.set(u); };
+      photo.onerror = () => showPhoto(list, note, i + 1);
+      photo.onload = () => { photo.style.display = ""; photoNote.replaceChildren(note); photoCredit.set(u); };
       photo.src = u;
     };
     AdsbDb.extra(ac).then(async (x) => {
       const info = x?.info;
       if (!company.textContent && info?.owner) company.textContent = info.owner;
+      const ctx = photoCtx(ac, { route, info });
+      let p = await aircraftPhotos(ctx).catch(() => null);
+      // Recherche Commons ratée (elle n'est pas gardée) : un essai de plus avant de se rabattre sur le modèle
+      if (!p) { await sleep(1500); p = await aircraftPhotos(ctx).catch(() => null); }
+      if (p) return showPhoto(p.urls, p.exact ? "Cet appareil"
+        : h("span", h("span", "Même modèle, aux couleurs de"), " ", h("span", { "data-notr": "" }, p.company)));
       const wiki = await Wiki.find(wikiQuery.ac(ac)).catch(() => null);
-      const name = prettyModel(ac.description) || ac.type || "";
-      const list = await quizPhotos({ registration: ac.registration, airline: route.airline || ac.operator || info?.owner, model: name, name,
-        article: wiki && !wiki.searchOnly ? wiki.title : "" }).catch(() => []);
-      showPhoto(list.length ? list.slice(0, 3) : [wiki?.imageUrl, wiki?.thumbnailUrl].filter(Boolean));
+      const name = ctx.model || ac.type || "";
+      const list = await quizPhotos({ model: name, name, article: wiki && !wiki.searchOnly ? wiki.title : "" }).catch(() => []);
+      showPhoto(list.length ? list.slice(0, 3) : [wiki?.imageUrl, wiki?.thumbnailUrl].filter(Boolean), "Même modèle, autre compagnie");
     }).catch(() => {});
 
     // Aide : cône dans la direction de l'avion (assez large pour contenir l'arrivée, sans être centré dessus)
@@ -520,7 +530,7 @@ export function flybyGame(view) {
         nextButtons(null)));
     }
     box.replaceChildren(
-      questionCard(`Destination · ${acLabel(ac)}`, ["Où va ", h("b", "atterrir"), " cet avion ?"],
+      questionCard(`Destination · ${acLabel(ac)}`, ["Où cet avion va-t-il ", h("b", "atterrir"), " ?"],
         "Le cône montre la direction de l'avion : l'aéroport est dedans. Aide-toi du vol restant et de la vitesse pour estimer la distance. Glisse, pince ou + / − pour zoomer, touche pour répondre."),
       h("div.fly-layout", h("div.fly-mapcol", map.el), h("div.fly-side", card, validate, feedback)));
     map.setMarks(base);

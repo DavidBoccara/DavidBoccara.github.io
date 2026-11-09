@@ -100,8 +100,9 @@
       var s = document.getElementById("splash"); if (!s) return;
       try { if (sessionStorage.getItem("splash_seen")) { s.remove(); return; } sessionStorage.setItem("splash_seen", "1"); } catch (e) {}
       try { // même règle que i18n.js : réglage « Langue », sinon langue du téléphone
-        var l = String(localStorage.getItem("lang") || "").replace(/"/g, "") || (/^fr/i.test(navigator.language || "fr") ? "fr" : "en");
+        var nav = navigator.language || "fr", l = String(localStorage.getItem("lang") || "").replace(/"/g, "") || (/^fr/i.test(nav) ? "fr" : /^es/i.test(nav) ? "es" : "en");
         if (l === "en") s.querySelector(".sp-tag").textContent = "Radar · Photo · Game";
+        if (l === "es") s.querySelector(".sp-tag").textContent = "Radar · Foto · Juego";
       } catch (e) {}
       var t0 = Date.now(), done = false, min = matchMedia("(prefers-reduced-motion: reduce)").matches ? 400 : 1550;
       function hide() {
