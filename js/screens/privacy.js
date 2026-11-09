@@ -10,7 +10,7 @@ import { CONTACT_EMAIL, LEGAL } from "../config.js";
 import { adsOn, adChoices } from "../ads.js";
 import { legalLinks } from "./legal.js";
 
-const UPDATED = "7 novembre 2026";
+const UPDATED = "9 novembre 2026";
 
 export function privacyPage(view) {
   const sec = (title, ...items) => h("div.card.pad.mt.privacy",
@@ -59,7 +59,7 @@ export function privacyPage(view) {
       "Sans compte, tout reste sur ton téléphone."),
 
     sec("Ta position",
-      "Pour trouver les avions autour de toi, l'appli envoie une position arrondie à environ 1 km aux services publics de données d'avions (adsb.fi, adsb.lol), en passant par notre serveur : ils ne reçoivent ni ton nom, ni ton e-mail, ni ton adresse internet. Avec l'appli Android, le radar écran éteint les interroge directement depuis le téléphone, toujours avec une position arrondie.",
+      "Pour trouver les avions autour de toi, l'appli envoie une position arrondie à environ 1 km aux services publics de données d'avions (adsb.fi, adsb.lol). Dans un navigateur, la demande passe par notre serveur : ils ne reçoivent ni ton nom, ni ton e-mail, ni ton adresse internet. Avec l'appli Android, le téléphone les interroge directement (radar écran éteint compris) : ils voient alors son adresse internet, comme n'importe quel site visité, mais jamais ton nom ni ton e-mail, et toujours une position arrondie.",
       "Le calcul de la distance et de la direction des avions se fait sur ton téléphone.",
       "Si la position du téléphone n'est pas disponible (localisation refusée, GPS éteint), tu peux indiquer ta ville à la main : le nom tapé est envoyé au service de cartes OpenStreetMap (Nominatim) pour trouver le lieu, et le lieu choisi reste sur ton téléphone."),
 

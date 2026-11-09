@@ -1,4 +1,4 @@
-// Données en ligne : avions ADS-B (via le relais Supabase), adsbdb, Wikipédia.
+// Données en ligne : avions ADS-B (relais Supabase, ou le téléphone dans l'appli Android 1.27+), adsbdb, Wikipédia.
 import { photoCredit, safeLicense, rememberCredit, wikimediaFile } from "./credits.js";
 import { LANG } from "./i18n.js";
 import { Supa } from "./supa.js";
@@ -14,11 +14,47 @@ import { looksMilitary, modelQueries } from "./game.js";
 const ROUND_KM = 1;
 const coarse = (x) => (Math.round(x * 100) / 100).toFixed(2);
 
+/**
+ * Appli Android 1.27+ : la demande est faite par le téléphone lui-même (avec son adresse internet, comme le radar
+ * écran éteint) au lieu du relais Supabase, partagé par tous les joueurs et limité par adsb.fi à 1 demande par seconde.
+ * Même requête, même réponse ({source, ac}) ; relais en secours si le téléphone n'y arrive pas. Dans un navigateur :
+ * toujours le relais (adsb.fi et adsb.lol refusent les demandes faites par une page web).
+ */
+const phone = () => (typeof window !== "undefined" && typeof window.PlaneGONative?.adsbFetch === "function" ? window.PlaneGONative : null);
+const phoneWaiting = new Map();
+let seq = 0;
+if (typeof window !== "undefined") window.addEventListener("planego-adsb", (e) => {
+  const done = phoneWaiting.get(e.detail);
+  if (!done) return;
+  phoneWaiting.delete(e.detail);
+  let o = null;
+  try { o = JSON.parse(phone()?.adsbTake(e.detail) || "null"); } catch { /* réponse illisible */ }
+  done(o);
+});
+function phoneFetch(query) {
+  const id = `a${++seq}_${Date.now().toString(36)}`;
+  return new Promise((resolve) => {
+    const t = setTimeout(() => { phoneWaiting.delete(id); resolve(null); }, 35000);
+    phoneWaiting.set(id, (o) => { clearTimeout(t); resolve(o); });
+    try { phone().adsbFetch(id, query); } catch { clearTimeout(t); phoneWaiting.delete(id); resolve(null); }
+  });
+}
+async function adsbQuery(query) {
+  if (phone()) {
+    const o = await phoneFetch(query);
+    if (Array.isArray(o?.ac)) { Adsb.via = "phone"; return o; }
+  }
+  Adsb.via = "relay";
+  return Supa.fn("adsb", query);
+}
+
 export const Adsb = {
   lastSource: "",
+  /** "phone" (appli 1.27+) ou "relay" : par où est passée la dernière demande. */
+  via: "",
   async around(lat, lon, radiusKm) {
     const nm = Math.min(250, Math.max(1, Math.ceil((radiusKm + ROUND_KM) / 1.852)));
-    const res = await Supa.fn("adsb", `lat=${coarse(lat)}&lon=${coarse(lon)}&dist=${nm}`);
+    const res = await adsbQuery(`lat=${coarse(lat)}&lon=${coarse(lon)}&dist=${nm}`);
     Adsb.lastSource = res.source || "";
     return parse(res.ac, lat, lon).filter((a) => a.distanceKm != null && a.distanceKm <= radiusKm)
       .sort((a, b) => a.distanceKm - b.distanceKm);
@@ -26,11 +62,11 @@ export const Adsb = {
   /** Dernière position d'un avion précis : cherché autour de sa dernière position, distance et direction calculées depuis moi. */
   async track(ac, me) {
     if (ac.lat == null || ac.lon == null) return null;
-    const res = await Supa.fn("adsb", `lat=${ac.lat.toFixed(5)}&lon=${ac.lon.toFixed(5)}&dist=25`);
+    const res = await adsbQuery(`lat=${ac.lat.toFixed(5)}&lon=${ac.lon.toFixed(5)}&dist=25`);
     return parse(res.ac, me.lat, me.lon).find((a) => a.hex === ac.hex) || null;
   },
   async nearestMilitary(lat, lon) {
-    const res = await Supa.fn("adsb", "mil=1");
+    const res = await adsbQuery("mil=1");
     Adsb.lastSource = res.source || "";
     return parse(res.ac, lat, lon).filter((a) => a.distanceKm != null && !a.onGround)
       .sort((a, b) => a.distanceKm - b.distanceKm)[0] || null;
