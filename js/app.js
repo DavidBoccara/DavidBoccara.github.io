@@ -27,6 +27,7 @@ import { askPhotoRulesAtStart, syncPhotoRules } from "./photorules.js";
 import { noticeRemovals } from "./report.js";
 import { Badges, badgeEl } from "./badges.js";
 import "./camera.js"; // photos de l'appareil branché par câble : bandeau « Nouvelle photo » sur tous les écrans
+import "./push.js"; // notifications « push » de l'appli Android 1.28+ : jeton rattaché au compte après chaque synchronisation
 
 // Barre du bas : 5 onglets, le Scanner au centre en bouton surélevé
 export const TABS = [

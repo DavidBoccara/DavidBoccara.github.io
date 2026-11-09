@@ -5,13 +5,14 @@ import { Supa } from "../supa.js";
 import { Cloud, sync, MyStatus } from "../cloud.js";
 import { adminConsole } from "./admin.js";
 import { Badges, badgeEl } from "../badges.js";
-import { Collection, Player, entryModel, entryRarity, QuizStore } from "../store.js";
+import { Collection, Player, entryModel, entryRarity, QuizStore, Prefs } from "../store.js";
 import { modelKey, gradePct } from "../game.js";
 import { loginGate, renderHud, go } from "../app.js";
 import { friends } from "./friends.js";
 import { grades } from "./grades.js";
 import { VERSION_URL } from "../config.js";
-import { Native } from "../native.js";
+import { Native, pushConfig } from "../native.js";
+import { PUSH_TYPES, pushAvailable, unregisterPush } from "../push.js";
 import { installCard, progressLine } from "../ui.js";
 import { deleteAccountFlow } from "./privacy.js";
 import { legalLinks } from "./legal.js";
@@ -90,6 +91,27 @@ function soundRow() {
     h("input", { type: "checkbox", checked: Sound.on, onchange: (e) => { Sound.on = e.target.checked; } })));
 }
 
+/** Notifications de l'appli Android 1.28+ (push.js) : un interrupteur par type, tous cochés au départ. */
+function pushRow() {
+  if (!pushAvailable()) return null;
+  const types = Prefs.pushTypes;
+  // Android 13+ : bouton tant que l'autorisation n'est pas donnée (réponse de l'appli : événement « planego-notifications »)
+  const allow = h("button.btn.small.outline.mt", { onclick: () => Native.askNotifications?.() }, "Autoriser les notifications");
+  const refresh = () => { allow.style.display = Native.canNotify?.() ? "none" : ""; };
+  const onAnswer = () => { if (!allow.isConnected) window.removeEventListener("planego-notifications", onAnswer); else refresh(); };
+  window.addEventListener("planego-notifications", onAnswer);
+  refresh();
+  return h("div.card.pad.mt",
+    h("div.row", { style: { gap: "8px" } }, h("b.grow", "Notifications"), infoButton("Notifications", [
+      "L'appli te prévient quand un joueur aime ou commente ta photo, quand un ami publie une photo, quand on te demande en ami ou qu'on accepte ta demande, et pour le concours de la semaine (dernières heures, gagnant).",
+      "Plusieurs à la suite sont regroupées en une seule. Elles arrivent sans son la nuit (22 h – 8 h) et après 5 dans la journée.",
+      "Les alertes d'avions du radar se règlent dans le Scanner.",
+    ], { small: true })),
+    PUSH_TYPES.map(([key, label]) => h("label.switch", h("span", label), h("input", { type: "checkbox", checked: types[key] !== false,
+      onchange: (e) => { Prefs.pushTypes = { ...Prefs.pushTypes, [key]: e.target.checked }; pushConfig(); } }))),
+    allow);
+}
+
 /** Interrupteur « Mesure d'audience » (Google Analytics, analytics.js) : coché = accord donné. */
 function analyticsRow() {
   if (!Analytics.enabled) return null;
@@ -145,7 +167,7 @@ function me(view, show) {
     h("div.row.mt", { style: { justifyContent: "center", flexWrap: "wrap" } },
       h("button.btn.small.outline", { onclick: changeAvatar }, "Changer la photo"), h("button.btn.small.outline", { onclick: editName }, "Modifier le pseudo"))),
     level, bar, xpText, stats, shareRow,
-    soundRow(), analyticsRow() || "", langRow(),
+    soundRow(), pushRow() || "", analyticsRow() || "", langRow(),
     h("div.row.mt2", h("button.btn.outline.grow", { onclick: () => show("friends") }, "Mes amis"), h("button.btn.outline.grow", { onclick: () => { ls.set("grades_mode", "grades"); show("ranking"); } }, "Grades")),
     h("button.btn.outline.block.mt2", { onclick: changePasswordFlow }, "Changer le mot de passe"),
     blockedList(),
@@ -220,6 +242,7 @@ function me(view, show) {
 
   async function logout() {
     if (!(await confirmBox("Se déconnecter ? Vos photos restent sauvegardées sur votre compte.", "Se déconnecter", true))) return;
+    await unregisterPush(); // ce téléphone ne reçoit plus les notifications de ce compte
     await Supa.signOut();
   }
 

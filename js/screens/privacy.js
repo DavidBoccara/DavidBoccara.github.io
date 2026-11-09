@@ -13,7 +13,7 @@ import { Analytics } from "../analytics.js";
 import { adsOn, adChoices } from "../ads.js";
 import { legalLinks } from "./legal.js";
 
-const UPDATED = "9 novembre 2026";
+const UPDATED = "10 novembre 2026";
 
 export function privacyPage(view) {
   const sec = (title, ...items) => h("div.card.pad.mt.privacy",
@@ -83,10 +83,19 @@ export function privacyPage(view) {
         "Pour surveiller les limites de ces services, l'appli compte combien de fois elle les appelle chaque jour : ce sont seulement des nombres, sans ton identité ni ta position.",
         ads && "Google (régie Google AdSense) : les annonces du feed, voir « Publicité et cookies » ci-dessous.",
         GA_ID && "Google (Google Analytics) : mesure d'audience, seulement avec ton accord, voir ci-dessous.",
+        "Google (Firebase Cloud Messaging) : livre les notifications de l'appli Android, voir « Notifications de l'appli » ci-dessous.",
       ),
       ads ? "Aucune donnée de ton compte n'est vendue ni transmise aux annonceurs."
         : GA_ID ? "Pas de publicité pour l'instant, pas de cookie publicitaire, aucune donnée vendue. Seul traceur : la mesure d'audience, et seulement si tu l'acceptes."
         : "Pas de publicité pour l'instant, pas de traceur, pas de cookie publicitaire, aucune donnée vendue."),
+
+    sec("Notifications de l'appli",
+      list(
+        "L'appli Android peut te prévenir quand un joueur aime ou commente ta photo, quand un ami publie une photo, quand on te demande en ami ou qu'on accepte ta demande, et pour le concours de la semaine.",
+        "Pour cela, Google (Firebase Cloud Messaging) donne à ton téléphone un numéro technique (« jeton ») que Plane GO garde avec ton compte et la langue de l'appli. À chaque notification, Plane GO envoie à Google ce jeton et le texte à afficher (pseudo du joueur, modèle de l'avion, début du commentaire, lien vers la photo publiée). Google la livre à ton téléphone, sans s'en servir pour de la publicité.",
+        "Tu choisis lesquelles tu veux dans ton Profil (« Notifications »), et tu peux toutes les couper dans les réglages d'Android. Rien ne t'est envoyé à propos d'un joueur que tu as bloqué (ni à lui à ton propos).",
+        "Google peut traiter ces données aux États-Unis, dans le cadre du « Data Privacy Framework » reconnu par l'Union européenne.",
+      )),
 
     ...[GA_ID && sec("Mesure d'audience (Google Analytics)",
       list(
@@ -117,6 +126,7 @@ export function privacyPage(view) {
     sec("Pourquoi Plane GO a le droit d'utiliser ces données",
       list(
         "Ton compte, tes captures, tes amis, le feed et le quiz : pour te fournir le jeu que tu as choisi d'utiliser (les Conditions d'utilisation).",
+        "Les notifications de l'appli : pour te tenir au courant de ce qui se passe dans le jeu, comme tu l'as choisi (réglables dans ton Profil).",
         "Les signalements, la modération (publication retirée, XP corrigés, suspension), la vérification des photos et la lutte contre la triche : pour garder le jeu honnête et sûr pour tous (intérêt légitime).",
         ads && "Les cookies publicitaires de Google : seulement avec ton accord, que tu peux retirer à tout moment.",
         GA_ID && "La mesure d'audience (Google Analytics) : seulement avec ton accord, que tu peux retirer à tout moment.",
@@ -137,6 +147,7 @@ export function privacyPage(view) {
         "Les messages envoyés avec le formulaire de contact (nom, e-mail, message) : un an au plus, puis effacés automatiquement.",
         "Les journaux techniques des hébergeurs (adresse internet, page demandée) : gardés par eux pour la sécurité, selon leurs propres règles.",
         "Les passages d'avions sur ton téléphone : effacés chaque lundi à 0 h.",
+        "Le jeton des notifications de ton téléphone : jusqu'à ta déconnexion, la suppression de ton compte, ou dès que Google indique qu'il ne sert plus. Une notification en attente d'envoi : 2 jours au plus.",
         GA_ID && "Mesure d'audience, si tu l'as acceptée : cookie de Google Analytics 13 mois au plus ; statistiques gardées 14 mois au plus par Google, puis effacées.",
         GA_ID && "Ton choix pour la mesure d'audience (accepté ou refusé) : 6 mois sur ton téléphone, puis l'appli te redemande.",
       )),

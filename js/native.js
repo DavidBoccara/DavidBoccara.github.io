@@ -28,6 +28,8 @@ export function nativeConfig() {
     militaryCallsign: D.militaryCallsign,
     // Langue des notifications de l'appli (1.25+) : l'appli connaît le français et l'anglais ; en espagnol, anglais
     lang: LANG === "fr" ? "fr" : "en",
+    // Notifications « push » voulues (1.28+, push.js) : l'appli ignore les types décochés dans le Profil
+    push: Prefs.pushTypes,
   });
 }
 

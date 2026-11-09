@@ -353,6 +353,8 @@ export const Prefs = {
   get notifyVisibleOnly() { return ls.get("notify_visible_only", false); }, set notifyVisibleOnly(v) { ls.set("notify_visible_only", v); },
   get notifyKinds() { return ls.get("notify_kinds", ["MILITARY"]); }, set notifyKinds(v) { ls.set("notify_kinds", v); },
   get notifyModels() { return ls.get("notify_models", []); }, set notifyModels(v) { ls.set("notify_models", v); },
+  /** Notifications « push » de l'appli voulues, par type (push.js) : { likes, posts, friends, contest }, absent = oui. */
+  get pushTypes() { return ls.get("push_types", {}); }, set pushTypes(v) { ls.set("push_types", v); },
 };
 
 export { spottedRarity };
