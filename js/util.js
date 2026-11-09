@@ -35,6 +35,17 @@ export function rarityMark(r, text) {
     h("span.rl", text ?? r?.label ?? ""));
 }
 
+/**
+ * Insigne de grade à côté du pseudo (feed, publication, commentaires, concours, classement, amis, page du joueur) :
+ * chevrons + numéro. Ambre à partir de « Spotter » (grades qui demandent des photos), plein au dernier grade.
+ */
+export function gradeTag(lvl) {
+  if (!lvl) return null;
+  const label = `Grade ${lvl.number} · ${lvl.name}`;
+  return h("span.grade-tag" + (!lvl.nextXp ? ".gt-top" : lvl.minModels ? ".gt-photo" : ""), { title: label, "aria-label": label },
+    icon("rank", 12), String(lvl.number));
+}
+
 // Icônes au trait (style « Instrument »), en SVG de la couleur du texte : onglets et petits boutons
 const ICONS = {
   // Manette (onglet Jeux)
@@ -54,6 +65,8 @@ const ICONS = {
   comment: '<path d="M5 5h14v10H9l-4 4z"/>',
   share: '<path d="M12 4v11M7 9l5-5 5 5M5 14v6h14v-6"/>',
   flag: '<path d="M6 21V4h11l-2 4 2 4H6"/>',
+  // Chevrons de grade (gradeTag)
+  rank: '<path d="M5 11.5l7-5 7 5M5 18l7-5 7 5"/>',
   trash: '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>',
   camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
   image: '<rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M20.5 15l-5-5-8 9"/>',

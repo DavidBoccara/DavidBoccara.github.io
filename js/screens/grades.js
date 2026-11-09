@@ -1,12 +1,12 @@
 // Onglet Classement : amis, général, et liste des grades avec le barème.
 import { Blocked } from "../blocks.js";
 import { LOCALE } from "../i18n.js";
-import { h, ls, toast } from "../util.js";
+import { h, ls, toast, gradeTag } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, otherOf } from "../cloud.js";
 import { linkPlayer } from "./player.js";
 import { Player } from "../store.js";
-import { LEVELS, RARITIES, MAX_PHOTO_KM, Quiz } from "../game.js";
+import { LEVELS, RARITIES, MAX_PHOTO_KM, Quiz, levelOf, missingFor, goalText, gradePct } from "../game.js";
 
 export function grades(view) {
   let mode = ls.get("grades_mode", "friends");
@@ -47,28 +47,34 @@ export function grades(view) {
         // Ligne cliquable : page du joueur (ses photos si son profil est public, ou si c'est un ami)
         return linkPlayer(h("div.card.pad.row", { style: { borderColor: p.id === Supa.userId ? "var(--cyan)" : "" } },
           h("div", { style: { width: "38px", textAlign: "center", fontWeight: 800, fontSize: i < 3 ? "24px" : "15px" } }, `#${i + 1}`),
-          av, h("div.grow", h("div", { style: { fontWeight: 700 } }, p.username + (p.id === Supa.userId ? "  (toi)" : "")),
-            h("div.small.dim", `${p.level.emblem} Niv. ${p.level.number} · ${p.level.name}`)),
+          av, h("div.grow", h("div", { style: { fontWeight: 700 } }, p.username + (p.id === Supa.userId ? "  (toi)" : ""), gradeTag(p.level)),
+            h("div.small.dim", p.level.name)),
           h("span.chip", `${p.xp.toLocaleString(LOCALE)} XP`)), p.id);
       }));
     } catch (e) { list.replaceChildren(); toast(e.message); }
   }
 
   function renderGrades() {
-    const xp = Player.bestXp(), cur = Player.level();
+    const xp = Player.bestXp(), models = Player.models(), cur = Player.level();
+    // Grade gardé d'avant la règle des modèles (9/11/2026) : plus haut que ce que donnent les XP et les modèles
+    const kept = cur.number > levelOf(xp, models).number;
+    const need = (l) => (l.minModels ? `${l.minXp} XP et ${l.minModels} modèles photographiés` : `${l.minXp} XP`);
     box.append(h("h1.title", "Les grades"), h("div.list.mt", LEVELS.map((l) => {
-      const done = l.number < cur.number, here = l.number === cur.number;
-      const pct = done ? 100 : here ? (l.nextXp ? ((xp - l.minXp) / (l.nextXp - l.minXp)) * 100 : 100) : 0;
+      const done = l.number < cur.number, here = l.number === cur.number, next = LEVELS[l.number];
+      const pct = done ? 100 : here ? gradePct(l, xp) : 0;
       return h("div.card.pad.row", { style: { opacity: !done && !here ? 0.6 : 1, borderColor: here ? "var(--cyan)" : "" } },
         h("div", { style: { fontSize: "30px" } }, l.emblem),
         h("div.grow", h("div", { style: { fontWeight: here ? 800 : 700 } }, `${l.number}. ${l.name}`),
-          h("div.small.dim", done ? `✓ Atteint • dès ${l.minXp} XP` : here ? (l.nextXp ? `Ton grade • ${xp} / ${l.nextXp} XP` : "Ton grade • grade maximum !")
-            : `À partir de ${l.minXp} XP (encore ${l.minXp - xp} XP)`),
+          h("div.small.dim", done ? `✓ Atteint • dès ${need(l)}`
+            : here ? (next ? `Ton grade • ${xp} / ${next.minXp} XP` + (next.minModels ? ` • ${models} / ${next.minModels} modèles` : "") : "Ton grade • grade maximum !")
+            : `À partir de ${need(l)} (${goalText(missingFor(l, xp, models))})`),
+          here && kept && h("div.small.dim", "Grade gardé : tu l'avais avant que les grades demandent des photos."),
           h("div.small", { style: { color: "var(--cyan)" } }, `Quiz : rayon de ${Quiz.radiusLabel(l)}${Quiz.bonusCount(l) ? ` · ${Quiz.bonusLabel(l)}` : ""}`),
           h("div.xpbar.cyan", h("i", { style: { width: pct + "%" } }))));
     })),
     h("div.section", "Barème"),
     h("div.kv.small", [
+      "À partir de « Spotter », chaque grade demande aussi des modèles différents photographiés (photos validées ; les photos anciennes ne comptent pas) : les jeux seuls ne suffisent plus.", "",
       "Rareté de l'avion :", ...RARITIES.map((r) => `  ${r.stars} ${r.label} : ${r.xp} XP`), "",
       "Distance du vol (depuis l'aéroport de départ, ou le pays d'immatriculation) :",
       "  moins de 300 km : ×1", "  300 à 1 000 km : ×1,2", "  1 000 à 3 000 km : ×1,5", "  3 000 à 6 000 km : ×2", "  plus de 6 000 km : ×2,5", "",

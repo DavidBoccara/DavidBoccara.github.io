@@ -1,6 +1,6 @@
 // Onglet Amis : recherche par pseudo, demandes, liste d'amis classée par XP.
 import { Blocked, blockUser } from "../blocks.js";
-import { h, toast, confirmBox, icon } from "../util.js";
+import { h, toast, confirmBox, icon, gradeTag } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, otherOf, isIncoming } from "../cloud.js";
 import { loginGate } from "../app.js";
@@ -32,7 +32,7 @@ export function friends(view) {
     const av = h("img.avatar.sm", { alt: "", src: p.avatarUrl || "icons/avatar.svg" });
     av.onerror = () => { av.src = "icons/avatar.svg"; };
     // Avatar et pseudo : page du joueur (les boutons de la ligne gardent leur rôle)
-    const who = linkPlayer(h("div.grow", h("div", { style: { fontWeight: 700 } }, p.username), h("div.small.dim", `${p.level.title} • ${p.xp} XP${note ? "  ·  " + note : ""}`)), p.id);
+    const who = linkPlayer(h("div.grow", h("div", { style: { fontWeight: 700 } }, p.username, gradeTag(p.level)), h("div.small.dim", `${p.level.title} • ${p.xp} XP${note ? "  ·  " + note : ""}`)), p.id);
     const buttons = [
       secondary && h("button.btn.small.outline", { onclick: onSecondary }, secondary),
       action && h("button.btn.small.primary", { onclick: onAction }, action),

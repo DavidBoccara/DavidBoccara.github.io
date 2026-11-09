@@ -5,7 +5,7 @@
 // « voir captures » de catches : ami, ou share_world) : un profil privé ne renvoie aucune photo à un non-ami.
 import { Blocked, blockUser } from "../blocks.js";
 import { LOCALE } from "../i18n.js";
-import { h, toast, rarityMark, icon } from "../util.js";
+import { h, toast, rarityMark, icon, gradeTag } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, otherOf, isIncoming } from "../cloud.js";
 import { flagOf } from "../game.js";
@@ -26,7 +26,7 @@ export function linkPlayer(el, id) {
 /** Page de la publication (comme depuis le feed) : données passées par sessionStorage. */
 function openPost(c) {
   sessionStorage.setItem("catch_" + c.id, JSON.stringify({ ...c, user: c.user && { id: c.user.id, username: c.user.username,
-    avatarPath: c.user.avatarPath, xp: c.user.xp }, photo: c.photoUrl, photos: c.photoUrls, index: 0 }));
+    avatarPath: c.user.avatarPath, xp: c.user.xp, models: c.user.models, gradeFloor: c.user.gradeFloor }, photo: c.photoUrl, photos: c.photoUrls, index: 0 }));
   go("comments/" + c.id);
 }
 
@@ -81,8 +81,8 @@ export function playerPage(view, [id]) {
       actions.append(h("button.btn.small.outline", { title: "Bloquer ce joueur", onclick: async () => { if (await blockUser(id, p.username)) back(); } }, "Bloquer"));
     }
     head.replaceChildren(h("div.row", { style: { gap: "14px", alignItems: "center" } }, av,
-      h("div.grow", { style: { minWidth: 0 } }, h("div.player-name", p.username),
-        h("div.small.dim", `${p.level.emblem} Niv. ${p.level.number} · ${p.level.name}`),
+      h("div.grow", { style: { minWidth: 0 } }, h("div.player-name", p.username, gradeTag(p.level)),
+        h("div.small.dim", p.level.name),
         h("div.tags", { style: { marginTop: "6px" } }, friend ? h("span.chip.small", "Ami") : null, mine ? h("span.chip.small", "C'est toi") : null,
           h("span.chip.small", p.shareWorld === true ? "Profil public" : "Profil privé")))),
       actions);

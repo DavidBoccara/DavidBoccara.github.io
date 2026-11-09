@@ -2,7 +2,7 @@
 import { ls, uuid, weekStart } from "./util.js";
 import { Supa } from "./supa.js";
 import { Sound } from "./sound.js";
-import { MAX_PHOTO_KM, rarityByName, prettyModel, levelOf, computeXp, modelKey, spottedRarity, describeXp } from "./game.js";
+import { MAX_PHOTO_KM, rarityByName, prettyModel, levelOf, nextGrade, goalText, computeXp, modelKey, spottedRarity, describeXp } from "./game.js";
 
 // ---------- Photos (IndexedDB) ----------
 let dbp = null;
@@ -116,6 +116,8 @@ export const Collection = {
   /** Empreintes des photos déjà ajoutées (détection des doublons). */
   prints: () => mine().flatMap(entryPhotoItems).filter((e) => e.phash || e.fileHash).map((e) => ({ phash: e.phash, pstrength: e.pstrength, shotAt: e.shotAt, fileHash: e.fileHash })),
   hexes: () => new Set(mine().filter((e) => !e.rejected && !isOld(e)).map((e) => e.hex)),
+  /** Modèles différents photographiés pour de vrai (photo validée, pas une photo ancienne) : comptent pour les grades. */
+  modelCount: () => new Set(mine().filter((e) => !e.rejected && !isOld(e) && e.xp > 0).map(modelKey).filter(Boolean)).size,
   /** Mes photos d'un avion précis (même code ICAO 24 bits) : les validées d'abord, la plus récente en tête. */
   forHex: (hex) => mine().filter((e) => e.hex === hex).sort((a, b) => (a.rejected ? 1 : 0) - (b.rejected ? 1 : 0) || b.takenAt - a.takenAt),
   /** La capture qui compte pour cet avion (photo validée), ou null : un avion ne s'attrape qu'une fois. */
@@ -168,7 +170,7 @@ export async function createCatch(s, blob, source, takenAt, verdict = null) {
   let xp = computeXp(s, { hasModel: Collection.hasModel, countForHex: Collection.countForHex });
   const rejected = !!verdict && !verdict.ok;
   if (rejected) xp = { ...xp, total: 0, newModelBonus: 0, zeroReason: `Photo non validée (${verdict.reason.toLowerCase()})` };
-  const before = levelOf(Player.xp());
+  const before = Player.level();
   const id = Date.now(), photoId = "p" + id;
   await Photos.put(photoId, blob);
   const entry = {
@@ -184,7 +186,7 @@ export async function createCatch(s, blob, source, takenAt, verdict = null) {
   Collection.add(entry);
   if (!rejected) Hunts.photo(s.hex, takenAt);
   const total = Player.xp();
-  return { entry, xp, levelBefore: before, levelAfter: levelOf(total), total };
+  return { entry, xp, levelBefore: before, levelAfter: Player.level(), goal: Player.next(), total };
 }
 /**
  * Photo(s) ancienne(s) d'un modèle du catalogue (c) : aucune vérification, 0 XP, pas d'avion précis (hex vide).
@@ -211,6 +213,7 @@ export function catchMessage(o) {
     : `${describeXp(o.xp)}\n\n= +${o.xp.total} XP`;
   m += `\n\nTotal : ${o.total} XP — Niveau ${o.levelAfter.number} « ${o.levelAfter.name} »`;
   if (o.levelAfter.number > o.levelBefore.number) m += `\n\nNouveau grade : ${o.levelAfter.name} !`;
+  else if (o.goal?.models) m += `\n\nPour « ${o.goal.next.name} » : ${goalText(o.goal)}.`; // grades : il faut aussi des modèles
   if (Supa.isLoggedIn) m += "\n\nLa photo est publiée sur votre feed et sauvegardée sur votre compte.";
   return m;
 }
@@ -315,7 +318,12 @@ export const Player = {
   xp: () => Collection.totalXp() + QuizStore.totalXp(),
   profile: null, // profil en ligne (pseudo, avatar, XP serveur)
   bestXp() { return Math.max(this.profile?.xp || 0, this.xp()); },
-  level() { return levelOf(this.bestXp()); },
+  /** Modèles différents photographiés (photos validées), d'après ce téléphone ou le serveur (autre appareil). */
+  models() { return Math.max(this.profile?.models || 0, Collection.modelCount()); },
+  /** Grade : XP et modèles photographiés ; jamais sous le grade gardé d'avant la règle des modèles (profil en ligne). */
+  level() { return levelOf(this.bestXp(), this.models(), this.profile?.gradeFloor); },
+  /** Ce qu'il manque pour le grade suivant : { next, xp, models }, null au grade maximum. */
+  next() { return nextGrade(this.level(), this.bestXp(), this.models()); },
 };
 
 // ---------- Réglages ----------

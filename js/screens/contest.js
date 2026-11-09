@@ -5,7 +5,7 @@
 // Dimanche à minuit (heure de Paris), la photo la plus votée gagne et son auteur reçoit 200 XP.
 import { Blocked } from "../blocks.js";
 import { LOCALE } from "../i18n.js";
-import { h, modal, toast, confirmBox, timeAgo, rarityMark, infoButton } from "../util.js";
+import { h, modal, toast, confirmBox, timeAgo, rarityMark, infoButton, gradeTag } from "../util.js";
 import { Supa } from "../supa.js";
 import { Weekly, Cloud, profileFrom, sync } from "../cloud.js";
 import { Collection, entryPhoto, entryModel, entryRarity, isOld } from "../store.js";
@@ -70,7 +70,7 @@ export function contestFeed(box) {
 
   function winnerTile(w) {
     const r = rarityByName(w.rarity), p = w.profiles || {};
-    const user = profileFrom({ id: w.user_id, username: p.username, avatar_path: p.avatar_path, xp: p.xp || 0 });
+    const user = profileFrom({ id: w.user_id, ...p });
     const who = p.username || "Un spotter", model = prettyModel(w.model || w.type) || "Un avion";
     const start = Date.parse(w.week), week = `Semaine du ${dayFmt(start)} au ${dayFmt(start + 6 * 86400e3)}`;
     const tile = h("div.card.winner-tile");
@@ -82,7 +82,7 @@ export function contestFeed(box) {
     tile.append(img, h("div.pad",
       h("div.kicker", { style: { color: "var(--accent)" } }, week),
       h("div.row", { style: { alignItems: "center", gap: "8px", marginTop: "6px" } }, av,
-        h("div.grow", h("b", who), h("div.small.dim", model))),
+        h("div.grow", h("b", who), gradeTag(user.level), h("div.small.dim", model))),
       h("div.small.mt", rarityMark(r, `${r.label} · ${w.votes} vote(s) · +${WEEK_PRIZE_XP} XP`))));
     return tile;
   }
@@ -174,7 +174,8 @@ export function contestFeed(box) {
   }
 
   function entryCard(e, rank, isMine) {
-    const r = rarityByName(e.rarity), user = profileFrom({ id: e.user_id, username: e.username, avatar_path: e.avatar_path, xp: e.user_xp });
+    const r = rarityByName(e.rarity), user = profileFrom({ id: e.user_id, username: e.username, avatar_path: e.avatar_path,
+      xp: e.user_xp, models: e.user_models, grade_floor: e.user_grade_floor });
     const av = h("img.avatar.sm", { alt: "", src: user.avatarUrl || "icons/avatar.svg" });
     av.onerror = () => { av.src = "icons/avatar.svg"; };
     const voteBtn = h("button.vote-btn" + (e.voted ? ".on" : "") + (isMine ? ".mine" : ""), { disabled: isMine },
@@ -187,13 +188,13 @@ export function contestFeed(box) {
     const model = prettyModel(e.model || e.type);
     return h("div.card.post.week-entry", { style: { borderColor: isMine ? "var(--cyan)" : "" } },
       h("div.head", h("div.rank", `#${rank}`), av, h("div.grow",
-        h("div", h("b", user.username || "Un spotter"), model ? ` — ${model}` : "", e.military ? " · militaire" : ""),
-        h("div.small.dim", `${timeAgo(Date.parse(e.taken_at))} · ${user.level.emblem} ${user.level.name}`)),
+        h("div", h("b", user.username || "Un spotter"), gradeTag(user.level), model ? ` — ${model}` : "", e.military ? " · militaire" : ""),
+        h("div.small.dim", `${timeAgo(Date.parse(e.taken_at))} · ${user.level.name}`)),
         gauge(e.score, { size: 62 })),
       h("img.photo", { src: photoUrl(e.photo_path), alt: "Photo de l'avion", loading: "lazy",
         // Photo en grand et fiche de l'avion (comme dans le Scanner)
         onclick: () => modal({ wide: true, body: [h("img.cover", { src: photoUrl(e.photo_path), alt: "", style: { borderRadius: "12px" } }),
-          h("div.mt", h("b", user.username || "Un spotter"), model ? ` — ${model}` : ""),
+          h("div.mt", h("b", user.username || "Un spotter"), gradeTag(user.level), model ? ` — ${model}` : ""),
           aircraftInfoCard({ hex: e.hex, type: e.type, model: e.model, military: e.military, rarity: r, xp: e.xp, takenAt: Date.parse(e.taken_at),
             countryIso: e.country_iso, countryName: e.country_name, registration: e.registration, callsign: e.callsign, operator: e.operator,
             route: e.route, flightKm: e.flight_km, distanceKm: e.distance_km, source: e.source })] }) }),

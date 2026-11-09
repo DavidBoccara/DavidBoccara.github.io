@@ -1,11 +1,10 @@
 // Outils communs aux modes du Quiz du ciel : préparation d'une question (nom + photo), mémoire des avions
 // déjà proposés en entraînement, note « Comment le reconnaître » après une erreur.
 import { creditLine, photoCredit, safeLicense, textCredit } from "./credits.js";
-import { LOCALE } from "./i18n.js";
 import { h, ls, modal, toast, confirmBox } from "./util.js";
 import { Radar } from "./radar.js";
 import { Wiki, quizPhotos, revealsAnswer, photoMatchesModel } from "./net.js";
-import { quizName, buildQuestion, recognitionTip, familyTip, Quiz, prettyModel } from "./game.js";
+import { quizName, buildQuestion, recognitionTip, familyTip, Quiz, prettyModel, goalText } from "./game.js";
 import { wikiQuery } from "./ui.js";
 import { Supa } from "./supa.js";
 import { bonusQuestions, flagAiQuestion } from "./wikiquiz.js";
@@ -39,13 +38,12 @@ export function radiusButton({ km, lvl, label, sub, onClick }) {
 }
 
 /** Petite ligne sous le bouton : rayon (et questions bonus) au grade suivant. */
-export function radiusNext(lvl, next, xp) {
-  if (!next) return h("div.rb-next", "Grade maximum : radar infini");
-  const bonus = Quiz.bonusLabel(next);
-  const more = xp != null && next.minXp > xp ? (next.minXp - xp).toLocaleString(LOCALE) : null;
-  // Morceaux séparés : en anglais, chacun est traduit à part (i18n.js) ; d'un seul bloc, « (encore … XP) » restait en français
+export function radiusNext(g) {
+  if (!g) return h("div.rb-next", "Grade maximum : radar infini");
+  const next = g.next, bonus = Quiz.bonusLabel(next), left = goalText(g); // ce qu'il manque : XP et modèles photographiés
+  // Morceaux séparés : en anglais, chacun est traduit à part (i18n.js) ; d'un seul bloc, « encore … » restait en français
   return h("div.rb-next", h("span", `Au grade ${next.name} :`), " ", h("span", Quiz.radiusLabel(next)),
-    bonus ? " + " : null, bonus ? h("span", bonus) : null, more ? " " : null, more ? h("span", `(encore ${more} XP)`) : null);
+    bonus ? " + " : null, bonus ? h("span", bonus) : null, left ? " · " : null, left ? h("span", left) : null);
 }
 
 /**

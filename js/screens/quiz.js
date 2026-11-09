@@ -7,7 +7,7 @@ import { h, meters, sleep, icon, modal } from "../util.js";
 import { Radar } from "../radar.js";
 import { Adsb } from "../net.js";
 import { QuizStore, Player } from "../store.js";
-import { Quiz, LEVELS } from "../game.js";
+import { Quiz } from "../game.js";
 import { Supa } from "../supa.js";
 import { sync } from "../cloud.js";
 import { go, renderHud } from "../app.js";
@@ -93,10 +93,10 @@ function liveQuiz(view) {
 
   function header() {
     showLoc();
-    const lvl = Player.level(), next = LEVELS[lvl.number];
+    const lvl = Player.level();
     const btn = radiusButton({ km: Quiz.radiusKm(lvl), lvl, label: "Chercher un avion", onClick: () => search() });
     btn.busy(busyText);
-    huntBtn.replaceChildren(btn, radiusNext(lvl, next, Player.bestXp()));
+    huntBtn.replaceChildren(btn, radiusNext(Player.next()));
     const s = QuizStore.stats(), m = Quiz.multiplier(s.streak + 1);
     streak.textContent = `Série : ${s.streak}`;
     mult.textContent = `×${m} · ${Quiz.BASE_XP * m} XP`;

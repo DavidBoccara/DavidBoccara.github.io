@@ -11,11 +11,13 @@ const iso = (ms) => new Date(ms).toISOString();
 export function profileFrom(o) {
   if (!o) return null;
   return { id: o.id, username: o.username, avatarPath: o.avatar_path || null, xp: o.xp | 0,
+    // Grade (supabase/grades.sql) : modèles photographiés et grade gardé d'avant la règle des modèles
+    models: o.models | 0, gradeFloor: o.grade_floor | 0,
     // Feed 🌍 Monde : true = publications partagées avec tout le monde, false = amis seulement,
     // null = pas encore répondu, undefined = réglage pas encore installé sur le serveur
     shareWorld: "share_world" in o ? o.share_world : undefined,
     get avatarUrl() { return this.avatarPath ? Supa.publicUrl("avatars", this.avatarPath) : null; },
-    get level() { return levelOf(this.xp); } };
+    get level() { return levelOf(this.xp, this.models, this.gradeFloor); } };
 }
 
 export function catchFrom(o) {
@@ -34,8 +36,8 @@ export function catchFrom(o) {
   };
 }
 
-const CATCH_SELECT = "*,profiles!catches_user_id_fkey(id,username,avatar_path,xp),likes(count),comments(count)";
-const PROFILE_SEL = "id,username,avatar_path,xp";
+const PROFILE_SEL = "id,username,avatar_path,xp,models,grade_floor";
+const CATCH_SELECT = `*,profiles!catches_user_id_fkey(${PROFILE_SEL}),likes(count),comments(count)`;
 
 export const Cloud = {
   async profile(id = me()) { return profileFrom((await Supa.select(`profiles?id=eq.${id}&select=*`))[0]); },
@@ -267,7 +269,7 @@ export const Weekly = {
   withdraw: () => Supa.rpc("weekly_withdraw", {}),
   vote: (entryId, on = true) => Supa.rpc("weekly_vote", { p_entry_id: entryId, p_on: on }),
   /** Photos gagnantes des semaines passées, la plus récente d'abord (avec le pseudo et l'avatar de l'auteur). */
-  winners: (limit = 60) => Supa.select(`weekly_winners?select=week,user_id,catch_id,photo_path,model,type,rarity,votes,profiles(username,avatar_path,xp)&order=week.desc&limit=${limit}`),
+  winners: (limit = 60) => Supa.select(`weekly_winners?select=week,user_id,catch_id,photo_path,model,type,rarity,votes,profiles(${PROFILE_SEL})&order=week.desc&limit=${limit}`),
 };
 
 export const otherOf = (f, meId) => (f.requester.id === meId ? f.addressee : f.requester);

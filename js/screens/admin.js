@@ -8,8 +8,8 @@
 import { h, toast, modal, confirmBox, choose, prompt, icon, infoButton, dateTime, timeAgo } from "../util.js";
 import { LOCALE } from "../i18n.js";
 import { Supa } from "../supa.js";
-import { Admin, MyStatus } from "../cloud.js";
-import { levelOf, prettyModel } from "../game.js";
+import { Admin, MyStatus, profileFrom } from "../cloud.js";
+import { prettyModel } from "../game.js";
 import { carousel } from "../ui.js";
 import { REASONS } from "../report.js";
 import { go } from "../app.js";
@@ -221,7 +221,7 @@ function players(body, ctx) {
 }
 
 function playerRow(p, onChange) {
-  const lvl = levelOf(p.xp);
+  const lvl = profileFrom(p).level; // XP, modèles photographiés et grade gardé
   return h("div.card.adm-row", { onclick: () => openPlayer(p.id, onChange) },
     avatar(p.avatar_path),
     h("div.grow",
@@ -241,7 +241,7 @@ export function openPlayer(id, onChange = () => {}) {
     let p;
     try { p = await Admin.player(id); } catch (e) { fill(box, h("p", e.message)); return; }
     if (!p) { fill(box, h("p", "Joueur introuvable (compte supprimé ?).")); return; }
-    const lvl = levelOf(p.xp);
+    const lvl = profileFrom(p).level;
     const line = (k, ...v) => [h("span.k", k), h("span", ...v)];
     const mail = p.email ? [h("a", { href: `mailto:${p.email}`, target: "_blank", rel: "noopener" }, p.email),
       h("button.btn.small.outline.adm-copy", { onclick: () => copy(p.email) }, "Copier"), p.email_confirmed ? null : " (pas confirmé)"] : ["—"];

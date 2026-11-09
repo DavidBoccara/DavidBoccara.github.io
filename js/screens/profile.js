@@ -6,7 +6,7 @@ import { Cloud, sync, MyStatus } from "../cloud.js";
 import { adminConsole } from "./admin.js";
 import { Badges, badgeEl } from "../badges.js";
 import { Collection, Player, entryModel, entryRarity, QuizStore } from "../store.js";
-import { levelOf, modelKey } from "../game.js";
+import { modelKey, gradePct, progressText } from "../game.js";
 import { loginGate, renderHud, go } from "../app.js";
 import { friends } from "./friends.js";
 import { grades } from "./grades.js";
@@ -155,14 +155,14 @@ function me(view, show) {
     legalLinks(), versionLine());
 
   function render() {
-    const p = Player.profile, xp = Player.bestXp(), lvl = levelOf(xp);
+    const p = Player.profile, xp = Player.bestXp(), lvl = Player.level();
     if (p?.avatarUrl) avatar.src = p.avatarUrl;
     name.textContent = p?.username || "…"; email.textContent = Supa.email;
     shareRow.style.display = p && p.shareWorld !== undefined ? "" : "none"; // réglage installé sur le serveur ?
     shareInput.checked = !!p?.shareWorld;
     level.textContent = `Niveau ${lvl.number} — ${lvl.title}`;
-    bar.firstChild.style.width = (lvl.nextXp ? ((xp - lvl.minXp) / (lvl.nextXp - lvl.minXp)) * 100 : 100) + "%";
-    xpText.textContent = lvl.nextXp ? `${xp} XP • encore ${lvl.nextXp - xp} XP pour « ${levelOf(lvl.nextXp).name} »` : `${xp} XP • grade maximum !`;
+    bar.firstChild.style.width = gradePct(lvl, xp) + "%";
+    xpText.textContent = progressText(xp, Player.next()); // XP et modèles photographiés qu'il manque pour le grade suivant
     const entries = Collection.all();
     const best = entries.reduce((b, e) => (!b || entryRarity(e).ordinal > entryRarity(b).ordinal ? e : b), null);
     const q = QuizStore.stats();

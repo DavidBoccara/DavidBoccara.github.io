@@ -6,6 +6,7 @@ import { LOCALE, t as tr } from "./i18n.js";
 import { $, h, ls, modal, toast, icon } from "./util.js";
 import { Supa, emailLink } from "./supa.js";
 import { Player } from "./store.js";
+import { gradePct } from "./game.js";
 import { Sound } from "./sound.js";
 import { Cloud, sync, MyStatus } from "./cloud.js";
 import { Radar } from "./radar.js";
@@ -113,7 +114,7 @@ Radar.subscribe(radarLive);
 export function renderHud() {
   const p = Player.profile, xp = Player.bestXp(), lvl = Player.level();
   Sound.level(lvl.number); // fanfare si le grade vient de monter après un gain
-  const pct = lvl.nextXp ? ((xp - lvl.minXp) / (lvl.nextXp - lvl.minXp)) * 100 : 100;
+  const pct = gradePct(lvl, xp);
   const av = h("img.avatar", { alt: "", src: p?.avatarUrl || "icons/avatar.svg" });
   av.onerror = () => { av.src = "icons/avatar.svg"; };
   $("#hud").replaceChildren(av,

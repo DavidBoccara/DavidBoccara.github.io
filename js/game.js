@@ -32,15 +32,40 @@ export function rarityOf(type, military, interesting = false, category = "") {
 export const rarityOfAc = (ac) => rarityOf(ac.type, ac.military, ac.interesting, ac.category);
 
 // ---------- Grades ----------
-export const LEVELS = D.levels.map(([minXp, name], i) => ({
-  number: i + 1, name, minXp, nextXp: D.levels[i + 1]?.[0] ?? null, emblem: "",
+// Un grade demande des XP et, à partir de « Spotter », des modèles différents photographiés (data.js, 9/11/2026).
+export const LEVELS = D.levels.map(([minXp, name, minModels], i) => ({
+  number: i + 1, name, minXp, minModels, nextXp: D.levels[i + 1]?.[0] ?? null, emblem: "",
   get title() { return name; },
 }));
-export function levelOf(xp) {
+/**
+ * Grade atteint avec xp et models (modèles photographiés). floor : grade gardé par les joueurs inscrits avant la règle
+ * des modèles (profiles.grade_floor) : le grade n'est jamais en dessous.
+ */
+export function levelOf(xp, models, floor = 1) {
   let i = 0;
-  LEVELS.forEach((l, j) => { if (xp >= l.minXp) i = j; });
-  return LEVELS[i];
+  LEVELS.forEach((l, j) => { if (xp >= l.minXp && models >= l.minModels) i = j; });
+  return LEVELS[Math.max(i, Math.min(floor, LEVELS.length) - 1)];
 }
+/** Ce qu'il manque pour atteindre le grade l : { xp, models } (0 = condition remplie). */
+export const missingFor = (l, xp, models) => ({ xp: Math.max(0, l.minXp - xp), models: Math.max(0, l.minModels - models) });
+/** Ce qu'il manque pour le grade suivant : { next, xp, models }, null au grade maximum. */
+export function nextGrade(lvl, xp, models) {
+  const next = LEVELS[lvl.number];
+  return next ? { next, ...missingFor(next, xp, models) } : null;
+}
+/** « encore 300 XP et 4 modèles à photographier » (m = missingFor ou nextGrade). */
+export function goalText(m) {
+  const xp = m.xp ? `${m.xp.toLocaleString(LOCALE)} XP` : "";
+  const models = m.models ? `${m.models} modèle${m.models > 1 ? "s" : ""} à photographier` : "";
+  return xp || models ? `encore ${[xp, models].filter(Boolean).join(" et ")}` : "";
+}
+/** Ligne sous la barre d'XP : « 2 508 XP • encore 492 XP et 19 modèles à photographier pour « Expert du ciel » ». */
+export function progressText(xp, g) {
+  const n = xp.toLocaleString(LOCALE);
+  return g ? `${n} XP • ${goalText(g)} pour « ${g.next.name} »` : `${n} XP • grade maximum !`;
+}
+/** Barre d'XP du grade (0 à 100 %). */
+export const gradePct = (lvl, xp) => (lvl.nextXp ? Math.min(100, Math.max(0, ((xp - lvl.minXp) / (lvl.nextXp - lvl.minXp)) * 100)) : 100);
 
 // ---------- Pays ----------
 /** Drapeau du pays : retiré du style « Instrument » (le nom du pays reste écrit). */

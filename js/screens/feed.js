@@ -5,7 +5,7 @@
 import { Blocked } from "../blocks.js";
 import { linkPlayer } from "./player.js";
 import { LOCALE } from "../i18n.js";
-import { h, timeAgo, toast, modal, icon, rarityMark, dateDay } from "../util.js";
+import { h, timeAgo, toast, modal, icon, rarityMark, dateDay, gradeTag } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, sync } from "../cloud.js";
 import { Player } from "../store.js";
@@ -211,7 +211,7 @@ function dailyPost(r) {
     : "du " + new Date(r.day + "T12:00:00").toLocaleDateString(LOCALE, { weekday: "long", day: "numeric", month: "long" });
   return h("div.card.post.daily-post", { "data-author": r.userId || "" },
     h("div.head", linkPlayer(avatar(r.user), r.userId), h("div.grow",
-      h("div", linkPlayer(h("b", r.user?.username || "Un spotter"), r.userId), " a fait le ", h("b", "Quiz du jour")),
+      h("div", linkPlayer(h("b", r.user?.username || "Un spotter"), r.userId), gradeTag(r.user?.level), " a fait le ", h("b", "Quiz du jour")),
       h("div.small.dim", timeAgo(r.createdAt) + (r.user ? ` · ${r.user.level.emblem} ${r.user.level.name}` : "")))),
     h("div.daily-score", h("div.big", `${emoji} ${r.correct}/${r.total}`),
       h("div.small", `bonne${r.correct > 1 ? "s" : ""} réponse${r.correct > 1 ? "s" : ""} au quiz ${dayText}`)),
@@ -227,7 +227,7 @@ function post(c) {
   const color = c.rarity.color;
   const likeBtn = likeButton(c, Cloud.like, Cloud.unlike);
   // Page de la publication : photo du joueur, fiche de l'avion et commentaires
-  const open = () => { sessionStorage.setItem("catch_" + c.id, JSON.stringify({ ...c, user: c.user && { id: c.user.id, username: c.user.username, avatarPath: c.user.avatarPath, xp: c.user.xp },
+  const open = () => { sessionStorage.setItem("catch_" + c.id, JSON.stringify({ ...c, user: c.user && { id: c.user.id, username: c.user.username, avatarPath: c.user.avatarPath, xp: c.user.xp, models: c.user.models, gradeFloor: c.user.gradeFloor },
     photo: c.photoUrl, photos: c.photoUrls, index: car?.index() || 0 })); go("comments/" + c.id); };
   // Photos de l'avion : une seule, ou l'album en carrousel (on fait glisser, comme sur Instagram)
   const urls = c.photoUrls?.length ? c.photoUrls : [c.photoUrl];
@@ -235,7 +235,7 @@ function post(c) {
   const current = () => urls[car.index()] || c.photoUrl;
   // Avatar et pseudo : page du joueur (ses photos, si son profil est public ou si c'est un ami)
   const av = linkPlayer(avatar(c.user), c.userId);
-  const who = () => linkPlayer(h("b", c.user?.username || "Un spotter"), c.userId);
+  const who = () => [linkPlayer(h("b", c.user?.username || "Un spotter"), c.userId), gradeTag(c.user?.level)]; // pseudo + insigne de grade
   let card = null;
   // signalée : la publication disparaît de mon feed ; joueur bloqué : toutes ses publications affichées aussi
   const flag = reportButton(c, (r) => r?.blocked ? document.querySelectorAll(`[data-author="${c.userId}"]`).forEach((x) => x.remove()) : card?.remove());

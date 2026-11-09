@@ -1128,39 +1128,17 @@ export const D = {
 "B06",
 "R44"
 ],
+// Grades : [XP, nom, modèles différents photographiés]. À partir de « Spotter », il faut aussi des photos (validées ;
+// les photos anciennes ne comptent pas) : les jeux seuls ne suffisent plus (9/11/2026, levelOf de game.js).
 "levels": [
-[
-0,
-"Observateur"
-],
-[
-100,
-"Guetteur"
-],
-[
-300,
-"Spotter"
-],
-[
-700,
-"Spotter confirmé"
-],
-[
-1500,
-"Chasseur d'avions"
-],
-[
-3000,
-"Expert du ciel"
-],
-[
-6000,
-"As du spotting"
-],
-[
-12000,
-"Légende du ciel"
-]
+[0, "Observateur", 0],
+[100, "Guetteur", 0],
+[300, "Spotter", 3],
+[700, "Spotter confirmé", 8],
+[1500, "Chasseur d'avions", 15],
+[3000, "Expert du ciel", 30],
+[6000, "As du spotting", 50],
+[12000, "Légende du ciel", 100]
 ],
 "emblems": [
 "🔭",

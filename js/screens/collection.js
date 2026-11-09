@@ -1,10 +1,9 @@
 // Onglet Collection : grade et XP, puis trois vues — mes photos, avions passés au-dessus, catalogue complet.
-import { LOCALE } from "../i18n.js";
 import { h, ls, rarityMark, infoButton } from "../util.js";
 import { Collection, Player, entryPhoto, entryPhotoItems, entryRarity, entryModel, entryLabel, isOld } from "../store.js";
 import { Supa } from "../supa.js";
 import { sync } from "../cloud.js";
-import { RARITIES, flagOf, modelKey } from "../game.js";
+import { RARITIES, flagOf, modelKey, gradePct, progressText } from "../game.js";
 import { importFlow, showEntry, wikiDot, wikiQuery, albumBadge } from "../ui.js";
 import { go, renderHud } from "../app.js";
 import { hangarList } from "./hangar.js";
@@ -42,8 +41,8 @@ export function collection(view, [sub]) {
   function header() {
     const xp = Player.bestXp(), lvl = Player.level();
     level.textContent = `Niveau ${lvl.number} — ${lvl.title}`;
-    bar.firstChild.style.width = (lvl.nextXp ? ((xp - lvl.minXp) / (lvl.nextXp - lvl.minXp)) * 100 : 100) + "%";
-    xpText.textContent = lvl.nextXp ? `${xp.toLocaleString(LOCALE)} XP • grade suivant à ${lvl.nextXp.toLocaleString(LOCALE)} XP` : `${xp.toLocaleString(LOCALE)} XP • grade maximum !`;
+    bar.firstChild.style.width = gradePct(lvl, xp) + "%";
+    xpText.textContent = progressText(xp, Player.next()); // XP et modèles photographiés qu'il manque pour le grade suivant
     renderHud();
   }
 

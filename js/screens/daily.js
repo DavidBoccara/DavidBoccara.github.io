@@ -6,7 +6,7 @@ import { h, ls, toast } from "../util.js";
 import { Radar } from "../radar.js";
 import { AdsbDb } from "../net.js";
 import { QuizStore, Sightings, Player } from "../store.js";
-import { Quiz, LEVELS, quizName, buildQuestion, MAX_PHOTO_KM, RARITIES, spottedRarity } from "../game.js";
+import { Quiz, quizName, buildQuestion, MAX_PHOTO_KM, RARITIES, spottedRarity } from "../game.js";
 import { Supa } from "../supa.js";
 import { sync } from "../cloud.js";
 import { go, renderHud } from "../app.js";
@@ -129,7 +129,7 @@ export function dailyQuiz(box) {
       if (!alive) return;
     }
     const today = todayKey(), st = DailyStore.get(), seen = todaysSightings(), farther = allToday().length - seen.length;
-    const lvl = Player.level(), next = LEVELS[lvl.number], r = dailyRadiusKm();
+    const lvl = Player.level(), r = dailyRadiusKm();
     const dateText = new Date().toLocaleDateString(LOCALE, { weekday: "long", day: "numeric", month: "long" });
     // Petit tableau à la place des longues phrases : avions du jour, modèles différents, questions, avions hors rayon
     const models = dailyCandidates().length, n = Math.min(DAILY_MAX, models);
@@ -137,7 +137,7 @@ export function dailyQuiz(box) {
     const dayTable = () => table([["Avions", seen.length], ["Modèles", models], ["Questions", n, n > 0], ["Plus loin", farther]]);
     const intro = h("div.daily-head", h("div.small.dim", `${dateText[0].toUpperCase()}${dateText.slice(1)} · une partie par jour`), reminderRow());
     // Le rayon de jeu est porté par le bouton d'action (Commencer / Aller au Scanner), avec le rayon au grade suivant dessous
-    const action = (label, sub, onClick) => h("div.mt", radiusButton({ km: r, lvl, label, sub, onClick }), radiusNext(lvl, next, Player.bestXp()));
+    const action = (label, sub, onClick) => h("div.mt", radiusButton({ km: r, lvl, label, sub, onClick }), radiusNext(Player.next()));
     pushDailyQuiz();
 
     if (st?.done) {
