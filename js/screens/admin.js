@@ -2,7 +2,7 @@
 // (pour l'instant le joueur Toshley). L'écran ne fait qu'afficher : chaque lecture et chaque action est vérifiée par le
 // serveur (fonctions admin_* de supabase/admin.sql ; suppressions par la fonction serveur « admin »).
 // Vues : Résumé (chiffres, appels aux services), Serveur (place prise, mémoire vive, processeur, disque), Audience (Google Analytics), Joueurs (fiche, XP, pseudo, photo, suspension, suppression du compte),
-// Signalements (publications, photos du quiz, questions de l'IA, publications retirées), Publications (photos et
+// Signalements (publications, photos du quiz, photos des avions, questions de l'IA, publications retirées), Publications (photos et
 // commentaires de tous les joueurs, profils privés compris) et Messages (formulaire de contact).
 // En français seulement : data-notr (jamais traduit), fichier ignoré par tools/i18n_check.py.
 import { h, toast, modal, confirmBox, choose, prompt, icon, infoButton, dateTime, timeAgo } from "../util.js";
@@ -370,13 +370,14 @@ async function suspendFlow(p, onDone) {
 async function reports(body, ctx) {
   body.append(spinner());
   const refresh = () => { ctx.changed(); reports(body.replaceChildren() || body, ctx); };
-  let rep, qf, ai, rem;
+  let rep, qf, ai, rem, af;
   try {
-    [rep, qf, ai, rem] = await Promise.all([Admin.reports(), Admin.quizFlags().catch(() => []), Admin.aiFlags().catch(() => []),
-      Admin.removals().catch(() => [])]);
+    [rep, qf, ai, rem, af] = await Promise.all([Admin.reports(), Admin.quizFlags().catch(() => []), Admin.aiFlags().catch(() => []),
+      Admin.removals().catch(() => []), Admin.acFlags().catch(() => [])]);
   } catch (e) { fill(body, h("div.card.pad", e.message)); return; }
   const quizOpen = qf.filter((f) => f.reports < 5), quizHidden = qf.filter((f) => f.reports >= 5);
   const aiOpen = ai.filter((a) => a.question);
+  const acOpen = af.filter((f) => f.reports < 3), acHidden = af.filter((f) => f.reports >= 3);
   fill(body, 
     h("div.section", `Publications signalées (${rep.length})`),
     rep.length ? h("div.list", rep.map((r) => reportCard(r, refresh))) : h("div.small.dim", "Aucune publication signalée."),
@@ -384,6 +385,10 @@ async function reports(body, ctx) {
       infoButton("Photos du quiz", "Retirées pour tous à partir de 5 joueurs. « Retirer pour tous » le fait tout de suite ; « Rétablir » efface les signalements (la photo revient dans le quiz).", { small: true })),
     quizOpen.length ? h("div.list", quizOpen.map((f) => quizCard(f, refresh))) : h("div.small.dim", "Aucune photo en attente."),
     quizHidden.length ? h("details.adm-more", h("summary", `Photos retirées pour tous (${quizHidden.length})`), h("div.list", quizHidden.map((f) => quizCard(f, refresh)))) : null,
+    h("div.row", h("div.section.grow", `Photos des avions signalées (${acOpen.length})`),
+      infoButton("Photos des avions", "Photos de la fiche d'un avion (Scanner, « Le plus proche », publications). Retirées pour tous à partir de 3 joueurs, et aussi du quiz. « Retirer pour tous » le fait tout de suite ; « Rétablir » efface les signalements (la photo revient, sauf pour les joueurs qui l'ont signalée eux-mêmes). Les téléphones relisent la liste au plus toutes les heures.", { small: true })),
+    acOpen.length ? h("div.list", acOpen.map((f) => acCard(f, refresh))) : h("div.small.dim", "Aucune photo en attente."),
+    acHidden.length ? h("details.adm-more", h("summary", `Photos des avions retirées pour tous (${acHidden.length})`), h("div.list", acHidden.map((f) => acCard(f, refresh)))) : null,
     h("div.row", h("div.section.grow", `Questions de l'IA signalées (${aiOpen.length})`),
       infoButton("Questions de l'IA", "Retirées pour tous à partir de 3 joueurs. « Retirer » le fait tout de suite ; « Garder » efface les signalements.", { small: true })),
     aiOpen.length ? h("div.list", aiOpen.map((a) => aiCard(a, refresh))) : h("div.small.dim", "Aucune question en attente."),
@@ -440,6 +445,27 @@ function quizCard(f, refresh) {
     h("div.adm-actions",
       !hidden && actBtn(".danger", "Retirer pour tous", async () => { await Admin.quizPhoto(f.photo, "hide"); toast("Photo retirée du quiz"); refresh(); }),
       actBtn(".outline", "Rétablir", async () => { await Admin.quizPhoto(f.photo, "restore"); toast("Photo rétablie"); refresh(); })));
+}
+
+const AC_REASONS = { wrong: "pas cet avion", not_plane: "pas un avion", shocking: "choquante", other: "autre" };
+/** Photo d'un avion signalée depuis le Scanner (aircraft_photo_flags) : mêmes actions que les photos du quiz, seuil de 3. */
+function acCard(f, refresh) {
+  const file = commonsFile(f.photo);
+  const src = file ? `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=250` : f.photo;
+  const page = file ? `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(file)}` : f.photo;
+  const im = h("img.adm-thumb", { alt: "", loading: "lazy", src });
+  im.onclick = () => amodal({ title: file || "Photo", body: [h("img", { src: file ? src.replace("width=250", "width=960") : src, alt: "", style: { width: "100%", borderRadius: "8px" } }),
+    h("a.small", { href: page, target: "_blank", rel: "noopener" }, "Page de la photo")] });
+  const hidden = f.reports >= 3;
+  const why = Object.entries(f.reasons || {}).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${AC_REASONS[k] || k} ×${n}`).join(", ");
+  return h("div.card.adm-card", h("div.row", { style: { alignItems: "flex-start", gap: "10px" } }, im,
+    h("div.grow", { style: { minWidth: 0 } }, h("div.adm-file", file || f.photo),
+      h("div.small", plural(f.reports, "joueur", "joueurs") + (hidden ? " · retirée pour tous" : "")),
+      why && h("div.small", why),
+      h("div.small.dim", ago(f.last_at)))),
+    h("div.adm-actions",
+      !hidden && actBtn(".danger", "Retirer pour tous", async () => { await Admin.acPhoto(f.photo, "hide"); toast("Photo retirée pour tous"); refresh(); }),
+      actBtn(".outline", "Rétablir", async () => { await Admin.acPhoto(f.photo, "restore"); toast("Photo rétablie"); refresh(); })));
 }
 
 function aiCard(a, refresh) {

@@ -131,7 +131,7 @@ export function privacyPage(view) {
         "La trace d'une de tes publications retirée après 5 signalements ou par la modération (date, modèle, raison) : un an, pour pouvoir répondre si tu contestes, puis effacée automatiquement.",
         "Les joueurs que tu as bloqués : jusqu'à ce que tu les débloques ou que tu supprimes ton compte.",
         "Ton engagement sur les photos (date et version du texte accepté) : tant que ton compte existe, pour pouvoir le prouver.",
-        "Tes signalements de photos ou de questions du quiz : tant que ton compte existe.",
+        "Tes signalements de photos (quiz et fiches des avions) ou de questions du quiz : tant que ton compte existe.",
         "Une suspension de ton compte décidée par la modération (dates et motif) : tant que ton compte existe.",
         "Les corrections de tes XP par la modération (points et motif) : tant que ton compte existe.",
         "Les messages envoyés avec le formulaire de contact (nom, e-mail, message) : un an au plus, puis effacés automatiquement.",

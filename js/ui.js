@@ -3,6 +3,7 @@ import { creditLine, osmCredit, textCredit } from "./credits.js";
 import { LOCALE, LANG } from "./i18n.js";
 import { h, modal, toast, icon, infoButton, pickImage, toJpeg, imageKind, exifDate, confirmBox, choose, dateTime, dateDay, dec, rarityMark } from "./util.js";
 import { Wiki, AdsbDb, Places, aircraftPhotos } from "./net.js";
+import { AcFlags, acFlagButton } from "./acflags.js";
 import { shareCard } from "./sharecard.js";
 import { Supa } from "./supa.js";
 import { ensurePhotoRules, requireAccount } from "./photorules.js";
@@ -76,9 +77,16 @@ export function aircraftPhotoBlock(ctx = null) {
   const img = h("img.cover", { alt: "Photo de l'appareil", style: { objectFit: "contain", maxHeight: "260px" } });
   const note = h("div.small.dim", { style: { marginTop: "4px" } });
   const credit = creditLine();
-  const box = h("div.ac-photo", { hidden: true }, img, note, credit);
   let urls = [], i = 0, cur = null;
-  const next = () => { if (i >= urls.length) { box.hidden = true; return; } cur = urls[i++]; img.src = cur; };
+  // Photo suivante, sans celles signalées entre-temps (acflags.js) ; plus rien : le bloc se cache
+  const next = () => {
+    while (i < urls.length && AcFlags.has(urls[i])) i++;
+    if (i >= urls.length) { box.hidden = true; cur = null; return; }
+    cur = urls[i++]; img.src = cur;
+  };
+  // « Signaler » dans le coin de la photo : pas cet avion, pas un avion, photo choquante…
+  const flag = acFlagButton(() => cur, next);
+  const box = h("div.ac-photo", { hidden: true }, h("div.ac-photo-wrap", img, flag), note, credit);
   img.onload = () => { box.hidden = false; credit.set(cur); };
   img.onerror = next; // fichier introuvable : photo suivante
   box.load = (c) => aircraftPhotos(c).then((p) => {

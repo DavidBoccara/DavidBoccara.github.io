@@ -238,6 +238,8 @@ export const Admin = {
   reports: () => rpcList("admin_reports"),
   removals: () => rpcList("admin_removals", { p_limit: 50 }),
   quizFlags: () => Supa.select("quiz_photo_flags?select=*&order=last_at.desc&limit=200"),
+  acFlags: () => Supa.select("aircraft_photo_flags?select=*&order=last_at.desc&limit=200"),
+  acPhoto: (photo, action) => Supa.rpc("admin_aircraft_photo", { p_photo: photo, p_action: action }),
   quizPhoto: (photo, action) => Supa.rpc("admin_quiz_photo", { p_photo: photo, p_action: action }),
   aiFlags: () => rpcList("admin_ai_flags"),
   aiRemove: (article, qid) => Supa.rpc("admin_ai_remove", { p_article: article, p_qid: qid }),

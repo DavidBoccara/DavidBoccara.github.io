@@ -10,6 +10,7 @@ import { wikiQuery } from "./ui.js";
 import { Supa } from "./supa.js";
 import { bonusQuestions, flagAiQuestion } from "./wikiquiz.js";
 import { Sound } from "./sound.js";
+import { AcFlags, photoKey } from "./acflags.js";
 
 // ---------- Rayon de jeu (selon le grade), porté par le bouton d'action du quiz ----------
 /** Cercles des 8 grades : le mien plein, les précédents en trait, les suivants en pointillés. */
@@ -99,18 +100,14 @@ export function bonusBlock(q, n, { onAward, xp = true } = {}) {
 // ---------- Photos signalées « 🚩 Cette photo donne la réponse » ----------
 // Retirée tout de suite pour le joueur qui la signale, et pour tous à partir de 5 joueurs différents (serveur).
 const FLAG_KEY = "quiz_flags", FLAG_CACHE = "quiz_flags_server2", FLAG_TTL = 6 * 3600e3, FLAG_MIN = 5;
-/** Clé d'une photo : nom du fichier pour Wikimedia (toutes tailles confondues), sinon son adresse sans paramètres. */
-export const photoKey = (url) => {
-  const u = url || "";
-  const m = /(?:upload|thumb)\.wikimedia\.org\/wikipedia\/[^/]+\/(?:thumb\/)?[0-9a-f]\/[0-9a-f]{2}\/([^/?#]+)/.exec(u);
-  if (m) { try { return "wiki:" + decodeURIComponent(m[1]); } catch { return "wiki:" + m[1]; } }
-  return u.split(/[?#]/)[0];
-};
+// Clé d'une photo (nom du fichier Wikimedia, toutes tailles confondues) : la même que pour les photos des avions signalées
+// dans le Scanner (acflags.js), qui sont écartées du quiz elles aussi
+export { photoKey };
 const myFlags = () => ls.get(FLAG_KEY, []).map(photoKey); // (anciennes clés converties)
 let serverFlags = new Set(ls.get(FLAG_CACHE, { at: 0, list: [] }).list);
 export const PhotoFlags = {
-  /** Photo retirée du quiz : signalée par moi, ou par au moins 5 joueurs ? */
-  has: (url) => { const k = photoKey(url); return serverFlags.has(k) || myFlags().includes(k); },
+  /** Photo retirée du quiz : signalée par moi, ou par au moins 5 joueurs ? (ou retirée des photos des avions, acflags.js) */
+  has: (url) => { const k = photoKey(url); return serverFlags.has(k) || myFlags().includes(k) || AcFlags.has(url); },
   /** Liste du serveur (photos signalées par au moins 5 joueurs), relue au plus toutes les 6 heures. */
   async refresh() {
     const c = ls.get(FLAG_CACHE, { at: 0, list: [] });

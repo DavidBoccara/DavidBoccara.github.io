@@ -6,6 +6,7 @@ import { compassRose, nextMark } from "../compass.js";
 import { Radar, showAircraftNotification, approachOf, approxPlace, approxLabel, mayBeVisible } from "../radar.js";
 import { Prefs, Collection } from "../store.js";
 import { Adsb, Wiki, aircraftPhotos, wmSize } from "../net.js";
+import { AcFlags, acFlagButton, photoKey as flagKey } from "../acflags.js";
 import { wikiQuery, locationBadge, defaultLocationAlert, photoCtx } from "../ui.js";
 import { KINDS, MODELS, filterMatches, UNCERTAIN_TEXT, rarityOf, rarityOfAc, approach, approachSortKey, acLabel, fmtDistance, fmtAltitude, fmtSpeed, prettyModel } from "../game.js";
 import { go } from "../app.js";
@@ -167,7 +168,7 @@ export function scanner(view) {
       thumb);
     const txt = (node, v) => { if (node.textContent !== v) node.textContent = v; };
     let rarKey = "", photoKey = null;
-    return { el, update(ac, caught, loc, vis, known) {
+    return { el, resetPhoto() { photoKey = null; }, update(ac, caught, loc, vis, known) {
       const r = rarityOfAc(ac), extra = Radar.extras.get(ac.hex);
       const model = prettyModel(ac.description || (extra?.info ? `${extra.info.manufacturer} ${extra.info.model}`.trim() : "")) || acLabel(ac) || "Appareil non identifié";
       const a = known !== undefined ? known : loc ? approach(loc.lat, loc.lon, ac, vis) : null;
@@ -208,7 +209,17 @@ export function scanner(view) {
   const schedule = () => { if (!pending) { pending = true; requestAnimationFrame(() => { pending = false; render(); }); } };
   const unsub = Radar.subscribe(schedule);
   render();
-  return () => { clearInterval(tick); unsub(); rose.stop(); camBtn?.cleanup?.(); };
+  // Photo signalée (acflags.js) : les vignettes qui la montrent cherchent une autre photo
+  const onFlag = (e) => {
+    for (const [hex, p] of photos) if (flagKey(p.url) === e.detail) photos.delete(hex);
+    for (const [hex, c] of cards) {
+      const src = c.el.querySelector("img.ac-thumb")?.getAttribute("src");
+      if (src && flagKey(src) === e.detail) c.resetPhoto();
+    }
+    schedule();
+  };
+  window.addEventListener("planego-photoflag", onFlag);
+  return () => { clearInterval(tick); unsub(); rose.stop(); camBtn?.cleanup?.(); window.removeEventListener("planego-photoflag", onFlag); };
 }
 
 // ---------- Vignettes : pastille, compte à rebours, flèche ----------
@@ -259,7 +270,12 @@ function setPhoto(img, ac, extra, key) {
   if (known) show(known.url);
   if (known?.key === key) return;
   let own = !!known?.own;
-  const wiki = () => Wiki.find(wikiQuery.ac(ac)).then((s) => { if (s?.thumbnailUrl && fresh() && !own) show(s.thumbnailUrl); return s?.thumbnailUrl; }).catch(() => null);
+  const wiki = () => Wiki.find(wikiQuery.ac(ac)).then((s) => {
+    const u = s?.thumbnailUrl && !AcFlags.has(s.thumbnailUrl) ? s.thumbnailUrl : null; // photo signalée : pas de vignette
+    if (u && fresh() && !own) show(u);
+    if (!u && fresh() && !own) img.removeAttribute("src");
+    return u;
+  }).catch(() => null);
   if (!known) wiki();
   img.onerror = () => { img.removeAttribute("src"); if (own) { own = false; photos.delete(ac.hex); wiki(); } };
   aircraftPhotos(photoCtx(ac, extra), { low: true }).catch(() => null).then(async (r) => {
@@ -452,7 +468,10 @@ async function showNearest(ac, loc) {
   } });
   buttons.push({ label: "Voir la fiche ›", primary: true, onClick: () => { go("ac/" + ac.hex); } });
   const credit = creditLine();
-  modal({ title: `${acLabel(ac)}`, body: [img, credit, name, h("div.kv.small.mt", lines.join("\n"))], buttons });
+  let cur = null;
+  const flag = acFlagButton(() => cur, () => next()); // « Signaler » : pas cet avion, pas un avion… (acflags.js)
+  flag.style.display = "none";
+  modal({ title: `${acLabel(ac)}`, body: [h("div.ac-photo-wrap", img, flag), credit, name, h("div.kv.small.mt", lines.join("\n"))], buttons });
   const extra = await Radar.extra(ac).catch(() => null);
   // Photo libre de cet appareil (ou du modèle aux couleurs de sa compagnie, Wikimedia Commons), sinon celle de l'article
   // Wikipédia du modèle ; jamais airport-data (pas de licence libre). La recherche Commons attend 6 s au plus.
@@ -462,8 +481,13 @@ async function showNearest(ac, loc) {
   ]);
   const srcs = [...(own?.urls || []).slice(0, 2), wiki?.imageUrl, wiki?.thumbnailUrl].filter(Boolean);
   let i = 0;
-  const next = () => { if (i < srcs.length) img.src = srcs[i++]; };
-  img.onload = () => { img.style.display = "block"; credit.set(srcs[i - 1]); };
+  // Photo suivante, sans les photos signalées ; plus rien : la photo disparaît
+  function next() {
+    while (i < srcs.length && AcFlags.has(srcs[i])) i++;
+    if (i < srcs.length) { cur = srcs[i++]; img.src = cur; }
+    else { cur = null; img.style.display = "none"; flag.style.display = "none"; credit.set(null); }
+  }
+  img.onload = () => { img.style.display = "block"; flag.style.display = ""; credit.set(cur); };
   img.onerror = next;
   next();
   if (extra?.info && !ac.description) name.textContent = prettyModel(`${extra.info.manufacturer} ${extra.info.model}`) || name.textContent;

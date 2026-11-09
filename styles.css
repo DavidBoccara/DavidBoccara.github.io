@@ -444,6 +444,9 @@ img.cover { width: 100%; display: block; object-fit: cover; background: var(--ca
 .bonus-end { margin-top: 8px; font-size: 13px; color: var(--text-2); }
 .bonus-flag { font-size: 12.5px; color: var(--dim); text-decoration-color: var(--line-3); padding: 6px 0 0; }
 .quiz-photo-wrap { position: relative; }
+/* Photo d'un avion (fiche, « Le plus proche », publication) : « Signaler » dans son coin (acflags.js) */
+.ac-photo-wrap { position: relative; }
+.ac-photo-wrap > img { display: block; }
 /* « Signaler » : discret, dans le coin de la photo, après la réponse (avec confirmation) */
 .photo-flag { position: absolute; top: 8px; right: 8px; background: rgba(15, 17, 19, .78); color: var(--text-2);
   border: 1px solid rgba(255, 255, 255, .16); border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; }

@@ -5,6 +5,7 @@ import { Supa } from "./supa.js";
 import { hit as countCall } from "./usage.js";
 import { distanceKm, bearingDeg, ls, sleep } from "./util.js";
 import { looksMilitary, modelQueries } from "./game.js";
+import { AcFlags } from "./acflags.js";
 
 // ---------- ADS-B ----------
 /**
@@ -411,10 +412,19 @@ export async function quizPhotos(ctx) {
  * alors seulement la photo de l'article Wikipédia du modèle). Remplace les photos airport-data (pas de licence libre).
  * Résultat gardé 7 jours (2 jours s'il n'y a rien) dans `aircraft_photos_v3` ; low = recherche de vignette (moins pressée).
  */
-const AP_KEY = "aircraft_photos_v3", AP_MAX = 250; // v3 : filtre NOT_A_PLANE par mots entiers (Eurowings, Seattle…)
+const AP_KEY = "aircraft_photos_v4", AP_MAX = 250; // v3 : filtre NOT_A_PLANE par mots entiers (Eurowings, Seattle…) ; v4 : 5 photos (remplaçantes des photos signalées)
 try { localStorage.removeItem("aircraft_photos_v1"); localStorage.removeItem("aircraft_photos_v2"); } catch { /* stockage bloqué */ }
 const apMem = new Map();
-export function aircraftPhotos(ctx, { low = false } = {}) {
+/** Photos signalées par les joueurs (acflags.js) écartées ; null s'il n'en reste aucune. */
+const unflagged = (r) => {
+  if (!r) return r;
+  const urls = r.urls.filter((u) => !AcFlags.has(u));
+  return urls.length ? { ...r, urls } : null;
+};
+export function aircraftPhotos(ctx, opts) {
+  return rawAircraftPhotos(ctx, opts).then(unflagged);
+}
+function rawAircraftPhotos(ctx, { low = false } = {}) {
   const key = [flat(ctx.registration), flat(airlineName(ctx.airline)), modelCore(ctx.model) || ""].join("|");
   if (apMem.has(key)) return apMem.get(key);
   const hit = ls.get(AP_KEY, {})?.[key];
@@ -423,7 +433,7 @@ export function aircraftPhotos(ctx, { low = false } = {}) {
     const sets = await commonsSets(ctx, false, low);
     const exact = sets.reg.length > 0, list = exact ? sets.reg : sets.airline;
     const sorted = [...list.filter((x) => x.safe), ...list.filter((x) => !x.safe)];
-    const r = sorted.length ? { urls: [...new Set(sorted.slice(0, 3).map(credited))], exact, company: sets.company } : null;
+    const r = sorted.length ? { urls: [...new Set(sorted.slice(0, 5).map(credited))], exact, company: sets.company } : null;
     if (sets.failed) apMem.delete(key); // hors ligne : on réessaiera
     else {
       const all = ls.get(AP_KEY, {}) || {};
