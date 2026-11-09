@@ -67,6 +67,9 @@ const ICONS = {
   flag: '<path d="M6 21V4h11l-2 4 2 4H6"/>',
   // Chevrons de grade (gradeTag)
   rank: '<path d="M5 11.5l7-5 7 5M5 18l7-5 7 5"/>',
+  // XP (éclair) et condition remplie (coche) : liste des grades
+  xp: '<path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   trash: '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>',
   camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
   image: '<rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M20.5 15l-5-5-8 9"/>',

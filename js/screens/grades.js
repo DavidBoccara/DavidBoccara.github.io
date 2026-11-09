@@ -1,12 +1,12 @@
 // Onglet Classement : amis, général, et liste des grades avec le barème.
 import { Blocked } from "../blocks.js";
 import { LOCALE } from "../i18n.js";
-import { h, ls, toast, gradeTag } from "../util.js";
+import { h, ls, toast, gradeTag, icon, infoButton } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, otherOf } from "../cloud.js";
 import { linkPlayer } from "./player.js";
 import { Player } from "../store.js";
-import { LEVELS, RARITIES, MAX_PHOTO_KM, Quiz, levelOf, missingFor, goalText, gradePct } from "../game.js";
+import { LEVELS, RARITIES, MAX_PHOTO_KM, Quiz, levelOf } from "../game.js";
 
 export function grades(view) {
   let mode = ls.get("grades_mode", "friends");
@@ -54,26 +54,35 @@ export function grades(view) {
     } catch (e) { list.replaceChildren(); toast(e.message); }
   }
 
-  function renderGrades() {
-    const xp = Player.bestXp(), models = Player.models(), cur = Player.level();
-    // Grade gardé d'avant la règle des modèles (9/11/2026) : plus haut que ce que donnent les XP et les modèles
-    const kept = cur.number > levelOf(xp, models).number;
-    const need = (l) => (l.minModels ? `${l.minXp} XP et ${l.minModels} modèles photographiés` : `${l.minXp} XP`);
-    box.append(h("h1.title", "Les grades"), h("div.list.mt", LEVELS.map((l) => {
-      const done = l.number < cur.number, here = l.number === cur.number, next = LEVELS[l.number];
-      const pct = done ? 100 : here ? gradePct(l, xp) : 0;
-      return h("div.card.pad.row", { style: { opacity: !done && !here ? 0.6 : 1, borderColor: here ? "var(--cyan)" : "" } },
-        h("div", { style: { fontSize: "30px" } }, l.emblem),
-        h("div.grow", h("div", { style: { fontWeight: here ? 800 : 700 } }, `${l.number}. ${l.name}`),
-          h("div.small.dim", done ? `✓ Atteint • dès ${need(l)}`
-            : here ? (next ? `Ton grade • ${xp} / ${next.minXp} XP` + (next.minModels ? ` • ${models} / ${next.minModels} modèles` : "") : "Ton grade • grade maximum !")
-            : `À partir de ${need(l)} (${goalText(missingFor(l, xp, models))})`),
-          here && kept && h("div.small.dim", "Grade gardé : tu l'avais avant que les grades demandent des photos."),
-          h("div.small", { style: { color: "var(--cyan)" } }, `Quiz : rayon de ${Quiz.radiusLabel(l)}${Quiz.bonusCount(l) ? ` · ${Quiz.bonusLabel(l)}` : ""}`),
-          h("div.xpbar.cyan", h("i", { style: { width: pct + "%" } }))));
-    })),
-    h("div.section", "Barème"),
-    h("div.kv.small", [
+  async function renderGrades() {
+    // Profil en ligne pas encore chargé (vue ouverte directement) : XP, modèles et grade gardé viennent du serveur
+    if (Supa.isLoggedIn && !Player.profile) Player.profile = await Cloud.profile().catch(() => null);
+    if (mode !== "grades") return;
+    const xp = Player.bestXp(), models = Player.models(), cur = Player.level(), g = Player.next();
+    const kept = cur.number > levelOf(xp, models).number; // grade gardé d'avant la règle des modèles (9/11/2026)
+    const num = (n) => n.toLocaleString(LOCALE);
+    // Une condition du grade suivant : icône, libellé, « 2 508 / 3 000 » (coché quand c'est bon) et barre
+    const goal = (ico, label, have, need) => h("div.goal-row" + (have >= need ? ".ok" : ""), icon(ico, 16), h("span", label),
+      h("span.v", `${num(have)} / ${num(need)}`, have >= need ? icon("check", 14) : null),
+      h("div.xpbar", h("i", { style: { width: Math.min(100, (have / need) * 100) + "%" } })));
+    // Carte « Ton grade » : grade actuel, puis ce qu'il manque pour le suivant et ce qu'il débloque
+    const me = h("div.card.pad.mt.grade-me", h("div.kicker", "Ton grade"), h("div.gm-name", gradeTag(cur), cur.name),
+      kept && h("div.small.dim", "Grade gardé : tu l'avais avant que les grades demandent des photos."),
+      g ? [h("div.kicker.gm-next", `Pour passer ${g.next.name}`),
+        goal("xp", "XP", xp, g.next.minXp),
+        g.next.minModels ? goal("camera", "Modèles photographiés", models, g.next.minModels) : null,
+        h("div.gm-unlock", h("span", icon("radar", 14), `Rayon ${Quiz.radiusLabel(g.next)}`),
+          Quiz.bonusCount(g.next) ? h("span", icon("quiz", 14), Quiz.bonusLabel(g.next)) : null)]
+        : h("div.small.dim", "Grade maximum : radar infini"));
+    // Tableau de tous les grades : ce qu'il faut (XP, modèles) et ce que ça donne au quiz (rayon, questions bonus)
+    const col = (ico, label) => h("th", icon(ico, 14), label);
+    const table = h("table.grade-table",
+      h("thead", h("tr", col("rank", "Grade"), col("xp", "XP"), col("camera", "Modèles"), col("radar", "Rayon"), col("quiz", "Bonus"))),
+      h("tbody", LEVELS.map((l) => h("tr" + (l.number === cur.number ? ".here" : l.number > cur.number ? ".locked" : ""),
+        h("td", h("span.gt-cell", gradeTag(l), l.name)), h("td", num(l.minXp)), h("td", l.minModels || "—"),
+        h("td", Quiz.radiusLabel(l)), h("td", Quiz.bonusCount(l) || "—")))));
+    // Barème des XP derrière le bouton « i » (pas de long texte à l'écran)
+    const bareme = () => h("div.kv.small", [
       "À partir de « Spotter », chaque grade demande aussi des modèles différents photographiés (photos validées ; les photos anciennes ne comptent pas) : les jeux seuls ne suffisent plus.", "",
       "Rareté de l'avion :", ...RARITIES.map((r) => `  ${r.stars} ${r.label} : ${r.xp} XP`), "",
       "Distance du vol (depuis l'aéroport de départ, ou le pays d'immatriculation) :",
@@ -81,7 +90,8 @@ export function grades(view) {
       "🆕 Premier avion d'un modèle : +50 %",
       `Un même avion ne rapporte qu'une fois, et seulement s'il est passé à moins de ${MAX_PHOTO_KM} km de toi.`, "",
       "Quiz : 5 XP par bonne réponse, ×2 dès 5 bonnes réponses d'affilée, ×3 dès 10… (maximum ×5).",
-    ].join("\n")));
+    ].join("\n"));
+    box.append(h("div.row", h("h1.title.grow", "Les grades"), infoButton("Barème", bareme)), me, h("div.card.pad.mt.grade-wrap", table));
   }
   render();
 }
