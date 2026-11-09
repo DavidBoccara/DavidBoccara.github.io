@@ -28,6 +28,9 @@ export const ADS_ENABLED = false;
 // client : identifiant d'éditeur « ca-pub-… » ; slot : numéro du bloc d'annonces ; layoutKey : clé de mise en page
 // d'un bloc « In-feed » (vide = bloc d'annonces display ordinaire, adaptatif).
 export const ADSENSE = { client: "ca-pub-1156180900899170", slot: "", layoutKey: "" };
+// Mesure d'audience Google Analytics 4 (analytics.js) : seulement avec l'accord du joueur (bandeau, réglage du Profil).
+// Vide = aucune mesure, aucun bandeau. Propriété créée par le propriétaire le 9/11/2026.
+export const GA_ID = "G-Z1JSSR0QBS";
 // Adresse publique du site : les liens des e-mails (mot de passe oublié, confirmation du compte) y ramènent.
 export const SITE_URL = "https://plane-go.com/";
 // Copie du site sur GitHub Pages (même code, même base de données) : https://davidboccara.github.io/

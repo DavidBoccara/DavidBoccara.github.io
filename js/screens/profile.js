@@ -18,6 +18,7 @@ import { legalLinks } from "./legal.js";
 import { updateCard } from "../update.js";
 import { saveShareWorld } from "./feed.js";
 import { Sound } from "../sound.js";
+import { Analytics, details as analyticsDetails } from "../analytics.js";
 import { LANG, LOCALE, setLang, t } from "../i18n.js";
 
 const VIEWS = [
@@ -89,6 +90,16 @@ function soundRow() {
     h("input", { type: "checkbox", checked: Sound.on, onchange: (e) => { Sound.on = e.target.checked; } })));
 }
 
+/** Interrupteur « Mesure d'audience » (Google Analytics, analytics.js) : coché = accord donné. */
+function analyticsRow() {
+  if (!Analytics.enabled) return null;
+  const box = h("input", { type: "checkbox", checked: Analytics.state === "yes", onchange: (e) => Analytics.set(e.target.checked) });
+  const sync = () => { if (!box.isConnected) window.removeEventListener("planego-consent", sync); else box.checked = Analytics.state === "yes"; };
+  window.addEventListener("planego-consent", sync);
+  return h("div.card.pad.mt", h("label.switch", h("span.row", { style: { gap: "8px" } }, "Mesure d'audience",
+    infoButton("Mesure d'audience", analyticsDetails, { small: true })), box));
+}
+
 // Version utilisée par ce joueur : appli Android (numéro de l'appli installée) + site (date de la version publiée
 // chargée à l'ouverture, lue sur /__version, worker/index.js). À demander au joueur en cas de problème.
 const siteBuild = fetch(VERSION_URL, { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
@@ -110,7 +121,7 @@ function me(view, show) {
   const ic = installCard();
   if (ic) view.append(ic);
   if (loginGate(view, "Connecte-toi pour personnaliser ton profil (pseudo, photo) et sauvegarder ta collection.")) {
-    view.append(soundRow(), langRow(), legalLinks(), versionLine());
+    view.append(soundRow(), analyticsRow() || "", langRow(), legalLinks(), versionLine());
     return;
   }
   if (MyStatus.suspended) view.append(suspendedCard());
@@ -134,7 +145,7 @@ function me(view, show) {
     h("div.row.mt", { style: { justifyContent: "center", flexWrap: "wrap" } },
       h("button.btn.small.outline", { onclick: changeAvatar }, "Changer la photo"), h("button.btn.small.outline", { onclick: editName }, "Modifier le pseudo"))),
     level, bar, xpText, stats, shareRow,
-    soundRow(), langRow(),
+    soundRow(), analyticsRow() || "", langRow(),
     h("div.row.mt2", h("button.btn.outline.grow", { onclick: () => show("friends") }, "Mes amis"), h("button.btn.outline.grow", { onclick: () => { ls.set("grades_mode", "grades"); show("ranking"); } }, "Grades")),
     h("button.btn.outline.block.mt2", { onclick: changePasswordFlow }, "Changer le mot de passe"),
     blockedList(),

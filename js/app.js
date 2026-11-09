@@ -1,5 +1,6 @@
 // Plane GO (PWA) : navigation par onglets, HUD du joueur, installation.
 import "./usage.js"; // compteur des appels aux services (console Admin), installé avant tout le reste
+import "./analytics.js"; // mesure d'audience Google Analytics, seulement avec l'accord du joueur (bandeau)
 import { syncBlocks } from "./blocks.js";
 import { LOCALE, t as tr } from "./i18n.js";
 import { $, h, ls, modal, toast, icon } from "./util.js";
@@ -67,8 +68,10 @@ function route() {
   view.dataset.screen = tab ? tab.id : page ? name : ""; // largeur du contenu sur ordinateur (styles.css)
   if (tab) { ls.set("last_tab", tab.id); cleanup = tab.screen(view, rest) || null; }
   else if (page) cleanup = page(view, rest.map(decodeURIComponent)) || null;
-  else go("feed");
+  else { go("feed"); return; }
   renderHud();
+  // Écran ouvert (mesure d'audience : analytics.js n'en garde que le nom, jamais les identifiants)
+  window.dispatchEvent(new CustomEvent("planego-route", { detail: { name: tab ? tab.id : name, rest } }));
 }
 
 function renderTabs(current) {

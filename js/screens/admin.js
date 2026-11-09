@@ -1,7 +1,7 @@
 // Console d'administration (Profil › Admin), réservée aux administrateurs : table private.admins de la base
 // (pour l'instant le joueur Toshley). L'écran ne fait qu'afficher : chaque lecture et chaque action est vérifiée par le
 // serveur (fonctions admin_* de supabase/admin.sql ; suppressions par la fonction serveur « admin »).
-// Vues : Résumé (chiffres, appels aux services), Serveur (place prise, mémoire vive, processeur, disque), Joueurs (fiche, XP, pseudo, photo, suspension, suppression du compte),
+// Vues : Résumé (chiffres, appels aux services), Serveur (place prise, mémoire vive, processeur, disque), Audience (Google Analytics), Joueurs (fiche, XP, pseudo, photo, suspension, suppression du compte),
 // Signalements (publications, photos du quiz, questions de l'IA, publications retirées), Publications (photos et
 // commentaires de tous les joueurs, profils privés compris) et Messages (formulaire de contact).
 // En français seulement : data-notr (jamais traduit), fichier ignoré par tools/i18n_check.py.
@@ -22,6 +22,7 @@ const VIEWS = [
   { id: "posts", label: "Publications" },
   { id: "messages", label: "Messages" },
   { id: "server", label: "Serveur" },
+  { id: "audience", label: "Audience" },
 ];
 
 // ---------- Petits outils ----------
@@ -100,7 +101,7 @@ export function adminConsole(view, sub, onRoute = () => {}) {
     paint();
     body.replaceChildren();
     const ctx = { show, changed: refreshCounts, ...opts };
-    ({ summary, players, reports, posts, messages, server })[id](body, ctx);
+    ({ summary, players, reports, posts, messages, server, audience })[id](body, ctx);
   }
   // « Ses publications » / « Ses commentaires » depuis la fiche d'un joueur
   const onPosts = (e) => show("posts", e.detail || {});
@@ -659,6 +660,75 @@ async function server(body, { show }) {
           h("td.v", Number(t.rows) >= 0 ? num(t.rows) : "—"), h("td.v", bytes(Number(t.bytes))))))));
   }
   fill(body, ...parts);
+}
+
+// ---------- Audience : chiffres de Google Analytics (action ga_report de la fonction serveur « admin ») ----------
+const SCREENS = { feed: "Feed", world: "Monde", friends: "Amis", contest: "Concours", quiz: "Jeux", live: "Quiz en direct",
+  daily: "Quiz du jour", pass: "Sur la carte", practice: "Entraînement", scanner: "Scanner", collection: "Collection", photos: "Photos",
+  seen: "Au-dessus", catalog: "Catalogue", profile: "Profil", me: "Profil", ranking: "Classement", admin: "Admin", ac: "Fiche d'un avion",
+  comments: "Publication", player: "Page d'un joueur", auth: "Connexion", reset: "Nouveau mot de passe", privacy: "Confidentialité",
+  legal: "Mentions légales", terms: "Conditions" };
+const screenName = (p) => (p === "/" ? "Accueil" : p.split("/").filter(Boolean).map((x) => SCREENS[x] || x).join(" › "));
+const DEVICES = { mobile: "Téléphone", desktop: "Ordinateur", tablet: "Tablette", smarttv: "Télévision" };
+const sourceName = (s) => (s === "(direct)" ? "Direct (appli, favori, lien tapé)" : s === "(not set)" ? "Inconnue" : s);
+const GA_STEPS = [
+  "Sur console.cloud.google.com (même compte Google que Google Analytics), crée un projet, par exemple « Plane GO ».",
+  "Menu « API et services › Bibliothèque » : cherche « Google Analytics Data API » et clique sur « Activer ».",
+  "Menu « IAM et administration › Comptes de service » : « Créer un compte de service », nom « plane-go-stats », aucun rôle, « OK ».",
+  "Ouvre ce compte de service › onglet « Clés » › « Ajouter une clé › Créer une clé › JSON » : un fichier .json se télécharge. Garde-le pour toi.",
+  "Dans Google Analytics › Administration › « Gestion des accès à la propriété » : « + », ajoute l'adresse du compte de service (…@….iam.gserviceaccount.com) avec le rôle « Lecteur ».",
+  "Dans Supabase › Edge Functions › Secrets : ajoute GA_SERVICE_ACCOUNT avec tout le contenu du fichier .json (Claude peut ouvrir la case pour toi).",
+  "Donne à Claude l'« ID de propriété » (Google Analytics › Administration › Détails de la propriété, un nombre) : il l'ajoute en secret GA_PROPERTY_ID.",
+];
+
+async function audience(body, { show }) {
+  body.append(spinner());
+  let r;
+  try { r = await Admin.analytics(); } catch (e) { r = { configured: true, error: e.message }; }
+  const head = h("div.row", h("div.section.grow", "Audience (Google Analytics)"),
+    infoButton("Audience", [
+      "Chiffres de Google Analytics : seulement les visiteurs qui ont accepté la mesure d'audience (bandeau à la première visite, réglage du Profil). Ceux qui refusent ne sont pas comptés : les vrais chiffres sont plus hauts (la console Résumé compte, elle, tous les joueurs actifs).",
+      "« En ce moment » = visiteurs des 30 dernières minutes. Le reste arrive chez Google avec quelques heures de retard.",
+      "Visiteurs = appareils différents (un même joueur sur son téléphone et son ordinateur compte deux fois). Tes propres visites sont comptées aussi.",
+      "Sources : site d'où viennent les visiteurs (m.facebook.com = lien ouvert dans Facebook ; « Direct » = appli, favori ou adresse tapée).",
+    ], { small: true }),
+    h("button.btn.small.outline", { onclick: () => show("audience"), title: "Actualiser" }, icon("refresh", 16)));
+  const steps = () => h("ol.adm-steps", GA_STEPS.map((t) => h("li", t)));
+  if (!r.configured) {
+    fill(body, head, h("div.card.pad",
+      h("p", { style: { marginTop: 0 } }, "Le site envoie déjà ses visites à Google Analytics (avec l'accord des joueurs), mais la console n'a pas encore le droit de lire les chiffres. À faire une fois :"),
+      steps(),
+      h("p.small.dim", `Il manque : ${[r.missing?.account && "GA_SERVICE_ACCOUNT", r.missing?.property && "GA_PROPERTY_ID"].filter(Boolean).join(" et ") || "?"}.`)));
+    return;
+  }
+  if (r.error) {
+    fill(body, head, h("div.card.pad",
+      h("p", { style: { marginTop: 0 } }, r.error),
+      r.account && h("p.small", `Compte de service : ${r.account}. S'il s'agit d'un refus d'accès, vérifie qu'il est « Lecteur » de la propriété (étape 5) et que l'ID de propriété est le bon.`),
+      steps()));
+    return;
+  }
+  const t7 = r.totals?.d7 || {}, t28 = r.totals?.d28 || {};
+  const avg = t28.users ? Math.round(t28.engagement / t28.users) : 0;
+  const mmss = `${Math.floor(avg / 60)} min ${String(avg % 60).padStart(2, "0")} s`;
+  const days = r.days || [], max = Math.max(1, ...days.map((d) => d.users));
+  // 28 barres : date écrite une barre sur 7 (et la dernière), sinon les chiffres se chevauchent sur un téléphone
+  const bars = h("div.adm-bars", days.map((d, i) => h("div.b", { title: `${d.date} : ${num(d.users)} visiteurs, ${num(d.views)} pages vues` },
+    h("i", { style: { height: `${Math.round((d.users / max) * 100)}%` } }),
+    h("span", (days.length - 1 - i) % 7 === 0 ? `${d.date.slice(8)}/${d.date.slice(5, 7)}` : "\u00a0"))));
+  const table = (title, cols, rows) => rows?.length ? [h("div.section", title), h("table.adm-table",
+    h("thead", h("tr", cols.map(([label], i) => h("th", label)))),
+    h("tbody", rows.map((row) => h("tr", cols.map(([, get], i) => (i ? h("td.v", num(get(row))) : h("td", get(row))))))))] : [];
+  fill(body, head,
+    stats([stat("En ce moment", num(r.realtime), r.realtime > 0), stat("Visiteurs 7 j", num(t7.users)), stat("Visiteurs 28 j", num(t28.users)),
+      stat("Nouveaux 28 j", num(t28.new)), stat("Pages vues 28 j", num(t28.views)), stat("Temps / visiteur", avg ? mmss : "—")]),
+    h("div.small.dim.mt", "Visiteurs par jour, 28 derniers jours"),
+    days.length ? bars : h("div.small.dim", "Pas encore de visite enregistrée."),
+    ...table("Écrans les plus vus (28 j)", [["Écran", (x) => screenName(x.name)], ["Vues", (x) => x.views], ["Visiteurs", (x) => x.users]], r.pages),
+    ...table("D'où ils viennent (28 j)", [["Source", (x) => sourceName(x.name)], ["Visites", (x) => x.sessions]], r.sources),
+    ...table("Pays (28 j)", [["Pays", (x) => x.name], ["Visiteurs", (x) => x.users]], r.countries),
+    ...table("Appareils (28 j)", [["Appareil", (x) => DEVICES[x.name] || x.name], ["Visiteurs", (x) => x.users]], r.devices),
+    h("div.small.dim.mt", "Seulement les visiteurs qui ont accepté la mesure d'audience."));
 }
 
 // ---------- Messages du formulaire de contact ----------

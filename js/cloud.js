@@ -228,6 +228,7 @@ export const Admin = {
   overview: () => Supa.rpc("admin_overview", {}),
   resources: () => Supa.rpc("admin_resources", {}),
   serverStats: () => Supa.admin({ action: "server_stats" }),
+  analytics: () => Supa.admin({ action: "ga_report" }),
   apiUsage: (days = 30) => rpcList("admin_api_usage", { p_days: days }),
   players: (query, sort, offset = 0) => rpcList("admin_players", { p_query: query || null, p_sort: sort, p_limit: 50, p_offset: offset }),
   player: (id) => Supa.rpc("admin_player", { p_user: id }),

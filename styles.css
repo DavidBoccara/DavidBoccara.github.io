@@ -534,6 +534,7 @@ b.player-link:hover, .player-link b:hover, h3.player-link:hover { text-decoratio
 .adm-thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; background: var(--card-2); flex: none; cursor: pointer; }
 .adm-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .adm-actions .btn { text-decoration: none; }
+.adm-steps { margin: 8px 0; padding-left: 20px; } .adm-steps li { margin: 6px 0; line-height: 1.45; }
 .adm-meter { padding: 6px 0 10px; border-bottom: 1px solid var(--line); }
 .adm-meter:last-of-type { border-bottom: 0; }
 .adm-meter .v { font-family: var(--mono); font-size: 13px; }
@@ -697,6 +698,13 @@ b.player-link:hover, .player-link b:hover, h3.player-link:hover { text-decoratio
 .cam-banner .btn { flex: none; }
 .cam-log { max-height: 50vh; overflow: auto; font: 400 11px/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; background: var(--card-2); padding: 10px; border-radius: 6px; }
 @media (min-width: 1000px) { .cam-banner { left: auto; right: 24px; bottom: 24px; width: 420px; } }
+/* Bandeau de consentement à la mesure d'audience (analytics.js) : sous les fenêtres (z-index 50), au-dessus des onglets */
+.consent { position: fixed; left: 12px; right: 12px; bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 45; padding: 12px;
+  background: var(--card); border: 1px solid var(--line-3); border-radius: var(--radius); }
+.consent-title { font: 500 11px/1.4 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.consent p { margin: 6px 0 10px; font-size: 14px; line-height: 1.45; }
+.consent .row { gap: 8px; }
+@media (min-width: 1000px) { .consent { left: auto; right: 24px; bottom: 24px; width: 420px; } }
 /* Scanner : petit bouton « prise USB » en haut à droite (appareil photo par câble) */
 .scan-head { display: flex; align-items: flex-start; gap: 12px; }
 .cam-btn { position: relative; flex: none; width: 34px; height: 34px; margin-top: 2px; display: inline-flex; align-items: center; justify-content: center;

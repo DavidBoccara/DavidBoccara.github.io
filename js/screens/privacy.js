@@ -2,12 +2,14 @@
 // qui les voit (amis, ou tout le monde si le joueur partage ses publications dans le feed Monde ; l'éditeur pour la
 // modération, console Admin),
 // et comment tout effacer (bouton « Supprimer mon compte », aussi dans le Profil). Section « Publicité et cookies »
-// (Google AdSense) affichée seulement quand la publicité est en service (ads.js).
+// (Google AdSense) affichée seulement quand la publicité est en service (ads.js). Section « Mesure d'audience » (Google
+// Analytics, avec accord : analytics.js) quand GA_ID est rempli.
 import { h, modal, toast, confirmBox } from "../util.js";
 import { Supa } from "../supa.js";
 import { Radar } from "../radar.js";
 import { back, go } from "../app.js";
-import { CONTACT_EMAIL, LEGAL } from "../config.js";
+import { CONTACT_EMAIL, LEGAL, GA_ID } from "../config.js";
+import { Analytics } from "../analytics.js";
 import { adsOn, adChoices } from "../ads.js";
 import { legalLinks } from "./legal.js";
 
@@ -80,8 +82,22 @@ export function privacyPage(view) {
         "OpenAI : écrit les questions bonus du quiz à partir des articles Wikipédia des avions. Il ne reçoit que le texte de l'article, jamais de donnée des joueurs.",
         "Pour surveiller les limites de ces services, l'appli compte combien de fois elle les appelle chaque jour : ce sont seulement des nombres, sans ton identité ni ta position.",
         ads && "Google (régie Google AdSense) : les annonces du feed, voir « Publicité et cookies » ci-dessous.",
+        GA_ID && "Google (Google Analytics) : mesure d'audience, seulement avec ton accord, voir ci-dessous.",
       ),
-      ads ? "Aucune donnée de ton compte n'est vendue ni transmise aux annonceurs." : "Pas de publicité pour l'instant, pas de traceur, pas de cookie publicitaire, aucune donnée vendue."),
+      ads ? "Aucune donnée de ton compte n'est vendue ni transmise aux annonceurs."
+        : GA_ID ? "Pas de publicité pour l'instant, pas de cookie publicitaire, aucune donnée vendue. Seul traceur : la mesure d'audience, et seulement si tu l'acceptes."
+        : "Pas de publicité pour l'instant, pas de traceur, pas de cookie publicitaire, aucune donnée vendue."),
+
+    ...[GA_ID && sec("Mesure d'audience (Google Analytics)",
+      list(
+        "Avec ton accord seulement, Plane GO utilise Google Analytics (Google Ireland Limited) pour savoir combien de personnes utilisent l'appli, quels écrans servent le plus, depuis quels pays et quels appareils, et d'où viennent les visiteurs (par exemple un lien partagé sur Facebook).",
+        "Google reçoit alors les écrans ouverts (sans code d'avion, ni numéro de publication, ni nom de joueur), le pays et la ville approximatifs (déduits de ton adresse internet, qui n'est pas gardée), le type d'appareil et de navigateur, la langue, le site d'où tu viens et la durée de ta visite. Un cookie garde un numéro au hasard pour reconnaître ton appareil d'une visite à l'autre.",
+        "Jamais envoyés : ton e-mail, ton pseudo, ta position, tes photos ni tes captures. Pas de publicité ciblée : les signaux publicitaires de Google sont coupés.",
+        "Ton accord est demandé par un petit bandeau à ta première visite : « Refuser » et « Accepter » sont au même niveau, et l'appli marche exactement pareil si tu refuses. Tu changes d'avis quand tu veux dans ton Profil (« Mesure d'audience ») ou avec le bouton ci-dessous ; si tu refuses, les cookies de Google Analytics sont effacés.",
+        "Si tu as moins de 15 ans, n'accepte qu'avec l'accord d'un parent.",
+        "Google peut traiter ces données aux États-Unis, dans le cadre du « Data Privacy Framework » reconnu par l'Union européenne.",
+      ),
+      h("button.btn.small.outline", { onclick: () => Analytics.ask() }, "Changer mon choix"))].filter(Boolean),
 
     ads ? sec("Publicité et cookies",
       list(
@@ -103,6 +119,7 @@ export function privacyPage(view) {
         "Ton compte, tes captures, tes amis, le feed et le quiz : pour te fournir le jeu que tu as choisi d'utiliser (les Conditions d'utilisation).",
         "Les signalements, la modération (publication retirée, XP corrigés, suspension), la vérification des photos et la lutte contre la triche : pour garder le jeu honnête et sûr pour tous (intérêt légitime).",
         ads && "Les cookies publicitaires de Google : seulement avec ton accord, que tu peux retirer à tout moment.",
+        GA_ID && "La mesure d'audience (Google Analytics) : seulement avec ton accord, que tu peux retirer à tout moment.",
         "Ce que l'appli garde sur ton téléphone (réglages, collection, passages d'avions) sert uniquement à son fonctionnement : ce ne sont pas des traceurs.",
       )),
 
@@ -120,6 +137,8 @@ export function privacyPage(view) {
         "Les messages envoyés avec le formulaire de contact (nom, e-mail, message) : un an au plus, puis effacés automatiquement.",
         "Les journaux techniques des hébergeurs (adresse internet, page demandée) : gardés par eux pour la sécurité, selon leurs propres règles.",
         "Les passages d'avions sur ton téléphone : effacés chaque lundi à 0 h.",
+        GA_ID && "Mesure d'audience, si tu l'as acceptée : cookie de Google Analytics 13 mois au plus ; statistiques gardées 14 mois au plus par Google, puis effacées.",
+        GA_ID && "Ton choix pour la mesure d'audience (accepté ou refusé) : 6 mois sur ton téléphone, puis l'appli te redemande.",
       )),
 
     sec("Tes droits",
