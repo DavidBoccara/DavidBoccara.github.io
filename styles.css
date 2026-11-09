@@ -17,7 +17,7 @@
 :root {
   --bg: #0F1113; --bar: #0F1113; --card: #16181B; --card-2: #1C1F23; --line: #2A2E33; --line-2: #22252A; --line-3: #3A3F45;
   --text: #E9EAEC; --text-2: #A2A7AE; --dim: #8B9097; --faint: #5B6168;
-  --accent: #F2A93B; --ink: #15110A;
+  --accent: #F2A93B; --ink: #15110A; --legend: #F0C35C; /* --legend : or du grade 8 « Légende du ciel » */
   --cyan: var(--accent); --amber: var(--accent); --green: #8FBF9F; --red: #E0716C; --civil: #5B6168;
   /* Raretés : couleurs adoucies (barres et libellés) */
   --r-common: #A2A7AE; --r-uncommon: #8FBF9F; --r-rare: #7EA6D8; --r-epic: #B497D6; --r-legendary: #F2A93B;
@@ -182,25 +182,32 @@ img.cover { width: 100%; display: block; object-fit: cover; background: var(--ca
 .rbars i.on { background: currentColor; }
 .rmark .rl { color: var(--text-2); }
 .rmark .rl:empty { display: none; }
-/* Insigne de grade à côté du pseudo (gradeTag d'util.js) : ambre dès « Spotter » (grade qui demande des photos), plein au dernier */
+/* Couleur de chaque grade (palette « Ciel » choisie par le propriétaire le 9/11/2026) : gris nuage, bleus du jour,
+   crépuscule, aube, puis soleil pour la Légende du ciel. Classes .g1 à .g8 : insigne, ma ligne du tableau, objectifs. */
+.g1 { --g: initial; } .g2 { --g: #A9D3F2; } .g3 { --g: #6DBBF2; } .g4 { --g: #4F93EC; }
+.g5 { --g: #7380F0; } .g6 { --g: #A07DE6; } .g7 { --g: #E487B0; } .g8 { --g: var(--legend); }
+/* Insigne de grade à côté du pseudo (gradeTag d'util.js) : gris au grade 1, couleur du grade ensuite, plein au dernier */
 .grade-tag { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; padding: 0 5px 0 3px; border: 1px solid var(--line-3);
   border-radius: 4px; font: 500 11px/16px var(--mono); color: var(--text-2); vertical-align: 1px; white-space: nowrap; }
 .grade-line > .grade-tag { margin: 0 6px 0 0; } /* insigne en début de ligne (page publication) */
 .grade-tag .rank-ico svg { display: block; }
-/* Feed : publications des « Légende du ciel » (grade 8) mises en avant : bord ambre, bandeau avec l'étoile ailée, avatar cerclé */
-.post.legend { border-color: var(--accent); }
-.legend-band { display: flex; align-items: center; gap: 7px; padding: 8px 14px; border-bottom: 1px solid var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, var(--card)); font: 500 10.5px var(--mono); letter-spacing: .16em;
-  text-transform: uppercase; color: var(--accent); }
-.post.legend .head .avatar { outline: 2px solid var(--accent); outline-offset: 1px; }
+.grade-tag:not(.g1) { color: var(--g); border-color: color-mix(in srgb, var(--g) 60%, transparent); }
+.grade-tag.g8 { background: var(--g); border-color: var(--g); color: var(--ink); }
+/* Feed : publications des « Légende du ciel » (grade 8) mises en avant : bord or, bandeau avec l'étoile ailée, avatar cerclé */
+.post.legend { border-color: var(--legend); }
+.legend-band { display: flex; align-items: center; gap: 7px; padding: 8px 14px; border-bottom: 1px solid var(--legend);
+  background: color-mix(in srgb, var(--legend) 10%, var(--card)); font: 500 10.5px var(--mono); letter-spacing: .16em;
+  text-transform: uppercase; color: var(--legend); }
+.post.legend .head .avatar { outline: 2px solid var(--legend); outline-offset: 1px; }
 /* Liste des grades (Classement › Grades) : carte « Ton grade » + tableau XP / modèles / rayon / bonus */
-.gm-name { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 600; }
+.gm-name { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 600; color: var(--g, var(--text)); }
 .gm-name .grade-tag, .gt-cell .grade-tag { margin: 0; }
 .gm-next { margin-top: 14px; }
 .goal-row { display: grid; grid-template-columns: 18px 1fr auto; align-items: center; gap: 4px 8px; margin-top: 10px; font-size: 13px; color: var(--text-2); }
 .goal-row .ico { color: var(--dim); }
 .goal-row .v { display: inline-flex; align-items: center; gap: 4px; font: 500 12px var(--mono); color: var(--text); }
-.goal-row.ok .v, .goal-row.ok .v .ico { color: var(--accent); }
+.goal-row.ok .v, .goal-row.ok .v .ico { color: var(--g); } /* couleur du grade visé */
+.goal-row .xpbar > i { background: var(--g); }
 .goal-row .xpbar { grid-column: 2 / 4; margin-top: 0; }
 .gm-unlock { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 12px; font-size: 12px; color: var(--text-2); }
 .gm-unlock span { display: inline-flex; align-items: center; gap: 5px; }
@@ -215,11 +222,9 @@ img.cover { width: 100%; display: block; object-fit: cover; background: var(--ca
 .grade-table td:first-child { font: 400 12.5px/1.3 var(--sans); color: var(--text); white-space: normal; }
 .gt-cell { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; } /* insigne et nom toujours sur une ligne */
 .grade-table tr.locked td { color: var(--faint); }
-.grade-table tr.here td { color: var(--accent); }
+.grade-table tr.here td { color: var(--g, var(--text)); }
 .grade-table tr.here td:first-child { font-weight: 600; }
 .grade-tag svg { display: block; stroke-width: 2.4; }
-.grade-tag.gt-photo { border-color: var(--accent); color: var(--accent); }
-.grade-tag.gt-top { border-color: var(--accent); background: var(--accent); color: var(--ink); }
 .rarity-big .rmark { font-size: 13px; }
 .rarity-big .rbars i { width: 5px; height: 15px; }
 

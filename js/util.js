@@ -37,13 +37,12 @@ export function rarityMark(r, text) {
 
 /**
  * Insigne de grade à côté du pseudo (feed, publication, commentaires, concours, classement, amis, page du joueur) :
- * chevrons + numéro. Ambre dès « Guetteur » (grades qui demandent des photos), plein au dernier grade.
+ * chevrons + numéro, dans la couleur du grade (classe .g1 à .g8 de styles.css), plein au dernier grade.
  */
 export function gradeTag(lvl) {
   if (!lvl) return null;
   const label = `Grade ${lvl.number} · ${lvl.name}`;
-  return h("span.grade-tag" + (!lvl.nextXp ? ".gt-top" : lvl.minModels ? ".gt-photo" : ""), { title: label, "aria-label": label },
-    rankIcon(lvl.number, 12), String(lvl.number));
+  return h("span.grade-tag.g" + lvl.number, { title: label, "aria-label": label }, rankIcon(lvl.number, 12), String(lvl.number));
 }
 
 /**

@@ -61,12 +61,12 @@ export function grades(view) {
     const have = Player.have(), { xp, models, likes } = have, cur = Player.level(), g = Player.next();
     const kept = cur.number > levelOf({ ...have, floor: 1 }).number; // grade gardé d'avant les nouvelles règles (9/11/2026)
     const num = (n) => n.toLocaleString(LOCALE);
-    // Une condition du grade suivant : icône, libellé, « 2 508 / 3 000 » (coché quand c'est bon) et barre
-    const goal = (ico, label, have, need) => h("div.goal-row" + (have >= need ? ".ok" : ""), icon(ico, 16), h("span", label),
+    // Une condition du grade suivant : icône, libellé, « 2 508 / 3 000 » (coché quand c'est bon) et barre, couleur du grade visé
+    const goal = (ico, label, have, need) => h(`div.goal-row.g${g.next.number}` + (have >= need ? ".ok" : ""), icon(ico, 16), h("span", label),
       h("span.v", `${num(have)} / ${num(need)}`, have >= need ? icon("check", 14) : null),
       h("div.xpbar", h("i", { style: { width: Math.min(100, (have / need) * 100) + "%" } })));
     // Carte « Ton grade » : grade actuel, puis ce qu'il manque pour le suivant et ce qu'il débloque
-    const me = h("div.card.pad.mt.grade-me", h("div.kicker", "Ton grade"), h("div.gm-name", gradeTag(cur), cur.name),
+    const me = h("div.card.pad.mt.grade-me", h("div.kicker", "Ton grade"), h(`div.gm-name.g${cur.number}`, gradeTag(cur), cur.name),
       kept && h("div.small.dim", "Grade gardé : tu l'avais avant les nouvelles règles des grades."),
       g ? [h("div.kicker.gm-next", `Pour passer ${g.next.name}`),
         goal("xp", "XP", xp, g.next.minXp),
@@ -79,7 +79,7 @@ export function grades(view) {
     const col = (ico, label) => h("th", icon(ico, 14), label);
     const table = h("table.grade-table",
       h("thead", h("tr", col("rank", "Grade"), col("xp", "XP"), col("camera", "Modèles"), col("heart", "Likes"), col("radar", "Rayon"))),
-      h("tbody", LEVELS.map((l) => h("tr" + (l.number === cur.number ? ".here" : l.number > cur.number ? ".locked" : ""),
+      h("tbody", LEVELS.map((l) => h("tr" + (l.number === cur.number ? `.here.g${l.number}` : l.number > cur.number ? ".locked" : ""),
         h("td", h("span.gt-cell", gradeTag(l), l.name)), h("td", num(l.minXp)), h("td", l.minModels || "—"),
         h("td", l.minLikes || "—"), h("td", Number.isFinite(Quiz.radiusKm(l)) ? Quiz.radiusLabel(l) : "∞")))));
     // Barème des XP derrière le bouton « i » (pas de long texte à l'écran)
