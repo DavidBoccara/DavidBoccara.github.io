@@ -81,7 +81,7 @@ export function grades(view) {
       h("thead", h("tr", col("rank", "Grade"), col("xp", "XP"), col("camera", "Modèles"), col("heart", "Likes"), col("radar", "Rayon"))),
       h("tbody", LEVELS.map((l) => h("tr" + (l.number === cur.number ? ".here" : l.number > cur.number ? ".locked" : ""),
         h("td", h("span.gt-cell", gradeTag(l), l.name)), h("td", num(l.minXp)), h("td", l.minModels || "—"),
-        h("td", l.minLikes || "—"), h("td", Quiz.radiusLabel(l))))));
+        h("td", l.minLikes || "—"), h("td", Number.isFinite(Quiz.radiusKm(l)) ? Quiz.radiusLabel(l) : "∞")))));
     // Barème des XP derrière le bouton « i » (pas de long texte à l'écran)
     const bareme = () => h("div.kv.small", [
       "À partir de « Spotter », chaque grade demande aussi des modèles différents photographiés (photos validées ; les photos anciennes ne comptent pas) et des likes reçus d'autres joueurs : les jeux seuls ne suffisent plus.", "",
