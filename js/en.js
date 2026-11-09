@@ -1533,7 +1533,7 @@ export const EN = [
   ["Likes", "Likes"],
   ["Like reçu sur une de tes publications (pas de toi), selon le grade de celui qui like :", "Like received on one of your posts (not from you), depending on the rank of whoever likes it:"],
   ["{1} : {2} XP", "{1}: {2} XP"],
-  ["À partir de « Spotter », chaque grade demande aussi des modèles différents photographiés (photos validées ; les photos anciennes ne comptent pas) et des likes reçus d'autres joueurs : les jeux seuls ne suffisent plus.", "From « Spotter » up, each rank also requires different models you have photographed (verified photos; old photos don't count) and likes from other players: games alone are no longer enough."],
+  ["Dès « Guetteur », chaque grade demande aussi des modèles différents photographiés (photos validées ; les photos anciennes ne comptent pas) et des likes reçus d'autres joueurs : les jeux seuls ne suffisent plus.", "From « Lookout » up, each rank also requires different models you have photographed (verified photos; old photos don't count) and likes from other players: games alone are no longer enough."],
   ["Quiz : {1} XP par bonne réponse, ×2 dès 5 bonnes réponses d'affilée (maximum ×{2}).", "Quiz: {1} XP per right answer, ×2 from 5 right answers in a row (maximum ×{2})."],
   ["3 bonnes réponses d'affilée = gains ×2, 6 = ×3 (au plus ×{1}). Une erreur remet la série à zéro.", "3 right answers in a row = gains ×2, 6 = ×3 (at most ×{1}). A mistake resets the streak."],
 ];

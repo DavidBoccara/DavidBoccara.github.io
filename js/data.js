@@ -1128,13 +1128,13 @@ export const D = {
 "B06",
 "R44"
 ],
-// Grades : [XP, nom, modèles différents photographiés, likes reçus]. À partir de « Spotter », il faut aussi des photos
+// Grades : [XP, nom, modèles différents photographiés, likes reçus]. Dès « Guetteur » (9/11/2026 au soir), il faut aussi des photos
 // (validées ; les photos anciennes ne comptent pas) et des likes d'autres joueurs : les jeux seuls ne suffisent plus
 // (levelOf de game.js). Seuils durcis le 9/11/2026, likes relevés le soir même ; mêmes valeurs dans private.grade_of
 // (supabase/likes_xp.sql).
 "levels": [
 [0, "Observateur", 0, 0],
-[150, "Guetteur", 0, 0],
+[150, "Guetteur", 2, 1],
 [600, "Spotter", 5, 5],
 [2000, "Spotter confirmé", 12, 20],
 [5000, "Chasseur d'avions", 25, 50],

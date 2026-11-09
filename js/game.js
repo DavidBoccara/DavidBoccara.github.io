@@ -32,7 +32,7 @@ export function rarityOf(type, military, interesting = false, category = "") {
 export const rarityOfAc = (ac) => rarityOf(ac.type, ac.military, ac.interesting, ac.category);
 
 // ---------- Grades ----------
-// Un grade demande des XP et, à partir de « Spotter », des modèles différents photographiés et des likes reçus d'autres
+// Un grade demande des XP et, dès « Guetteur », des modèles différents photographiés et des likes reçus d'autres
 // joueurs (data.js ; mêmes seuils côté serveur : private.grade_of de supabase/likes_xp.sql).
 export const LEVELS = D.levels.map(([minXp, name, minModels, minLikes], i) => ({
   number: i + 1, name, minXp, minModels, minLikes, nextXp: D.levels[i + 1]?.[0] ?? null, emblem: "",

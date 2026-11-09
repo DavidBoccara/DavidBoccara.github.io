@@ -37,7 +37,7 @@ export function rarityMark(r, text) {
 
 /**
  * Insigne de grade à côté du pseudo (feed, publication, commentaires, concours, classement, amis, page du joueur) :
- * chevrons + numéro. Ambre à partir de « Spotter » (grades qui demandent des photos), plein au dernier grade.
+ * chevrons + numéro. Ambre dès « Guetteur » (grades qui demandent des photos), plein au dernier grade.
  */
 export function gradeTag(lvl) {
   if (!lvl) return null;

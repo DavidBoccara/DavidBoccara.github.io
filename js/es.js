@@ -1534,7 +1534,7 @@ export const ES = [
   ["Likes", "Me gusta"],
   ["Like reçu sur une de tes publications (pas de toi), selon le grade de celui qui like :", "« Me gusta » recibido en una de tus publicaciones (no tuyo), según el rango de quien lo da:"],
   ["{1} : {2} XP", "{1}: {2} XP"],
-  ["À partir de « Spotter », chaque grade demande aussi des modèles différents photographiés (photos validées ; les photos anciennes ne comptent pas) et des likes reçus d'autres joueurs : les jeux seuls ne suffisent plus.", "A partir de « Spotter », cada rango pide también modelos distintos fotografiados (fotos validadas; las fotos antiguas no cuentan) y « me gusta » de otros jugadores: los juegos solos ya no bastan."],
+  ["Dès « Guetteur », chaque grade demande aussi des modèles différents photographiés (photos validées ; les photos anciennes ne comptent pas) et des likes reçus d'autres joueurs : les jeux seuls ne suffisent plus.", "A partir de « Vigía », cada rango pide también modelos distintos fotografiados (fotos validadas; las fotos antiguas no cuentan) y « me gusta » de otros jugadores: los juegos solos ya no bastan."],
   ["Quiz : {1} XP par bonne réponse, ×2 dès 5 bonnes réponses d'affilée (maximum ×{2}).", "Quiz: {1} XP por respuesta correcta, ×2 a partir de 5 respuestas correctas seguidas (máximo ×{2})."],
   ["3 bonnes réponses d'affilée = gains ×2, 6 = ×3 (au plus ×{1}). Une erreur remet la série à zéro.", "3 respuestas correctas seguidas = ganancias ×2, 6 = ×3 (como máximo ×{1}). Un error reinicia la racha."],
 ];

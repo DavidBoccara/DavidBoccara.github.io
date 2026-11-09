@@ -84,7 +84,7 @@ export function grades(view) {
         h("td", l.minLikes || "—"), h("td", Number.isFinite(Quiz.radiusKm(l)) ? Quiz.radiusLabel(l) : "∞")))));
     // Barème des XP derrière le bouton « i » (pas de long texte à l'écran)
     const bareme = () => h("div.kv.small", [
-      "À partir de « Spotter », chaque grade demande aussi des modèles différents photographiés (photos validées ; les photos anciennes ne comptent pas) et des likes reçus d'autres joueurs : les jeux seuls ne suffisent plus.", "",
+      "Dès « Guetteur », chaque grade demande aussi des modèles différents photographiés (photos validées ; les photos anciennes ne comptent pas) et des likes reçus d'autres joueurs : les jeux seuls ne suffisent plus.", "",
       "Like reçu sur une de tes publications (pas de toi), selon le grade de celui qui like :", ...LEVELS.map((l) => `  ${l.name} : ${likeXp(l)} XP`), "",
       "Rareté de l'avion :", ...RARITIES.map((r) => `  ${r.stars} ${r.label} : ${r.xp} XP`), "",
       "Distance du vol (depuis l'aéroport de départ, ou le pays d'immatriculation) :",
