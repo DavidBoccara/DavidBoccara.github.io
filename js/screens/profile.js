@@ -6,13 +6,13 @@ import { Cloud, sync, MyStatus } from "../cloud.js";
 import { adminConsole } from "./admin.js";
 import { Badges, badgeEl } from "../badges.js";
 import { Collection, Player, entryModel, entryRarity, QuizStore } from "../store.js";
-import { modelKey, gradePct, progressText } from "../game.js";
+import { modelKey, gradePct } from "../game.js";
 import { loginGate, renderHud, go } from "../app.js";
 import { friends } from "./friends.js";
 import { grades } from "./grades.js";
 import { VERSION_URL } from "../config.js";
 import { Native } from "../native.js";
-import { installCard } from "../ui.js";
+import { installCard, progressLine } from "../ui.js";
 import { deleteAccountFlow } from "./privacy.js";
 import { legalLinks } from "./legal.js";
 import { updateCard } from "../update.js";
@@ -162,7 +162,7 @@ function me(view, show) {
     shareInput.checked = !!p?.shareWorld;
     level.textContent = `Niveau ${lvl.number} — ${lvl.title}`;
     bar.firstChild.style.width = gradePct(lvl, xp) + "%";
-    xpText.textContent = progressText(xp, Player.next()); // XP et modèles photographiés qu'il manque pour le grade suivant
+    xpText.replaceChildren(...progressLine(xp, Player.next())); // XP, modèles et likes qu'il manque pour le grade suivant
     const entries = Collection.all();
     const best = entries.reduce((b, e) => (!b || entryRarity(e).ordinal > entryRarity(b).ordinal ? e : b), null);
     const q = QuizStore.stats();

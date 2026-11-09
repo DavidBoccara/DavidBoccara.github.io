@@ -175,7 +175,7 @@ export function contestFeed(box) {
 
   function entryCard(e, rank, isMine) {
     const r = rarityByName(e.rarity), user = profileFrom({ id: e.user_id, username: e.username, avatar_path: e.avatar_path,
-      xp: e.user_xp, models: e.user_models, grade_floor: e.user_grade_floor });
+      xp: e.user_xp, models: e.user_models, likes_received: e.user_likes, grade_floor: e.user_grade_floor });
     const av = h("img.avatar.sm", { alt: "", src: user.avatarUrl || "icons/avatar.svg" });
     av.onerror = () => { av.src = "icons/avatar.svg"; };
     const voteBtn = h("button.vote-btn" + (e.voted ? ".on" : "") + (isMine ? ".mine" : ""), { disabled: isMine },

@@ -11,13 +11,13 @@ const iso = (ms) => new Date(ms).toISOString();
 export function profileFrom(o) {
   if (!o) return null;
   return { id: o.id, username: o.username, avatarPath: o.avatar_path || null, xp: o.xp | 0,
-    // Grade (supabase/grades.sql) : modèles photographiés et grade gardé d'avant la règle des modèles
-    models: o.models | 0, gradeFloor: o.grade_floor | 0,
+    // Grade (grades.sql, likes_xp.sql) : modèles photographiés, likes reçus, grade gardé d'avant les nouvelles règles
+    models: o.models | 0, likesReceived: o.likes_received | 0, gradeFloor: o.grade_floor | 0,
     // Feed 🌍 Monde : true = publications partagées avec tout le monde, false = amis seulement,
     // null = pas encore répondu, undefined = réglage pas encore installé sur le serveur
     shareWorld: "share_world" in o ? o.share_world : undefined,
     get avatarUrl() { return this.avatarPath ? Supa.publicUrl("avatars", this.avatarPath) : null; },
-    get level() { return levelOf(this.xp, this.models, this.gradeFloor); } };
+    get level() { return levelOf({ xp: this.xp, models: this.models, likes: this.likesReceived, floor: this.gradeFloor }); } };
 }
 
 export function catchFrom(o) {
@@ -36,7 +36,7 @@ export function catchFrom(o) {
   };
 }
 
-const PROFILE_SEL = "id,username,avatar_path,xp,models,grade_floor";
+const PROFILE_SEL = "id,username,avatar_path,xp,models,likes_received,grade_floor";
 const CATCH_SELECT = `*,profiles!catches_user_id_fkey(${PROFILE_SEL}),likes(count),comments(count)`;
 
 export const Cloud = {

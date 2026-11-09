@@ -16,7 +16,7 @@ import { prefetchBonus } from "../wikiquiz.js";
 import { Native } from "../native.js";
 
 export const DAILY_MAX = 10;        // questions au plus
-export const DAILY_PERFECT = 10;    // bonus si tout est juste (au moins 3 questions)
+export const DAILY_PERFECT = 5;     // bonus si tout est juste (au moins 3 questions ; 10 avant le 9/11/2026)
 const KEY = "daily_quiz";
 
 /** Date du jour sur le téléphone, AAAA-MM-JJ. */

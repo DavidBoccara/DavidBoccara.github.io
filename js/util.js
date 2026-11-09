@@ -43,7 +43,30 @@ export function gradeTag(lvl) {
   if (!lvl) return null;
   const label = `Grade ${lvl.number} · ${lvl.name}`;
   return h("span.grade-tag" + (!lvl.nextXp ? ".gt-top" : lvl.minModels ? ".gt-photo" : ""), { title: label, "aria-label": label },
-    icon("rank", 12), String(lvl.number));
+    rankIcon(lvl.number, 12), String(lvl.number));
+}
+
+/**
+ * Insigne militaire de chaque grade (aplats, couleur du texte) : 1 à 3 chevrons (Observateur, Guetteur, Spotter),
+ * épaulette d'officier à 1, 2 ou 3 galons (Spotter confirmé, Chasseur d'avions, Expert du ciel), étoile (As du spotting),
+ * étoile ailée (Légende du ciel).
+ */
+const RANKS = [
+  "M3 15.4L12 8.4L21 15.4V18.6L12 11.6L3 18.6Z",
+  "M3 12L12 5L21 12V15.2L12 8.2L3 15.2ZM3 18.4L12 11.4L21 18.4V21.6L12 14.6L3 21.6Z",
+  "M3 9.2L12 2.2L21 9.2V12.4L12 5.4L3 12.4ZM3 15.4L12 8.4L21 15.4V18.6L12 11.6L3 18.6ZM3 21.6L12 14.6L21 21.6V24.8L12 17.8L3 24.8Z",
+  "M5.5 23V6.2L12 1.5l6.5 4.7V23ZM7.3 21.2h9.4V7.1L12 3.7 7.3 7.1ZM8.8 13.2h6.4v2.6H8.8Z",
+  "M5.5 23V6.2L12 1.5l6.5 4.7V23ZM7.3 21.2h9.4V7.1L12 3.7 7.3 7.1ZM8.8 10.6h6.4v2.6H8.8ZM8.8 15.4h6.4v2.6H8.8Z",
+  "M5.5 23V6.2L12 1.5l6.5 4.7V23ZM7.3 21.2h9.4V7.1L12 3.7 7.3 7.1ZM8.8 9h6.4v2.6H8.8ZM8.8 13.2h6.4v2.6H8.8ZM8.8 17.4h6.4v2.6H8.8Z",
+  "M12.00 2.60L14.47 9.20L21.51 9.51L15.99 13.90L17.88 20.69L12.00 16.80L6.12 20.69L8.01 13.90L2.49 9.51L9.53 9.20Z",
+  "M12.00 6.00L13.53 10.09L17.90 10.28L14.48 13.00L15.64 17.22L12.00 14.80L8.36 17.22L9.52 13.00L6.10 10.28L10.47 10.09ZM0.6 9.2H8.2L9 11.2H2.2ZM23.4 9.2H15.8L15 11.2H21.8ZM1.8 12.2H8.2L9 14.2H3.4ZM22.2 12.2H15.8L15 14.2H20.6ZM3.4 15.2H8.2L9 17.2H5ZM20.6 15.2H15.8L15 17.2H19Z",
+];
+export function rankIcon(n, size = 14) {
+  const s = document.createElement("span");
+  s.className = "ico rank-ico";
+  s.setAttribute("aria-hidden", "true");
+  s.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd"><path d="${RANKS[Math.min(Math.max(n, 1), 8) - 1]}"/></svg>`;
+  return s;
 }
 
 // Icônes au trait (style « Instrument »), en SVG de la couleur du texte : onglets et petits boutons
@@ -70,6 +93,7 @@ const ICONS = {
   // XP (éclair) et condition remplie (coche) : liste des grades
   xp: '<path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  heart: '<path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z"/>',
   trash: '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>',
   camera: '<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',
   image: '<rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M20.5 15l-5-5-8 9"/>',

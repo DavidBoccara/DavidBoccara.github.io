@@ -40,13 +40,14 @@ export const FLY_LEVELS = [ // grades 1 à 8
   { n: 9, ring: false, speed: true, cap: false, tol: TOL.serree },
   { n: 11, ring: false, speed: false, cap: false, tol: TOL.fine },
   { n: 12, ring: false, speed: false, cap: false, tol: TOL.fine },
-].map((l, i) => ({ ...l, grade: i + 1, xp: 10 + Math.round((i * 10) / 7) })); // 10 XP au grade 1 → 20 XP au grade 8
+].map((l, i) => ({ ...l, grade: i + 1, xp: 4 + Math.round((i * 4) / 7) })); // 4 XP au grade 1 → 8 XP au grade 8 (10 → 20 avant le 9/11/2026)
 export const flyLevel = (grade) => FLY_LEVELS[Math.min(Math.max((grade || 1) - 1, 0), 7)];
 const myLevel = () => flyLevel(Player.level().number);
 
 // ---------- Série ----------
-// Bonnes réponses d'affilée (premier ou deuxième essai) ; une erreur remet à zéro. ×2 après 3, ×3 après 6… ×5 au plus.
-export const multiplier = (streak) => Math.min(5, 1 + Math.floor(streak / 3));
+// Bonnes réponses d'affilée (premier ou deuxième essai) ; une erreur remet à zéro. ×2 après 3, ×3 après 6 (au plus ; ×5 avant le 9/11/2026).
+export const FLY_MAX_MULT = 3;
+export const multiplier = (streak) => Math.min(FLY_MAX_MULT, 1 + Math.floor(streak / 3));
 const Stats = {
   get: () => ({ streak: 0, best: 0, ...ls.get("flyby_stats", {}) }),
   set: (v) => ls.set("flyby_stats", v),
@@ -203,7 +204,7 @@ export function flybyRules() {
     "Trois défis qui alternent avec les avions autour de toi : lequel va passer près de toi, où un avion va atterrir, lequel vole le plus haut.",
     `Jusqu'à ${lvl.n} avions sur la carte. Premier essai : ${lvl.xp} XP, deuxième : la moitié. Destination : jusqu'à ${lvl.xp} XP, de moins en moins en s'éloignant de l'aéroport.`,
     `Destination : tout le gain à moins de 25 km de l'aéroport, 90 % à 50 km, 80 % à 100 km, 70 % à 150 km, 50 % à 250 km, 30 % à 400 km, 10 % à 600 km, rien au-delà ni hors du cône. La série continue à moins de ${DEST_OK_KM} km.`,
-    "3 bonnes réponses d'affilée = gains ×2, 6 = ×3… jusqu'à ×5. Une erreur remet la série à zéro.",
+    `3 bonnes réponses d'affilée = gains ×2, 6 = ×3 (au plus ×${FLY_MAX_MULT}). Une erreur remet la série à zéro.`,
     `Vérifié en vrai : si l'avion trouvé passe près de toi, photographie-le pendant son passage pour +${HUNT_XP} XP.`,
     next ? `Au grade ${next.grade} : ${next.n} avions, moins d'aides, ${next.xp} XP.` : "",
   ].filter(Boolean);

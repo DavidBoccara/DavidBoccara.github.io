@@ -9,7 +9,7 @@ import { Supa } from "./supa.js";
 import { ensurePhotoRules, requireAccount } from "./photorules.js";
 import { Collection, Sightings, createCatch, createOldPhoto, isOld, addAlbumPhoto, removeEntryPhoto, setMainEntryPhoto, entryPhotoItems, entryPhotos, ALBUM_MAX, catchMessage, entryPhoto, entryLabel, entryModel, entryRarity, Player } from "./store.js";
 import { Cloud, sync } from "./cloud.js";
-import { flagOf, distanceBonus, MAX_PHOTO_KM, computeXp, spottedRarity, prettyModel } from "./game.js";
+import { flagOf, distanceBonus, MAX_PHOTO_KM, computeXp, spottedRarity, prettyModel, missingParts } from "./game.js";
 import { renderHud, install, isStandalone, isIos, isAndroid, go } from "./app.js";
 import { Native } from "./native.js";
 import { APK_HOME, SITE_URL } from "./config.js";
@@ -572,6 +572,14 @@ export async function askPhotoSource(s) {
  * urls : adresses (ou promesses d'adresse) dans l'ordre ; fit : "cover" (feed, photo recadrée) ou "contain" (photo entière) ;
  * onTap(i) : toucher la photo ; onChange(i) : photo affichée. el.index() = n° de la photo affichée.
  */
+// Ce qu'il manque pour le grade suivant (g = Player.next()) : un span par morceau, traduits un à un (i18n.js)
+const missingSpans = (g) => missingParts(g).flatMap((p, i) => [i ? " · " : "", h("span", p)]);
+/** Sous le bouton du quiz : « Il manque : 492 XP · 19 modèles · 10 likes ». */
+export const missingLine = (g) => [h("span", "Il manque :"), " ", ...missingSpans(g)];
+/** Sous la barre d'XP (Profil, Collection) : « 2 508 XP • Pour « Expert du ciel », il manque : 492 XP · 19 modèles · 10 likes ». */
+export const progressLine = (xp, g) => [h("span", `${xp.toLocaleString(LOCALE)} XP`), " • ",
+  ...(g ? [h("span", `Pour « ${g.next.name} », il manque :`), " ", ...missingSpans(g)] : [h("span", "grade maximum !")])];
+
 export function carousel(urls, { alt = "Photo de l'avion", fit = "cover", onTap, onChange } = {}) {
   const n = urls.length;
   const imgs = urls.map((_, i) => h("img", { alt: n > 1 ? `${alt} (${i + 1} sur ${n})` : alt, draggable: "false" }));

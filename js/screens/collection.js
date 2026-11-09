@@ -3,8 +3,8 @@ import { h, ls, rarityMark, infoButton } from "../util.js";
 import { Collection, Player, entryPhoto, entryPhotoItems, entryRarity, entryModel, entryLabel, isOld } from "../store.js";
 import { Supa } from "../supa.js";
 import { sync } from "../cloud.js";
-import { RARITIES, flagOf, modelKey, gradePct, progressText } from "../game.js";
-import { importFlow, showEntry, wikiDot, wikiQuery, albumBadge } from "../ui.js";
+import { RARITIES, flagOf, modelKey, gradePct } from "../game.js";
+import { importFlow, showEntry, wikiDot, wikiQuery, albumBadge, progressLine } from "../ui.js";
 import { go, renderHud } from "../app.js";
 import { hangarList } from "./hangar.js";
 import { catalogView } from "./catalog.js";
@@ -42,7 +42,7 @@ export function collection(view, [sub]) {
     const xp = Player.bestXp(), lvl = Player.level();
     level.textContent = `Niveau ${lvl.number} — ${lvl.title}`;
     bar.firstChild.style.width = gradePct(lvl, xp) + "%";
-    xpText.textContent = progressText(xp, Player.next()); // XP et modèles photographiés qu'il manque pour le grade suivant
+    xpText.replaceChildren(...progressLine(xp, Player.next())); // XP, modèles et likes qu'il manque pour le grade suivant
     renderHud();
   }
 

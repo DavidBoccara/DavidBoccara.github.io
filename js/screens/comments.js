@@ -55,7 +55,7 @@ export function commentsPage(view, [id]) {
   function renderTop(c) {
     const rarity = c.rarity?.stars ? c.rarity : rarityByName(c.rarity?.key || c.rarity);
     const user = c.user ? profileFrom({ id: c.user.id, username: c.user.username, avatar_path: c.user.avatarPath, xp: c.user.xp,
-      models: c.user.models, grade_floor: c.user.gradeFloor }) : null;
+      models: c.user.models, likes_received: c.user.likesReceived, grade_floor: c.user.gradeFloor }) : null;
     const model = c.modelName || "";
     // Photo du joueur, ou toutes ses photos de cet avion (album) en carrousel
     const photos = (c.photos?.length ? c.photos : c.photoUrls?.length ? c.photoUrls : [c.photo || c.photoUrl]).filter(Boolean);

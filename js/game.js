@@ -32,38 +32,37 @@ export function rarityOf(type, military, interesting = false, category = "") {
 export const rarityOfAc = (ac) => rarityOf(ac.type, ac.military, ac.interesting, ac.category);
 
 // ---------- Grades ----------
-// Un grade demande des XP et, à partir de « Spotter », des modèles différents photographiés (data.js, 9/11/2026).
-export const LEVELS = D.levels.map(([minXp, name, minModels], i) => ({
-  number: i + 1, name, minXp, minModels, nextXp: D.levels[i + 1]?.[0] ?? null, emblem: "",
+// Un grade demande des XP et, à partir de « Spotter », des modèles différents photographiés et des likes reçus d'autres
+// joueurs (data.js ; mêmes seuils côté serveur : private.grade_of de supabase/likes_xp.sql).
+export const LEVELS = D.levels.map(([minXp, name, minModels, minLikes], i) => ({
+  number: i + 1, name, minXp, minModels, minLikes, nextXp: D.levels[i + 1]?.[0] ?? null, emblem: "",
   get title() { return name; },
 }));
+/** XP que rapporte un like donné par un joueur de ce grade (fixés par le serveur : private.like_xp). */
+export const likeXp = (lvl) => D.likeXp[Math.min(Math.max((lvl?.number || 1) - 1, 0), 7)];
+/** Ce qu'il manque pour atteindre le grade l avec p = { xp, models, likes } : { xp, models, likes } (0 = condition remplie). */
+export const missingFor = (l, p) => ({ xp: Math.max(0, l.minXp - (p.xp || 0)), models: Math.max(0, l.minModels - (p.models || 0)),
+  likes: Math.max(0, l.minLikes - (p.likes || 0)) });
 /**
- * Grade atteint avec xp et models (modèles photographiés). floor : grade gardé par les joueurs inscrits avant la règle
- * des modèles (profiles.grade_floor) : le grade n'est jamais en dessous.
+ * Grade atteint avec p = { xp, models, likes, floor } (modèles photographiés, likes reçus). floor : grade gardé par les
+ * joueurs inscrits avant ces règles (profiles.grade_floor) : le grade n'est jamais en dessous.
  */
-export function levelOf(xp, models, floor = 1) {
+export function levelOf(p) {
   let i = 0;
-  LEVELS.forEach((l, j) => { if (xp >= l.minXp && models >= l.minModels) i = j; });
-  return LEVELS[Math.max(i, Math.min(floor, LEVELS.length) - 1)];
+  LEVELS.forEach((l, j) => { const m = missingFor(l, p); if (!m.xp && !m.models && !m.likes) i = j; });
+  return LEVELS[Math.max(i, Math.min(p.floor || 1, LEVELS.length) - 1)];
 }
-/** Ce qu'il manque pour atteindre le grade l : { xp, models } (0 = condition remplie). */
-export const missingFor = (l, xp, models) => ({ xp: Math.max(0, l.minXp - xp), models: Math.max(0, l.minModels - models) });
-/** Ce qu'il manque pour le grade suivant : { next, xp, models }, null au grade maximum. */
-export function nextGrade(lvl, xp, models) {
+/** Ce qu'il manque pour le grade suivant : { next, xp, models, likes }, null au grade maximum. */
+export function nextGrade(lvl, p) {
   const next = LEVELS[lvl.number];
-  return next ? { next, ...missingFor(next, xp, models) } : null;
+  return next ? { next, ...missingFor(next, p) } : null;
 }
-/** « encore 300 XP et 4 modèles à photographier » (m = missingFor ou nextGrade). */
-export function goalText(m) {
-  const xp = m.xp ? `${m.xp.toLocaleString(LOCALE)} XP` : "";
-  const models = m.models ? `${m.models} modèle${m.models > 1 ? "s" : ""} à photographier` : "";
-  return xp || models ? `encore ${[xp, models].filter(Boolean).join(" et ")}` : "";
-}
-/** Ligne sous la barre d'XP : « 2 508 XP • encore 492 XP et 19 modèles à photographier pour « Expert du ciel » ». */
-export function progressText(xp, g) {
-  const n = xp.toLocaleString(LOCALE);
-  return g ? `${n} XP • ${goalText(g)} pour « ${g.next.name} »` : `${n} XP • grade maximum !`;
-}
+/** Ce qu'il manque, en morceaux à afficher : « 492 XP », « 19 modèles », « 10 likes » (m = missingFor ou nextGrade). */
+export const missingParts = (m) => [
+  m.xp && `${m.xp.toLocaleString(LOCALE)} XP`,
+  m.models && `${m.models} modèle${m.models > 1 ? "s" : ""}`,
+  m.likes && `${m.likes} like${m.likes > 1 ? "s" : ""}`,
+].filter(Boolean);
 /** Barre d'XP du grade (0 à 100 %). */
 export const gradePct = (lvl, xp) => (lvl.nextXp ? Math.min(100, Math.max(0, ((xp - lvl.minXp) / (lvl.nextXp - lvl.minXp)) * 100)) : 100);
 
@@ -382,8 +381,9 @@ export function fmtOrigin(ac, extra) {
 
 // ---------- Quiz ----------
 export const Quiz = {
-  BASE_XP: 5,
-  MAX_MULT: 5,
+  // Gains des jeux réduits le 9/11/2026 (avant : 5 XP, ×5 au plus, bonus 3 XP) : les photos doivent compter plus
+  BASE_XP: 2,
+  MAX_MULT: 3,
   // Rayon de jeu par grade ; au grade 8, radar infini (tous les avions que la source ADS-B peut donner, ~460 km)
   RADIUS_KM: [1, 5, 7, 10, 15, 25, 30, Infinity],
   radiusKm: (lvl) => Quiz.RADIUS_KM[Math.min(Math.max(lvl.number - 1, 0), 7)],
@@ -391,7 +391,7 @@ export const Quiz = {
   kmLabel: (km) => (Number.isFinite(km) ? meters(km * 1000) : "infini"),
   radiusLabel: (lvl) => Quiz.kmLabel(Quiz.radiusKm(lvl)),
   // Questions bonus du quiz en direct, sur l'avion reconnu (d'après Wikipédia, wikiquiz.js) : 1 au grade 4, 2 au grade 5…
-  BONUS_XP: 3,
+  BONUS_XP: 1,
   bonusCount: (lvl) => Math.max(0, (lvl?.number || 0) - 3),
   bonusLabel: (lvl) => { const n = Quiz.bonusCount(lvl); return n ? `${n} question${n > 1 ? "s" : ""} bonus` : ""; },
 };

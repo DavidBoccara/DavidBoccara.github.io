@@ -1,6 +1,6 @@
 // Service worker de Plane GO : l'appli s'ouvre même sans réseau, et un clic sur une
 // notification ouvre la fiche de l'avion.
-const CACHE = "planego-0d27a7f2f1b2bf4b06f99760aed00c2c3ce67c78";
+const CACHE = "planego-db4031cb27708085d8590eb4638d0a09653a7790";
 const SHELL = [
   "./",
   "icons/apple-touch-icon.png",

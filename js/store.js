@@ -2,7 +2,7 @@
 import { ls, uuid, weekStart } from "./util.js";
 import { Supa } from "./supa.js";
 import { Sound } from "./sound.js";
-import { MAX_PHOTO_KM, rarityByName, prettyModel, levelOf, nextGrade, goalText, computeXp, modelKey, spottedRarity, describeXp } from "./game.js";
+import { MAX_PHOTO_KM, rarityByName, prettyModel, levelOf, nextGrade, computeXp, modelKey, spottedRarity, describeXp } from "./game.js";
 
 // ---------- Photos (IndexedDB) ----------
 let dbp = null;
@@ -213,7 +213,10 @@ export function catchMessage(o) {
     : `${describeXp(o.xp)}\n\n= +${o.xp.total} XP`;
   m += `\n\nTotal : ${o.total} XP — Niveau ${o.levelAfter.number} « ${o.levelAfter.name} »`;
   if (o.levelAfter.number > o.levelBefore.number) m += `\n\nNouveau grade : ${o.levelAfter.name} !`;
-  else if (o.goal?.models) m += `\n\nPour « ${o.goal.next.name} » : ${goalText(o.goal)}.`; // grades : il faut aussi des modèles
+  else if (o.goal?.models) { // grades : il faut aussi des modèles photographiés
+    const n = o.goal.models;
+    m += `\n\nPour « ${o.goal.next.name} » : encore ${n} modèle${n > 1 ? "s" : ""} à photographier.`;
+  }
   if (Supa.isLoggedIn) m += "\n\nLa photo est publiée sur votre feed et sauvegardée sur votre compte.";
   return m;
 }
@@ -321,9 +324,14 @@ export const Player = {
   /** Modèles différents photographiés (photos validées), d'après ce téléphone ou le serveur (autre appareil). */
   models() { return Math.max(this.profile?.models || 0, Collection.modelCount()); },
   /** Grade : XP et modèles photographiés ; jamais sous le grade gardé d'avant la règle des modèles (profil en ligne). */
-  level() { return levelOf(this.bestXp(), this.models(), this.profile?.gradeFloor); },
-  /** Ce qu'il manque pour le grade suivant : { next, xp, models }, null au grade maximum. */
-  next() { return nextGrade(this.level(), this.bestXp(), this.models()); },
+  /** Likes reçus qui comptent (serveur : profiles.likes_received). */
+  likes() { return this.profile?.likesReceived || 0; },
+  /** Ce qui compte pour le grade : { xp, models, likes, floor } (floor = grade gardé, profil en ligne). */
+  have() { return { xp: this.bestXp(), models: this.models(), likes: this.likes(), floor: this.profile?.gradeFloor }; },
+  /** Grade : XP, modèles photographiés et likes reçus ; jamais sous le grade gardé d'avant les nouvelles règles. */
+  level() { return levelOf(this.have()); },
+  /** Ce qu'il manque pour le grade suivant : { next, xp, models, likes }, null au grade maximum. */
+  next() { return nextGrade(this.level(), this.have()); },
 };
 
 // ---------- Réglages ----------

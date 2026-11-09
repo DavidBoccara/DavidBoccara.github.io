@@ -186,6 +186,13 @@ img.cover { width: 100%; display: block; object-fit: cover; background: var(--ca
 .grade-tag { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; padding: 0 5px 0 3px; border: 1px solid var(--line-3);
   border-radius: 4px; font: 500 11px/16px var(--mono); color: var(--text-2); vertical-align: 1px; white-space: nowrap; }
 .grade-line > .grade-tag { margin: 0 6px 0 0; } /* insigne en début de ligne (page publication) */
+.grade-tag .rank-ico svg { display: block; }
+/* Feed : publications des « Légende du ciel » (grade 8) mises en avant : bord ambre, bandeau avec l'étoile ailée, avatar cerclé */
+.post.legend { border-color: var(--accent); }
+.legend-band { display: flex; align-items: center; gap: 7px; padding: 8px 14px; border-bottom: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--card)); font: 500 10.5px var(--mono); letter-spacing: .16em;
+  text-transform: uppercase; color: var(--accent); }
+.post.legend .head .avatar { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* Liste des grades (Classement › Grades) : carte « Ton grade » + tableau XP / modèles / rayon / bonus */
 .gm-name { display: flex; align-items: center; gap: 8px; font-size: 20px; font-weight: 600; }
 .gm-name .grade-tag, .gt-cell .grade-tag { margin: 0; }

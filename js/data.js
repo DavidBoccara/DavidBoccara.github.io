@@ -1128,18 +1128,21 @@ export const D = {
 "B06",
 "R44"
 ],
-// Grades : [XP, nom, modèles différents photographiés]. À partir de « Spotter », il faut aussi des photos (validées ;
-// les photos anciennes ne comptent pas) : les jeux seuls ne suffisent plus (9/11/2026, levelOf de game.js).
+// Grades : [XP, nom, modèles différents photographiés, likes reçus]. À partir de « Spotter », il faut aussi des photos
+// (validées ; les photos anciennes ne comptent pas) et des likes d'autres joueurs : les jeux seuls ne suffisent plus
+// (levelOf de game.js). Seuils durcis le 9/11/2026 ; mêmes valeurs dans private.grade_of (supabase/likes_xp.sql).
 "levels": [
-[0, "Observateur", 0],
-[100, "Guetteur", 0],
-[300, "Spotter", 3],
-[700, "Spotter confirmé", 8],
-[1500, "Chasseur d'avions", 15],
-[3000, "Expert du ciel", 30],
-[6000, "As du spotting", 50],
-[12000, "Légende du ciel", 100]
+[0, "Observateur", 0, 0],
+[150, "Guetteur", 0, 0],
+[600, "Spotter", 5, 2],
+[2000, "Spotter confirmé", 12, 8],
+[5000, "Chasseur d'avions", 25, 20],
+[10000, "Expert du ciel", 45, 50],
+[20000, "As du spotting", 75, 100],
+[40000, "Légende du ciel", 120, 200]
 ],
+// XP d'un like reçu selon le grade de celui qui like (grade 1 → 8) ; = private.like_xp (supabase/likes_xp.sql)
+"likeXp": [0, 1, 2, 3, 4, 5, 6, 8],
 "emblems": [
 "🔭",
 "👀",

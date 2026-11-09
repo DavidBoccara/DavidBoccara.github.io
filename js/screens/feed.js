@@ -5,7 +5,7 @@
 import { Blocked } from "../blocks.js";
 import { linkPlayer } from "./player.js";
 import { LOCALE } from "../i18n.js";
-import { h, timeAgo, toast, modal, icon, rarityMark, dateDay, gradeTag } from "../util.js";
+import { h, timeAgo, toast, modal, icon, rarityMark, dateDay, gradeTag, rankIcon } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, sync } from "../cloud.js";
 import { Player } from "../store.js";
@@ -201,6 +201,10 @@ function likeButton(x, like, unlike) {
   return btn;
 }
 
+// Joueurs « Légende du ciel » (grade maximum) bien visibles dans le feed : carte bordée d'ambre, bandeau avec l'étoile ailée
+const isLegend = (u) => !!u?.level && !u.level.nextXp;
+const legendBand = (u) => isLegend(u) && h("div.legend-band", rankIcon(8, 14), h("span", "Légende du ciel"));
+
 const avatar = (u) => { const av = h("img.avatar.sm", { alt: "", src: u?.avatarUrl || "icons/avatar.svg" }); av.onerror = () => { av.src = "icons/avatar.svg"; }; return av; };
 
 /** Résultat du Quiz du jour d'un ami (ou le mien). */
@@ -209,7 +213,7 @@ function dailyPost(r) {
   const emoji = perfect ? "" : r.correct * 2 >= r.total ? "" : "";
   const dayText = r.day === todayKey() ? "d'aujourd'hui"
     : "du " + new Date(r.day + "T12:00:00").toLocaleDateString(LOCALE, { weekday: "long", day: "numeric", month: "long" });
-  return h("div.card.post.daily-post", { "data-author": r.userId || "" },
+  return h("div.card.post.daily-post" + (isLegend(r.user) ? ".legend" : ""), { "data-author": r.userId || "" }, legendBand(r.user),
     h("div.head", linkPlayer(avatar(r.user), r.userId), h("div.grow",
       h("div", linkPlayer(h("b", r.user?.username || "Un spotter"), r.userId), gradeTag(r.user?.level), " a fait le ", h("b", "Quiz du jour")),
       h("div.small.dim", timeAgo(r.createdAt) + (r.user ? ` · ${r.user.level.emblem} ${r.user.level.name}` : "")))),
@@ -227,7 +231,8 @@ function post(c) {
   const color = c.rarity.color;
   const likeBtn = likeButton(c, Cloud.like, Cloud.unlike);
   // Page de la publication : photo du joueur, fiche de l'avion et commentaires
-  const open = () => { sessionStorage.setItem("catch_" + c.id, JSON.stringify({ ...c, user: c.user && { id: c.user.id, username: c.user.username, avatarPath: c.user.avatarPath, xp: c.user.xp, models: c.user.models, gradeFloor: c.user.gradeFloor },
+  const open = () => { sessionStorage.setItem("catch_" + c.id, JSON.stringify({ ...c, user: c.user && { id: c.user.id, username: c.user.username, avatarPath: c.user.avatarPath, xp: c.user.xp, models: c.user.models,
+      likesReceived: c.user.likesReceived, gradeFloor: c.user.gradeFloor },
     photo: c.photoUrl, photos: c.photoUrls, index: car?.index() || 0 })); go("comments/" + c.id); };
   // Photos de l'avion : une seule, ou l'album en carrousel (on fait glisser, comme sur Instagram)
   const urls = c.photoUrls?.length ? c.photoUrls : [c.photoUrl];
@@ -243,7 +248,7 @@ function post(c) {
     c.flightKm != null && `${Math.round(c.flightKm).toLocaleString(LOCALE)} km parcourus`, c.source === "import" && "photo ajoutée après coup"].filter(Boolean).join(" • ");
   // Photo ancienne (ajoutée depuis le Catalogue) : compte comme attrapé dans la collection, mais sans XP ; date de la photo
   const old = c.source === "old";
-  card = h("div.card.post", { "data-author": c.userId || "" },
+  card = h("div.card.post" + (isLegend(c.user) ? ".legend" : ""), { "data-author": c.userId || "" }, legendBand(c.user),
     h("div.head", av, h("div.grow",
       old ? h("div", who(), " a partagé une photo ancienne : ", h("b", c.modelName || "un avion"), c.military ? " (militaire)" : "")
         : h("div", who(), " a attrapé ", h("b", c.modelName ? "un " + c.modelName : "un avion"), c.military ? " (militaire)" : ""),

@@ -26,7 +26,8 @@ export function linkPlayer(el, id) {
 /** Page de la publication (comme depuis le feed) : données passées par sessionStorage. */
 function openPost(c) {
   sessionStorage.setItem("catch_" + c.id, JSON.stringify({ ...c, user: c.user && { id: c.user.id, username: c.user.username,
-    avatarPath: c.user.avatarPath, xp: c.user.xp, models: c.user.models, gradeFloor: c.user.gradeFloor }, photo: c.photoUrl, photos: c.photoUrls, index: 0 }));
+    avatarPath: c.user.avatarPath, xp: c.user.xp, models: c.user.models,
+      likesReceived: c.user.likesReceived, gradeFloor: c.user.gradeFloor }, photo: c.photoUrl, photos: c.photoUrls, index: 0 }));
   go("comments/" + c.id);
 }
 
