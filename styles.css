@@ -503,6 +503,16 @@ img.cover { width: 100%; display: block; object-fit: cover; background: var(--ca
 b.player-link:hover, .player-link b:hover, h3.player-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .player-name { font-size: 20px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .player-stats { margin-top: 12px; }
+/* Pastilles (badges.js) : demandes d'ami reçues, ce qui attend l'administrateur */
+.badge { display: inline-block; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: var(--ink);
+  font: 600 11px/18px var(--mono); text-align: center; letter-spacing: 0; }
+.tab .e { position: relative; }
+.tab-badge { position: absolute; top: -7px; left: 13px; border: 2px solid var(--bar); height: 22px; line-height: 18px; border-radius: 11px; }
+.seg-badge { margin-left: 6px; vertical-align: 1px; }
+.req-head { color: var(--accent); display: flex; align-items: center; }
+.req-card { border-color: var(--accent); }
+.req-actions { margin-top: 10px; gap: 8px; }
+.req-actions .btn { flex: 1; }
 /* Console d'administration (Profil › Admin, js/screens/admin.js) */
 .admin-seg { margin-top: 6px; gap: 0 18px; flex-wrap: wrap; overflow: visible; } /* 5 vues : sur deux lignes sur téléphone */
 .adm-sub { margin: 10px 0 4px; gap: 16px; }

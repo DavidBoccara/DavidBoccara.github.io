@@ -1,7 +1,7 @@
 // Plane GO (PWA) : navigation par onglets, HUD du joueur, installation.
 import "./usage.js"; // compteur des appels aux services (console Admin), installé avant tout le reste
 import { syncBlocks } from "./blocks.js";
-import { LOCALE } from "./i18n.js";
+import { LOCALE, t as tr } from "./i18n.js";
 import { $, h, ls, modal, toast, icon } from "./util.js";
 import { Supa, emailLink } from "./supa.js";
 import { Player } from "./store.js";
@@ -23,6 +23,7 @@ import { checkAppUpdate } from "./update.js";
 import { watchDefaultLocation } from "./ui.js";
 import { askPhotoRulesAtStart, syncPhotoRules } from "./photorules.js";
 import { noticeRemovals } from "./report.js";
+import { Badges, badgeEl } from "./badges.js";
 import "./camera.js"; // photos de l'appareil branché par câble : bandeau « Nouvelle photo » sur tous les écrans
 
 // Barre du bas : 5 onglets, le Scanner au centre en bouton surélevé
@@ -73,7 +74,7 @@ function route() {
 function renderTabs(current) {
   $("#tabs").replaceChildren(...TABS.map((t) => {
     const b = h("button.tab" + (t.id === current ? ".on" : "") + (t.center ? ".center" : ""), {
-      "aria-label": t.label, "aria-current": t.id === current ? "page" : null, onclick: () => go(t.id),
+      "aria-label": t.label, "aria-current": t.id === current ? "page" : null, "data-tab": t.id, onclick: () => openTab(t.id),
     });
     if (t.center) {
       b.append(h("span.fab", icon("radar", 28)), h("span.l", t.label));
@@ -81,7 +82,25 @@ function renderTabs(current) {
     return b;
   }));
   radarLive();
+  paintBadges();
 }
+
+/** Onglet touché : Profil avec une demande d'ami en attente → directement la vue Amis, pour y répondre. */
+function openTab(id) {
+  if (id === "profile" && Badges.friends > 0) go("profile/friends");
+  else go(id);
+}
+
+/** Pastille de l'onglet Profil : demandes d'ami reçues (+ ce qui attend un administrateur). badges.js */
+function paintBadges() {
+  const tab = $('#tabs .tab[data-tab="profile"]');
+  if (!tab) return;
+  tab.querySelector(".badge")?.remove();
+  const n = Badges.total, el = badgeEl(n, "tab-badge");
+  if (el) tab.querySelector(".e")?.append(el);
+  tab.setAttribute("aria-label", tr("Profil") + (n ? ` (${n})` : ""));
+}
+window.addEventListener("planego-badges", paintBadges);
 
 /** Le bouton Scanner pulse tant que le radar tourne. */
 function radarLive() { $("#tabs .tab.center")?.classList.toggle("live", Radar.running); }

@@ -13,6 +13,7 @@ import { levelOf, prettyModel } from "../game.js";
 import { carousel } from "../ui.js";
 import { REASONS } from "../report.js";
 import { go } from "../app.js";
+import { Badges } from "../badges.js";
 
 const VIEWS = [
   { id: "summary", label: "Résumé" },
@@ -85,14 +86,13 @@ export function adminConsole(view, sub, onRoute = () => {}) {
   const seg = h("div.seg.admin-seg");
   const body = h("div.mt");
   root.append(seg, body);
-  let current = null, counts = {}, alive = true;
+  let current = null, alive = true;
+  // Pastilles : signalements à traiter, messages pas encore vus (mêmes chiffres que l'onglet Profil, badges.js)
+  const counts = { reports: () => Badges.reports, messages: () => Badges.messages };
   const paint = () => seg.replaceChildren(...VIEWS.map((v) => h("button" + (v.id === current ? ".on" : ""), { onclick: () => show(v.id) },
-    v.label, counts[v.id] ? h("span.adm-count", String(counts[v.id])) : null)));
-  const refreshCounts = () => Admin.overview().then((o) => {
-    if (!alive || !o) return;
-    counts = { reports: (o.reports_open | 0) + (o.quiz_flags | 0) + (o.ai_flags | 0), messages: o.messages | 0 };
-    paint();
-  }).catch(() => {});
+    v.label, counts[v.id]?.() ? h("span.adm-count", String(counts[v.id]())) : null)));
+  const refreshCounts = () => Badges.refresh();
+  window.addEventListener("planego-badges", paint);
   function show(id, opts = {}) {
     current = id;
     onRoute(id);
@@ -106,7 +106,7 @@ export function adminConsole(view, sub, onRoute = () => {}) {
   window.addEventListener("planego-admin-posts", onPosts);
   refreshCounts();
   show(VIEWS.some((v) => v.id === sub) ? sub : "summary");
-  return () => { alive = false; window.removeEventListener("planego-admin-posts", onPosts); };
+  return () => { alive = false; window.removeEventListener("planego-admin-posts", onPosts); window.removeEventListener("planego-badges", paint); };
 }
 
 // ---------- Résumé ----------
@@ -582,6 +582,8 @@ async function messages(body, ctx) {
   let list;
   try { list = await Admin.messages(); } catch (e) { fill(body, h("div.card.pad", e.message)); return; }
   const refresh = () => { ctx.changed(); body.replaceChildren(); messages(body, ctx); };
+  // Messages affichés = vus : ils ne comptent plus dans la pastille de l'onglet Profil
+  Badges.messagesSeen(Math.max(0, ...list.map((m) => Number(m.id) || 0)));
   fill(body, 
     h("div.row", h("div.section.grow", `Messages reçus (${list.length})`),
       infoButton("Messages", "Envoyés avec le formulaire « Contactez-nous » (plane-go.com/contact). Effacés automatiquement au bout d'un an.", { small: true })),

@@ -4,6 +4,7 @@ import { h, ls, toast, prompt, pickImage, toJpeg, confirmBox, infoButton, modal,
 import { Supa } from "../supa.js";
 import { Cloud, sync, MyStatus } from "../cloud.js";
 import { adminConsole } from "./admin.js";
+import { Badges, badgeEl } from "../badges.js";
 import { Collection, Player, entryModel, entryRarity, QuizStore } from "../store.js";
 import { levelOf, modelKey } from "../game.js";
 import { loginGate, renderHud, go } from "../app.js";
@@ -32,7 +33,11 @@ export function profile(view, [sub, sub2]) {
   view.append(seg, body);
   let current = null, stop = null;
   const views = () => VIEWS.filter((v) => !v.admin || (MyStatus.admin && Supa.isLoggedIn));
-  const paint = () => seg.replaceChildren(...views().map((v) => h("button" + (v.id === current ? ".on" : ""), { onclick: () => show(v.id) }, v.label)));
+  // Pastilles : demandes d'ami reçues sur « Amis », ce qui attend l'administrateur sur « Admin » (badges.js)
+  const count = (id) => (id === "friends" ? Badges.friends : id === "admin" ? Badges.admin : 0);
+  const paint = () => seg.replaceChildren(...views().map((v) => h("button" + (v.id === current ? ".on" : ""), { onclick: () => show(v.id) },
+    v.label, badgeEl(count(v.id), "seg-badge"))));
+  window.addEventListener("planego-badges", paint);
   const show = (id, adminView) => {
     if (!views().some((v) => v.id === id)) id = "me";
     stop?.(); stop = null;
@@ -58,7 +63,7 @@ export function profile(view, [sub, sub2]) {
       else paint();
     }).catch(() => {});
   }
-  return () => stop?.();
+  return () => { stop?.(); window.removeEventListener("planego-badges", paint); };
 }
 
 /** Compte suspendu par l'administrateur : ce qui est bloqué, jusqu'à quand, pourquoi. */
