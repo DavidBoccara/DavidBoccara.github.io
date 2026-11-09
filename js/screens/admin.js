@@ -677,8 +677,8 @@ const GA_STEPS = [
   "Menu « IAM et administration › Comptes de service » : « Créer un compte de service », nom « plane-go-stats », aucun rôle, « OK ».",
   "Ouvre ce compte de service › onglet « Clés » › « Ajouter une clé › Créer une clé › JSON » : un fichier .json se télécharge. Garde-le pour toi.",
   "Dans Google Analytics › Administration › « Gestion des accès à la propriété » : « + », ajoute l'adresse du compte de service (…@….iam.gserviceaccount.com) avec le rôle « Lecteur ».",
-  "Dans Supabase › Edge Functions › Secrets : ajoute GA_SERVICE_ACCOUNT avec tout le contenu du fichier .json (Claude peut ouvrir la case pour toi).",
-  "Donne à Claude l'« ID de propriété » (Google Analytics › Administration › Détails de la propriété, un nombre) : il l'ajoute en secret GA_PROPERTY_ID.",
+  "Dans Supabase › Edge Functions › Secrets : ajoute GA_SERVICE_ACCOUNT avec tout le contenu du fichier .json.",
+  "Le numéro de la propriété (563308488) est déjà dans la fonction serveur « admin ». Si tu changes de propriété, donne le nouveau numéro à Claude.",
 ];
 
 async function audience(body, { show }) {
