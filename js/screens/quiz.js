@@ -123,7 +123,9 @@ function liveQuiz(view) {
     header();
     while (alive && id === searchId) {
       showHunt("Recherche de votre position…");
-      const loc = await Radar.locate();
+      // Dernière position connue tout de suite, comme « Le plus proche » du Scanner (relue en arrière-plan si elle a plus de 2 min)
+      const loc = Radar.location || (await Radar.locate());
+      Radar.locate();
       if (!alive || id !== searchId) return;
       if (!loc) {
         showHunt(null, "Position inconnue : le quiz utilise ta position pour trouver les avions au-dessus de toi.",

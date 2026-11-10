@@ -388,13 +388,13 @@ const quizMem = new Map();
  * Le crédit lu ici est gardé (credits.js) : il s'affiche sous la photo sans nouvelle requête.
  * ctx = { registration, airline, model (désignation ADS-B, ex. « Airbus A220-300 »), name (réponse du quiz), article,
  * livery (question sur la compagnie : ses noms ; seulement les photos 1 et 2 dont le nom de fichier porte l'un d'eux,
- * c.-à-d. aux couleurs de la compagnie, d'un auteur qui ne la nomme pas) }.
+ * c.-à-d. aux couleurs de la compagnie, d'un auteur qui ne la nomme pas), low (préparée d'avance : recherches après les autres) }.
  */
 export async function quizPhotos(ctx) {
   const { registration = "", airline = "", model = "", name = "", article = "", livery = null } = ctx;
   const key = [registration, airline, model, name, article, livery ? "livery" : ""].join("|");
   if (!quizMem.has(key)) quizMem.set(key, (async () => {
-    const sets = await commonsSets(ctx, !livery);
+    const sets = await commonsSets(ctx, !livery, !!ctx.low); // low : question préparée d'avance
     if (sets.failed) quizMem.delete(key); // recherche ratée (réseau, Commons occupé) : pas gardée, on réessaiera
     const painted = (x) => livery.some((n) => ` ${words(x.title)} `.includes(` ${words(n)} `));
     const fair = (x) => !revealsAnswer(x.author, name) && !revealsAnswer(x.author, model) && !(livery || []).some((n) => flat(x.author).includes(flat(n)));

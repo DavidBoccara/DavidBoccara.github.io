@@ -4,7 +4,7 @@ import { creditLine, photoCredit, safeLicense, textCredit } from "./credits.js";
 import { h, ls, modal, toast, confirmBox } from "./util.js";
 import { Radar } from "./radar.js";
 import { Wiki, quizPhotos, revealsAnswer, photoMatchesModel } from "./net.js";
-import { quizName, buildQuestion, recognitionTip, familyTip, Quiz, prettyModel, airlineOf, airlineQuestion } from "./game.js";
+import { quizName, buildQuestion, recognitionTip, familyTip, Quiz, prettyModel, airlineOf, airlineQuestion, CATALOG } from "./game.js";
 import { wikiQuery, missingLine } from "./ui.js";
 import { Supa } from "./supa.js";
 import { bonusQuestions, flagAiQuestion } from "./wikiquiz.js";
@@ -137,12 +137,17 @@ export const usablePhotos = (urls) => [...new Set(urls.filter(Boolean))].filter(
  * sans risque seulement (domaine public, CC0, CC 4.0), auteur connu qui ne donne pas la réponse. En dernier recours,
  * la photo de l'article Wikipédia aux mêmes conditions. Jamais les photos airport-data (sans licence libre).
  * ctx = { registration, airline, model } de l'avion. null si aucune photo ne convient (la question est passée).
+ * Modèle civil du catalogue : son article est connu d'avance, la recherche des photos part sans attendre Wikipédia
+ * (article, langues, photo de l'article et son crédit : ≈ 2 s de moins).
  */
 export async function questionPhoto(_ownUrl, wikiQ, name, ctx = {}) {
-  const wiki = await Wiki.find(wikiQ).catch(() => null);
-  const article = wiki && !wiki.searchOnly ? wiki.title : "";
+  const wikiP = Wiki.find(wikiQ).catch(() => null);
+  const type = (wikiQ?.type || "").trim().toUpperCase();
+  const known = !wikiQ?.military && type && CATALOG.find((c) => c.codes.includes(type) && !c.militaryOnly)?.wiki;
+  const article = known || ((w) => (w && !w.searchOnly ? w.title : ""))(await wikiP);
   const list = await quizPhotos({ ...ctx, name, article }).catch(() => []);
   for (const u of usablePhotos(list).slice(0, 3)) if (await loads(u)) return u;
+  const wiki = await wikiP;
   for (const u of usablePhotos([wiki?.imageUrl, wiki?.thumbnailUrl])) {
     if (!photoMatchesModel(u, article, ctx.model, name)) continue; // photo d'entreprise, de personnes, d'une autre version…
     const c = await photoCredit(u).catch(() => null);
@@ -243,19 +248,29 @@ export const questionTitle = (q) => (q.ask === "airline" ? "Quelle est la compag
 export const answerNote = (q, ok, choice) => (q.ask === "airline" ? h("div.mt", h("span.dim", "Modèle de l'avion : "), h("b", q.model))
   : ok ? "" : tipCard(q, choice));
 
+/** Question d'un avion de la liste (fiche adsbdb, nom, photo) ; low : préparée d'avance (recherches de photos après les autres). */
+async function prepare(ac, wantAirline, low) {
+  const extra = await Radar.extra(ac).catch(() => null);
+  return makeQuestion(ac, extra, wikiQuery.ac(ac), { registration: ac.registration,
+    airline: extra?.route?.airline || ac.operator || extra?.info?.owner, model: prettyModel(ac.description || ""), low }, wantAirline).catch(() => null);
+}
+
 /**
- * Première question possible (nom connu + photo) dans la liste d'avions.
+ * Première question possible (nom connu + photo) dans la liste d'avions (tous les types, du plus proche au plus loin).
+ * Pendant qu'un avion se prépare, les 2 suivants aussi (en arrière-plan) : s'il ne convient pas, le suivant est presque
+ * prêt, et sinon la question suivante l'est (fiche, Wikipédia, photos et image gardées en cache) : il ne reste alors qu'à
+ * relire la liste des avions, comme « Le plus proche » du Scanner. Avant (10/11/2026) : un avion après l'autre, 3 à 7 s.
  * avoid : modèle(s) à éviter si un autre est disponible (sinon pris en dernier recours) ;
  * onFail(hex) : appelé pour un avion impossible à présenter (pas de nom ou pas de photo).
  */
 export async function pickQuestion(list, { avoid = null, tries = 8, onFail = null } = {}) {
-  const avoided = new Set([].concat(avoid || [])), wantAirline = AirlineTurn.airline();
+  const avoided = new Set([].concat(avoid || [])), wantAirline = AirlineTurn.airline(), cands = list.slice(0, tries), jobs = [];
+  const job = (i) => i < cands.length && (jobs[i] ||= prepare(cands[i], wantAirline, i > 0));
   let fallback = null;
-  for (const ac of list.slice(0, tries)) {
-    const extra = await Radar.extra(ac).catch(() => null);
-    const q = await makeQuestion(ac, extra, wikiQuery.ac(ac),
-      { registration: ac.registration, airline: extra?.route?.airline || ac.operator || extra?.info?.owner, model: prettyModel(ac.description || "") }, wantAirline);
-    if (!q) { onFail?.(ac.hex); continue; }
+  for (let i = 0; i < cands.length; i++) {
+    job(i + 1); job(i + 2);
+    const q = await job(i);
+    if (!q) { onFail?.(cands[i].hex); continue; }
     if (avoided.has(q.model)) { fallback ||= q; continue; } // modèle proposé récemment : en dernier recours
     return AirlineTurn.done(q);
   }

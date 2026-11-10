@@ -47,7 +47,7 @@ export function practiceQuiz(box) {
   async function next() {
     const id = ++searchId;
     body.replaceChildren(h("div.empty", "Recherche d'un avion autour de toi…"));
-    const loc = await Radar.locate();
+    const loc = Radar.location || (await Radar.locate()); // dernière position connue tout de suite, comme le Scanner
     showLoc();
     if (!alive || id !== searchId) return;
     if (!loc) {

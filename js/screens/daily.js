@@ -118,7 +118,7 @@ function reminderRow() {
 }
 
 export function dailyQuiz(box) {
-  let alive = true;
+  let alive = true, ahead = null; // ahead : question suivante en préparation { hex, q }
   const body = h("div");
   box.replaceChildren(body);
 
@@ -204,7 +204,8 @@ export function dailyQuiz(box) {
     const total = st.hexes.length;
     body.replaceChildren(h("div.small.dim", `Question ${st.index + 1} / ${total} · ${st.correct} bonne(s) réponse(s)`),
       h("div.xpbar", h("i", { style: { width: `${(st.index / total) * 100}%` } })), h("div.empty", "Préparation de la question…"));
-    const q = await questionFor(st.hexes[st.index]);
+    const hex = st.hexes[st.index];
+    const q = await (ahead?.hex === hex ? ahead.q : questionFor(hex));
     if (!alive) return;
     if (!q) { // avion impossible à présenter (pas de nom ou de photo) : on passe, sans pénalité
       if (st.spare?.length) st.hexes[st.index] = st.spare.shift(); // un autre modèle à la place
@@ -217,6 +218,9 @@ export function dailyQuiz(box) {
       st.index + 1 < total ? "Question suivante " : "Voir mon score ");
     const nb = Quiz.bonusCount(Player.level());
     if (nb) prefetchBonus(q); // questions bonus prêtes quand le joueur aura répondu
+    // Question suivante préparée pendant que le joueur répond (nom, photo) : affichée tout de suite après
+    const nextHex = st.hexes[st.index + 1];
+    ahead = nextHex ? { hex: nextHex, q: questionFor(nextHex) } : null;
     let answered = false;
     const opts = q.options.map((name) => h("button.opt", { onclick: () => answer(name) }, name));
     const photo = quizPhoto(q, ".mt");
