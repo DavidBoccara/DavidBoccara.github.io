@@ -17,13 +17,21 @@ export function playBetaCard({ dismissible = false } = {}) {
   if (!ON || isIos() || fromPlayStore() || ls.get("play_beta_sent") || (dismissible && ls.get("play_beta_hidden"))) return null;
   const card = h("div.card.pad.play-beta",
     h("div.pb-head", h("span.beta-tag", icon("flask", 12)), "Bientôt sur le Play Store"),
-    h("b", "L'appli Android arrive avec toutes ses fonctions"),
-    h("div.small.dim", "Radar écran éteint, alertes des avions rares, notifications. Rejoins l'équipe de test et reçois l'insigne Bêta-testeur."),
+    h("b", "Débloque toute la puissance de Plane GO"),
+    h("div.small.dim", "Radar à pleine capacité, appareil photo connecté, alertes en direct et bien plus. Teste l'appli Android avant tout le monde et reçois l'insigne Bêta-testeur."),
     h("div.row.mt", { style: { flexWrap: "wrap" } },
       h("button.btn.primary.small", { onclick: () => askToJoin(card) }, "Devenir testeur"),
       dismissible && h("button.btn.small.outline", { onclick: () => { ls.set("play_beta_hidden", Date.now()); card.remove(); } }, "Plus tard")));
   return card;
 }
+
+// Ce que l'appli Android apporte en plus du site : [icône, titre, une ligne]
+const PERKS = [
+  ["radar", "La pleine capacité du radar", "Scan à la seconde et alertes dès qu'un avion rare ou militaire approche."],
+  ["usb", "Ton appareil photo connecté", "Branche ton Sony Alpha par câble : la photo arrive dans Plane GO, rangée avec le bon avion."],
+  ["bell", "Les notifications", "Likes, commentaires, photos de tes amis et résultats du concours."],
+  ["image", "Et bien plus", "Photos enregistrées dans ta galerie, rappel du quiz du jour à 18 h, partage en un geste."],
+];
 
 function askToJoin(card) {
   const logged = Supa.isLoggedIn;
@@ -37,7 +45,8 @@ function askToJoin(card) {
   modal({
     title: "Rejoindre l'équipe de test",
     body: [
-      "Google ajoute les testeurs avec l'adresse de leur compte Google : celle du Play Store de ton téléphone Android. Tu recevras ensuite le lien pour installer l'appli de test.",
+      h("div.news", PERKS.map(([ico, title, text]) => h("div.news-item", h("span.news-ico", icon(ico, 22)), h("div", h("b", title), h("div.dim", text))))),
+      h("p.small.mt", "Laisse l'adresse Gmail de ton Play Store : Google ajoute les testeurs avec leur compte Google, et tu recevras le lien pour installer l'appli. En remerciement, l'insigne Bêta-testeur s'affichera à côté de ton pseudo."),
       !logged && field("Prénom ou pseudo", name),
       field("Adresse Gmail du Play Store", email),
       field("Un mot (facultatif)", note),
