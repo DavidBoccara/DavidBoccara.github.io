@@ -7,7 +7,7 @@ import { Adsb } from "../net.js";
 import { locationBadge, defaultLocationAlert } from "../ui.js";
 import { Player } from "../store.js";
 import { Quiz } from "../game.js";
-import { pickQuestion, PracticeSeen, tipCard, markOptions, quizPhoto, bonusBlock } from "../quizkit.js";
+import { pickQuestion, PracticeSeen, markOptions, quizPhoto, bonusBlock, questionTitle, answerNote, AIRLINE_RULE } from "../quizkit.js";
 import { prefetchBonus } from "../wikiquiz.js";
 
 /** Règle de l'Entraînement (bouton « i » de l'onglet Jeux). */
@@ -16,6 +16,7 @@ export function practiceRules() {
   return [
     "Autant d'avions que tu veux, pris autour de toi en ce moment, même loin : de quoi t'entraîner à les reconnaître"
       + (Quiz.bonusCount(lvl) ? `, avec ${Quiz.bonusLabel(lvl)} sur chaque avion` : "") + ".",
+    AIRLINE_RULE,
     "Rien ne compte : ni XP, ni série, ni statistiques. Seul le compteur de la séance garde tes bonnes réponses.",
   ];
 }
@@ -66,7 +67,7 @@ export function practiceQuiz(box) {
       fresh.slice(0, 8).forEach((a) => tried.add(a.hex));
       const q = await pickQuestion(fresh, { avoid: recent, tries: 8, onFail: fail });
       if (!alive || id !== searchId) return;
-      if (q && !recent.includes(q.answer)) return ask(q); // nouvel avion, nouveau modèle
+      if (q && !recent.includes(q.model)) return ask(q); // nouvel avion, nouveau modèle
       fallback ||= q;
     }
     if (fallback) return ask(fallback);
@@ -94,7 +95,7 @@ export function practiceQuiz(box) {
     const opts = q.options.map((name) => h("button.opt", { onclick: () => answer(name) }, name));
     const photo = quizPhoto(q);
     body.replaceChildren(photo, h("p", hint),
-      h("h3", { style: { margin: "4px 0" } }, "Quel est cet avion ?"), ...opts, result, tipBox, bonusBox, nextBtn);
+      h("h3", { style: { margin: "4px 0" } }, questionTitle(q)), ...opts, result, tipBox, bonusBox, nextBtn);
 
     function answer(choice) {
       if (answered) return;
@@ -105,7 +106,7 @@ export function practiceQuiz(box) {
       showScore();
       result.style.display = ""; result.style.color = ok ? "var(--green)" : "var(--red)";
       result.textContent = ok ? "Bonne réponse !" : `Raté : c'était « ${q.answer} ».`;
-      if (!ok) tipBox.replaceChildren(tipCard(q, choice));
+      tipBox.replaceChildren(answerNote(q, ok, choice));
       photo.showFlag();
       nextBtn.style.display = "";
       // À partir du grade 4 : questions bonus sur ce modèle, comme dans le quiz en direct, mais sans points

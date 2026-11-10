@@ -56,7 +56,7 @@ const metresOf = (v) => {
 
 /** Faits utiles du modèle de la question q, ou null (pas d'article, pas de fiche, hors ligne). */
 export async function modelFacts(q) {
-  const key = `${q.type || ""}|${q.answer}`;
+  const key = `${q.type || ""}|${q.model || q.answer}`; // q.model : question sur la compagnie (bonus sur le modèle)
   const cache = ls.get(CACHE_KEY, {});
   if (cache[key] && Date.now() - cache[key].at < TTL) return cache[key].f;
   const art = await articleOf(q);
@@ -168,7 +168,7 @@ function candidates(f, q) {
   }
   if (f.engines.length) add("moteur", "Quel moteur l'équipe ?", choices(f.engines, ENGINES), `moteur${f.engines.length > 1 ? "s" : ""} : ${f.engines.join(", ")}.`);
   // Constructeur : seulement s'il n'est pas déjà écrit dans le nom de l'avion (sinon la réponse est donnée)
-  const answerWords = norm(q.answer).split(" ");
+  const answerWords = norm(q.model || q.answer).split(" ");
   const makers = f.makers.filter((m) => !answerWords.includes(firstWord(m)));
   if (makers.length === f.makers.length && makers.length) {
     const pool = [...new Set(CATALOG.map((c) => c.maker))].filter((m) => !f.makers.some((x) => firstWord(x) === firstWord(m)));
@@ -183,7 +183,7 @@ const aiMem = new Map();
 /** Questions IA de l'article du modèle : lues sur le serveur, ou préparées par l'IA la première fois (10 à 40 s). */
 function aiRow(q) {
   if (!Supa.isLoggedIn) return Promise.resolve(null);
-  const key = `${q.type || ""}|${q.answer}`;
+  const key = `${q.type || ""}|${q.model || q.answer}`; // q.model : question sur la compagnie (bonus sur le modèle)
   if (!aiMem.has(key)) aiMem.set(key, (async () => {
     const art = await articleOf(q);
     if (!art) return null;

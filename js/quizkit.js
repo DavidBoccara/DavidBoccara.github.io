@@ -1,10 +1,10 @@
-// Outils communs aux modes du Quiz du ciel : préparation d'une question (nom + photo), mémoire des avions
-// déjà proposés en entraînement, note « Comment le reconnaître » après une erreur.
+// Outils communs aux modes du Quiz du ciel : préparation d'une question (nom + photo ; avion de ligne : une fois sur deux
+// sa compagnie), mémoire des avions déjà proposés en entraînement, note « Comment le reconnaître » après une erreur.
 import { creditLine, photoCredit, safeLicense, textCredit } from "./credits.js";
 import { h, ls, modal, toast, confirmBox } from "./util.js";
 import { Radar } from "./radar.js";
 import { Wiki, quizPhotos, revealsAnswer, photoMatchesModel } from "./net.js";
-import { quizName, buildQuestion, recognitionTip, familyTip, Quiz, prettyModel } from "./game.js";
+import { quizName, buildQuestion, recognitionTip, familyTip, Quiz, prettyModel, airlineOf, airlineQuestion } from "./game.js";
 import { wikiQuery, missingLine } from "./ui.js";
 import { Supa } from "./supa.js";
 import { bonusQuestions, flagAiQuestion } from "./wikiquiz.js";
@@ -171,7 +171,9 @@ export function quizPhoto(q, cls = "") {
       : n >= FLAG_MIN ? `Merci ! ${n} joueurs l'ont signalée : elle est remplacée pour tout le monde`
       : `Merci ! Signalée par ${n} joueur${n > 1 ? "s" : ""} sur les ${FLAG_MIN} nécessaires. Tu ne la reverras plus.`, 5000);
   };
-  wrap.showFlag = () => { flag.style.display = ""; credit.reveal(); };
+  // Question sur la compagnie : son nom peint sur l'avion n'est pas une raison de retirer la photo (elle sert aussi au
+  // quiz des modèles) : pas de « Signaler »
+  wrap.showFlag = () => { if (q.ask !== "airline") flag.style.display = ""; credit.reveal(); };
   return wrap;
 }
 
@@ -203,28 +205,61 @@ export const loads = (url) => new Promise((res) => {
   img.src = url;
 });
 
+// ---------- Avions de ligne : le modèle, puis la compagnie (demandé par le propriétaire le 10/11/2026) ----------
+// Vol d'une compagnie connue (indicatif, airlineOf de game.js) : une question sur deux porte sur la compagnie, à reconnaître
+// à ses couleurs. Le tour (clé quiz_airline_turn) ne passe au modèle qu'après une vraie question sur la compagnie.
+const TURN_KEY = "quiz_airline_turn";
+export const AirlineTurn = {
+  airline: () => ls.get(TURN_KEY, "airline") === "airline",
+  /** Question posée : tour suivant (renvoie q). */
+  done(q) { if (q?.airliner) ls.set(TURN_KEY, q.ask === "airline" ? "model" : "airline"); return q; },
+};
+export const AIRLINE_RULE = "Avion de ligne : une question sur deux porte sur sa compagnie, à reconnaître à ses couleurs.";
+
+/**
+ * Question sur un avion (nom connu + photo), ou null. wantAirline et vol d'une compagnie connue : question sur la compagnie,
+ * avec une photo de ce modèle à ses couleurs (son nom dans le nom du fichier) ; sans une telle photo, question sur le modèle.
+ * wikiQ : article Wikipédia du modèle (questions bonus) ; ctx = { registration, airline, model } pour la photo.
+ */
+export async function makeQuestion(ac, extra, wikiQ, ctx, wantAirline) {
+  const name = quizName(ac, extra);
+  if (!name) return null;
+  const airline = ac.military ? null : airlineOf(ac.callsign);
+  if (airline && wantAirline) {
+    const list = await quizPhotos({ ...ctx, name, airline: airline.name, livery: airline.names }).catch(() => []);
+    for (const u of usablePhotos(list).slice(0, 3)) if (await loads(u)) {
+      const q = buildQuestion(ac, extra, u);
+      return q && { ...airlineQuestion(q, airline), airliner: true, wiki: wikiQ };
+    }
+  }
+  const url = await questionPhoto(null, wikiQ, name, ctx);
+  const q = url && buildQuestion(ac, extra, url);
+  return q ? { ...q, airliner: !!airline, wiki: wikiQ } : null;
+}
+
+/** Titre de la question. */
+export const questionTitle = (q) => (q.ask === "airline" ? "Quelle est la compagnie de cet avion ?" : "Quel est cet avion ?");
+/** Après la réponse : le modèle (question sur la compagnie), ou « Comment le reconnaître » après une erreur sur le modèle. */
+export const answerNote = (q, ok, choice) => (q.ask === "airline" ? h("div.mt", h("span.dim", "Modèle de l'avion : "), h("b", q.model))
+  : ok ? "" : tipCard(q, choice));
+
 /**
  * Première question possible (nom connu + photo) dans la liste d'avions.
  * avoid : modèle(s) à éviter si un autre est disponible (sinon pris en dernier recours) ;
  * onFail(hex) : appelé pour un avion impossible à présenter (pas de nom ou pas de photo).
  */
 export async function pickQuestion(list, { avoid = null, tries = 8, onFail = null } = {}) {
-  const avoided = new Set([].concat(avoid || []));
+  const avoided = new Set([].concat(avoid || [])), wantAirline = AirlineTurn.airline();
   let fallback = null;
   for (const ac of list.slice(0, tries)) {
     const extra = await Radar.extra(ac).catch(() => null);
-    const name = quizName(ac, extra);
-    if (!name) { onFail?.(ac.hex); continue; }
-    const url = await questionPhoto(null, wikiQuery.ac(ac), name,
-      { registration: ac.registration, airline: extra?.route?.airline || ac.operator || extra?.info?.owner, model: prettyModel(ac.description || "") });
-    if (!url) { onFail?.(ac.hex); continue; }
-    const q = buildQuestion(ac, extra, url);
+    const q = await makeQuestion(ac, extra, wikiQuery.ac(ac),
+      { registration: ac.registration, airline: extra?.route?.airline || ac.operator || extra?.info?.owner, model: prettyModel(ac.description || "") }, wantAirline);
     if (!q) { onFail?.(ac.hex); continue; }
-    q.wiki = wikiQuery.ac(ac); // article Wikipédia du modèle (questions bonus du quiz en direct)
-    if (avoided.has(q.answer)) { fallback ||= q; continue; } // modèle proposé récemment : en dernier recours
-    return q;
+    if (avoided.has(q.model)) { fallback ||= q; continue; } // modèle proposé récemment : en dernier recours
+    return AirlineTurn.done(q);
   }
-  return fallback;
+  return AirlineTurn.done(fallback);
 }
 
 /** Avions déjà proposés en entraînement (pendant 6 h), du plus ancien au plus récent : on fait tourner les avions proches. */
@@ -236,7 +271,7 @@ export const PracticeSeen = {
   lastAnswer: () => PracticeSeen.list().at(-1)?.answer || null,
   /** Modèles des n dernières questions (pour varier les modèles). */
   recentAnswers: (n = 3) => PracticeSeen.list().slice(-n).map((x) => x.answer),
-  add: (q) => ls.set(SEEN_KEY, [...PracticeSeen.list().filter((x) => x.hex !== q.hex), { hex: q.hex, answer: q.answer, at: Date.now() }].slice(-200)),
+  add: (q) => ls.set(SEEN_KEY, [...PracticeSeen.list().filter((x) => x.hex !== q.hex), { hex: q.hex, answer: q.model || q.answer, at: Date.now() }].slice(-200)),
 };
 
 /** Après une erreur : petite note pour apprendre à reconnaître l'avion (et celui choisi par erreur). */

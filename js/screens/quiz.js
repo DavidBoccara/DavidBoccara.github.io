@@ -12,7 +12,7 @@ import { Supa } from "../supa.js";
 import { sync } from "../cloud.js";
 import { go, renderHud } from "../app.js";
 import { locationBadge, defaultLocationAlert } from "../ui.js";
-import { pickQuestion, tipCard, markOptions, quizPhoto, radiusButton, radiusNext, bonusBlock } from "../quizkit.js";
+import { pickQuestion, markOptions, quizPhoto, radiusButton, radiusNext, bonusBlock, questionTitle, answerNote, AIRLINE_RULE } from "../quizkit.js";
 import { prefetchBonus } from "../wikiquiz.js";
 import { dailyQuiz, DailyStore, dailyQuestionCount, dailyRules } from "./daily.js";
 import { practiceQuiz, practiceRules } from "./practice.js";
@@ -21,7 +21,7 @@ import { dataSources } from "../credits.js";
 
 // Les 4 jeux, présentés en cartes (nom, ce qu'on y fait, ce que ça rapporte) pour qu'on comprenne d'un coup d'œil
 const MODES = [
-  { id: "live", label: "Quiz en direct", icon: "plane", desc: "Devine le modèle d'un avion qui passe près de toi", gain: "XP · série" },
+  { id: "live", label: "Quiz en direct", icon: "plane", desc: "Devine le modèle ou la compagnie d'un avion qui passe près de toi", gain: "XP · série" },
   { id: "daily", label: "Quiz du jour", icon: "calendar", desc: "Les avions passés au-dessus de toi aujourd'hui", gain: "1 partie / jour" },
   { id: "pass", label: "Défis sur la carte", icon: "map", desc: "Qui va passer près de toi, où il va, qui vole le plus haut", gain: "XP · série" },
   { id: "practice", label: "Entraînement", icon: "refresh", desc: "Révise les modèles sans pression", gain: "Sans points" },
@@ -31,6 +31,7 @@ const RUN = { live: liveQuiz, daily: dailyQuiz, practice: practiceQuiz, pass: fl
 const RULES = {
   live: () => [
     "Un avion passe dans ton rayon de jeu : trouve son modèle parmi 4 propositions.",
+    AIRLINE_RULE,
     `Chaque bonne réponse rapporte des XP, et les réponses justes d'affilée multiplient les gains. Une erreur remet la série à zéro.`,
     "Ton rayon de jeu grandit avec ton grade (indiqué sur le bouton « Chercher un avion »).",
     Quiz.bonusCount(Player.level()) ? `Après chaque avion : ${Quiz.bonusLabel(Player.level())} sur le modèle (+${Quiz.BONUS_XP} XP chacune).` : "À partir du grade 4, des questions bonus sur le modèle rapportent des XP en plus.",
@@ -162,7 +163,7 @@ function liveQuiz(view) {
     if (Quiz.bonusCount(Player.level())) prefetchBonus(q); // questions bonus prêtes quand le joueur aura répondu
     const photo = quizPhoto(q);
     qBox.replaceChildren(photo, h("p", hint),
-      h("h3", { style: { margin: "4px 0" } }, "Quel est cet avion ?"), ...opts, result, tipBox, bonusBox, next);
+      h("h3", { style: { margin: "4px 0" } }, questionTitle(q)), ...opts, result, tipBox, bonusBox, next);
 
     function answer(choice) {
       if (answered) return;
@@ -178,8 +179,8 @@ function liveQuiz(view) {
       } else {
         result.style.color = "var(--red)";
         result.textContent = `Raté : c'était « ${q.answer} ». La série repart de zéro.`;
-        tipBox.replaceChildren(tipCard(q, choice));
       }
+      tipBox.replaceChildren(answerNote(q, r.correct, choice));
       photo.showFlag();
       next.style.display = "";
       // À partir du grade 4 : questions bonus sur ce modèle, d'après sa page Wikipédia (1 au grade 4, 2 au grade 5…)

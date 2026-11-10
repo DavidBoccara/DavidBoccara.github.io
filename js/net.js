@@ -257,6 +257,8 @@ async function commonsSearch(query, limit, width) {
 export const wmSize = (url, w) => (url && /\/thumb\//.test(url) ? url.replace(/\/\d+px-/, `/${w}px-`) : url);
 const plainText = (html) => (html ? new DOMParser().parseFromString(String(html), "text/html").body.textContent.replace(/\s+/g, " ").trim() : "");
 const flat = (t) => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+/** Mots séparés par une espace, sans accents ni ponctuation (« File:Air_France A320.jpg » → « file air france a320 jpg »). */
+const words = (t) => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
 
 /**
  * Désignation du modèle telle qu'on la trouve dans les noms de fichiers : « A-220-300 » → « a220 », « 737-800 » → « 737 »,
@@ -384,18 +386,22 @@ const quizMem = new Map();
  * de la même compagnie, 3) le modèle. Seulement des licences sans risque (domaine public, CC0, Creative Commons 4.0),
  * avec un auteur connu qui ne donne pas la réponse ; tirées au hasard dans chaque groupe pour varier les photos.
  * Le crédit lu ici est gardé (credits.js) : il s'affiche sous la photo sans nouvelle requête.
- * ctx = { registration, airline, model (désignation ADS-B, ex. « Airbus A220-300 »), name (réponse du quiz), article }.
+ * ctx = { registration, airline, model (désignation ADS-B, ex. « Airbus A220-300 »), name (réponse du quiz), article,
+ * livery (question sur la compagnie : ses noms ; seulement les photos 1 et 2 dont le nom de fichier porte l'un d'eux,
+ * c.-à-d. aux couleurs de la compagnie, d'un auteur qui ne la nomme pas) }.
  */
 export async function quizPhotos(ctx) {
-  const { registration = "", airline = "", model = "", name = "", article = "" } = ctx;
-  const key = [registration, airline, model, name, article].join("|");
+  const { registration = "", airline = "", model = "", name = "", article = "", livery = null } = ctx;
+  const key = [registration, airline, model, name, article, livery ? "livery" : ""].join("|");
   if (!quizMem.has(key)) quizMem.set(key, (async () => {
-    const sets = await commonsSets(ctx, true);
+    const sets = await commonsSets(ctx, !livery);
     if (sets.failed) quizMem.delete(key); // recherche ratée (réseau, Commons occupé) : pas gardée, on réessaiera
-    const fair = (x) => !revealsAnswer(x.author, name) && !revealsAnswer(x.author, model);
+    const painted = (x) => livery.some((n) => ` ${words(x.title)} `.includes(` ${words(n)} `));
+    const fair = (x) => !revealsAnswer(x.author, name) && !revealsAnswer(x.author, model) && !(livery || []).some((n) => flat(x.author).includes(flat(n)));
     const out = [];
     const ok = (x) => x.safe && fair(x); // quiz : licences sans risque seulement
-    for (const t of [sets.reg.filter(ok), sets.airline.filter(ok), sets.model.filter(ok).slice(0, 10)]) for (const x of shuffled(t)) {
+    const groups = livery ? [sets.reg.filter(painted), sets.airline.filter(painted)] : [sets.reg, sets.airline, sets.model.filter(ok).slice(0, 10)];
+    for (const t of groups) for (const x of shuffled(t.filter(ok))) {
       const url = credited(x);
       if (!out.includes(url)) out.push(url);
     }

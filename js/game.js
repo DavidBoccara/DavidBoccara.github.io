@@ -436,6 +436,21 @@ export function buildQuestion(ac, extra, photoUrl) {
     !n.name.toLowerCase().includes(answer.toLowerCase()) && !answer.toLowerCase().includes(n.name.toLowerCase());
   const wrong = [...new Set([...shuffle(POOL.filter((n) => n.kind === kind && ok(n))), ...shuffle(POOL.filter((n) => n.kind !== kind && ok(n)))].map((n) => n.name))].slice(0, 3);
   if (wrong.length < 3) return null;
-  return { hex: ac.hex, answer, options: shuffle([...wrong, answer]), photoUrl, type: t, kind,
+  return { hex: ac.hex, answer, model: answer, options: shuffle([...wrong, answer]), photoUrl, type: t, kind,
     distanceKm: ac.distanceKm, altitudeM: ac.altitudeFt != null ? Math.round(ac.altitudeFt * 0.3048) : null, askedAt: Date.now() };
+}
+
+// Compagnies du quiz (D.airlines) : une question sur deux d'un avion de ligne porte sur sa compagnie (quizkit.js)
+const AIRLINES = D.airlines.map(([codes, name, region, ...alias]) => ({ codes: codes.split(" "), name, region, names: [name, ...alias] }));
+/** Compagnie d'un vol d'après le préfixe OACI de son indicatif (« AFR1234 » → Air France), ou null. */
+export function airlineOf(callsign) {
+  const m = /^([A-Z]{3})\d/.exec((callsign || "").trim().toUpperCase());
+  return (m && AIRLINES.find((a) => a.codes.includes(m[1]))) || null;
+}
+/** Question sur la compagnie (même avion, même photo) : 3 autres compagnies, de la même région du monde d'abord. */
+export function airlineQuestion(q, airline) {
+  const others = AIRLINES.filter((a) => a !== airline);
+  const wrong = [...shuffle(others.filter((a) => a.region === airline.region)), ...shuffle(others.filter((a) => a.region !== airline.region))]
+    .slice(0, 3).map((a) => a.name);
+  return { ...q, ask: "airline", answer: airline.name, options: shuffle([...wrong, airline.name]) };
 }

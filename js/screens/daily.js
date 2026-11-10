@@ -6,12 +6,12 @@ import { h, ls, toast } from "../util.js";
 import { Radar } from "../radar.js";
 import { AdsbDb } from "../net.js";
 import { QuizStore, Sightings, Player } from "../store.js";
-import { Quiz, quizName, buildQuestion, MAX_PHOTO_KM, RARITIES, spottedRarity } from "../game.js";
+import { Quiz, quizName, MAX_PHOTO_KM, RARITIES, spottedRarity } from "../game.js";
 import { Supa } from "../supa.js";
 import { sync } from "../cloud.js";
 import { go, renderHud } from "../app.js";
 import { wikiQuery } from "../ui.js";
-import { tipCard, markOptions, questionPhoto, quizPhoto, radiusButton, radiusNext, bonusBlock } from "../quizkit.js";
+import { markOptions, quizPhoto, radiusButton, radiusNext, bonusBlock, makeQuestion, AirlineTurn, questionTitle, answerNote, AIRLINE_RULE } from "../quizkit.js";
 import { prefetchBonus } from "../wikiquiz.js";
 import { Native } from "../native.js";
 
@@ -91,6 +91,7 @@ export function dailyRules() {
   const lvl = Player.level();
   return [
     `Une question par modèle d'avion passé aujourd'hui dans ton rayon de jeu (le même que le quiz en direct, radar actif), jamais deux fois le même modèle, 10 au plus : les plus rares d'abord.`,
+    AIRLINE_RULE,
     `${Quiz.BASE_XP} XP par bonne réponse, +${DAILY_PERFECT} XP si tout est juste`
       + (Quiz.bonusCount(lvl) ? `, et ${Quiz.bonusLabel(lvl)} sur chaque avion (+${Quiz.BONUS_XP} XP chacune)` : "") + ".",
     "Une seule partie par jour : plus tu attends dans la journée, plus il y a d'avions ! Tes amis voient ton score dans le feed.",
@@ -191,15 +192,11 @@ export function dailyQuiz(box) {
   async function questionFor(hex) {
     const seen = Sightings.byHex(hex), s = seen?.spotted;
     if (!s) return null;
-    const ac = { hex, type: s.type, description: s.model, military: s.military, category: s.category, distanceKm: s.distanceKm, altitudeFt: null };
+    const ac = { hex, callsign: s.callsign, type: s.type, description: s.model, military: s.military, category: s.category, distanceKm: s.distanceKm, altitudeFt: null };
     const info = Radar.extras.get(hex)?.info || (await AdsbDb.aircraft(hex).catch(() => null));
-    const extra = { info };
-    const name = quizName(ac, extra);
-    if (!name) return null;
-    const u = await questionPhoto(null, wikiQuery.spotted(s), name, { registration: s.registration, airline: s.operator, model: s.model });
-    if (!u) return null;
-    const q = buildQuestion(ac, extra, u);
-    return q && { ...q, seenAt: seen.seenAt, wiki: wikiQuery.spotted(s) }; // wiki : article du modèle (questions bonus)
+    // wiki : article du modèle (questions bonus) ; avion de ligne : une fois sur deux, question sur la compagnie
+    const q = await makeQuestion(ac, { info }, wikiQuery.spotted(s), { registration: s.registration, airline: s.operator, model: s.model }, AirlineTurn.airline());
+    return AirlineTurn.done(q && { ...q, seenAt: seen.seenAt });
   }
 
   async function play(st) {
@@ -230,7 +227,7 @@ export function dailyQuiz(box) {
       // Deux morceaux séparés : le traducteur anglais traduit chacun (en une seule phrase, il ne trouvait que « Passé {1} »)
       h("p", h("span", q.seenAt ? `Passé au-dessus de toi aujourd'hui à ${hourOf(q.seenAt)}` : "Passé au-dessus de toi aujourd'hui"),
         ...(q.distanceKm != null ? [" · ", h("span", `à ${q.distanceKm.toFixed(1).replace(".", DEC)} km`)] : [])),
-      h("h3", { style: { margin: "4px 0" } }, "Quel est cet avion ?"), ...opts, result, tipBox, bonusBox, next);
+      h("h3", { style: { margin: "4px 0" } }, questionTitle(q)), ...opts, result, tipBox, bonusBox, next);
 
     function answer(choice) {
       if (answered) return;
@@ -246,7 +243,7 @@ export function dailyQuiz(box) {
       DailyStore.save(cur);
       result.style.display = ""; result.style.color = ok ? "var(--green)" : "var(--red)";
       result.textContent = ok ? `Bonne réponse ! +${Quiz.BASE_XP} XP` : `Raté : c'était « ${q.answer} ».`;
-      if (!ok) tipBox.replaceChildren(tipCard(q, choice));
+      tipBox.replaceChildren(answerNote(q, ok, choice));
       photo.showFlag();
       next.style.display = "";
       // À partir du grade 4 : questions bonus sur ce modèle, comme dans le quiz en direct (XP à part du résultat du jour)
