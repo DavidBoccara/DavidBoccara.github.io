@@ -24,6 +24,7 @@ import { legalPage, termsPage } from "./screens/legal.js";
 import { checkAppUpdate } from "./update.js";
 import { watchDefaultLocation } from "./ui.js";
 import { askPhotoRulesAtStart, syncPhotoRules } from "./photorules.js";
+import { showNewsAtStart } from "./news.js";
 import { noticeRemovals } from "./report.js";
 import { Badges, badgeEl } from "./badges.js";
 import "./camera.js"; // photos de l'appareil branché par câble : bandeau « Nouvelle photo » sur tous les écrans
@@ -174,6 +175,7 @@ if (emailLink) openEmailLink(emailLink);
 setTimeout(checkAppUpdate, 3000); // appli Android pas à jour ?
 watchDefaultLocation(); // position du téléphone introuvable → fenêtre « ce n'est pas normal »
 setTimeout(askPhotoRulesAtStart, 3500); // joueurs déjà inscrits : engagement « photos depuis des lieux publics »
+setTimeout(showNewsAtStart, 2000); // fenêtre « Nouveautés », une seule fois par appareil (news.js)
 window.addEventListener("planego-synced", noticeRemovals); // une de mes publications supprimée après 5 signalements ?
 window.addEventListener("planego-synced", syncBlocks); // joueurs bloqués (blocks.js)
 if (Supa.isLoggedIn) {
