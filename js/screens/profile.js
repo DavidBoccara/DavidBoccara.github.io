@@ -14,6 +14,7 @@ import { VERSION_URL } from "../config.js";
 import { Native, pushConfig } from "../native.js";
 import { PUSH_TYPES, pushAvailable, unregisterPush } from "../push.js";
 import { installCard, progressLine } from "../ui.js";
+import { playBetaCard } from "../playbeta.js";
 import { deleteAccountFlow } from "./privacy.js";
 import { legalLinks } from "./legal.js";
 import { updateCard } from "../update.js";
@@ -142,6 +143,8 @@ function me(view, show) {
   view.append(updateCard()); // appli Android pas à jour
   const ic = installCard();
   if (ic) view.append(ic);
+  const pb = playBetaCard(); // « Bientôt sur le Play Store » (même après « Plus tard » dans le Feed)
+  if (pb) view.append(pb);
   if (loginGate(view, "Connecte-toi pour personnaliser ton profil (pseudo, photo) et sauvegarder ta collection.")) {
     view.append(soundRow(), analyticsRow() || "", langRow(), legalLinks(), versionLine());
     return;

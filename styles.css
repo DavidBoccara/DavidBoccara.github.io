@@ -646,6 +646,12 @@ b.player-link:hover, .player-link b:hover, h3.player-link:hover { text-decoratio
 .gate-logo { display: block; width: 120px; height: 120px; margin: 0 auto -8px; }
 .gate h2 { margin: 14px 0 6px; }
 .install { border-color: rgba(242, 169, 59, .45); }
+/* Bannière « Bientôt sur le Play Store » (playbeta.js) */
+.play-beta { margin-bottom: 12px; }
+.play-beta b { display: block; margin-bottom: 4px; }
+.pb-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font: 500 11px/1.4 var(--mono); letter-spacing: .1em;
+  text-transform: uppercase; color: var(--green); }
+.pb-head .beta-tag { margin-left: 0; cursor: default; }
 
 /* Page Confidentialité */
 .privacy h3 { margin: 0 0 8px; font-size: 16px; }

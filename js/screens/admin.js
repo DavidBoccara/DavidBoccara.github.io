@@ -787,7 +787,8 @@ async function messages(body, ctx) {
   Badges.messagesSeen(Math.max(0, ...list.map((m) => Number(m.id) || 0)));
   fill(body, 
     h("div.row", h("div.section.grow", `Messages reçus (${list.length})`),
-      infoButton("Messages", "Envoyés avec le formulaire « Contactez-nous » (plane-go.com/contact). Effacés automatiquement au bout d'un an.", { small: true })),
+      infoButton("Messages", ["Envoyés avec le formulaire « Contactez-nous » (plane-go.com/contact) ou le bouton « Devenir testeur » de la bannière « Bientôt sur le Play Store ». Effacés automatiquement au bout d'un an.",
+        "Demande de testeur : ajoute l'adresse dans la Play Console (Tester › Test fermé › Testeurs), puis « Donner l'insigne bêta » si le joueur a un compte."], { small: true })),
     list.length ? h("div.list", list.map((msg) => messageCard(msg, refresh))) : h("div.small.dim", "Aucun message."));
 }
 
@@ -802,6 +803,11 @@ function messageCard(msg, refresh) {
     h("div.adm-actions",
       reply && h("a.btn.small.primary", { href: reply, target: "_blank", rel: "noopener" }, "Répondre"),
       msg.email && actBtn(".outline", "Copier l'adresse", async () => copy(msg.email)),
+      msg.user_id && !msg.beta_tester && actBtn(".outline", "Donner l'insigne bêta", async () => {
+        await Admin.setBeta(msg.user_id, true);
+        toast(`${msg.username || msg.name} est bêta-testeur`);
+        refresh();
+      }),
       actBtn(".danger", "Supprimer", async () => {
         if (!(await confirmBox(`Supprimer le message de ${msg.name} ?`, "Supprimer", true))) return;
         await Admin.deleteMessage(msg.id);

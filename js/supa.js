@@ -63,6 +63,8 @@ export const Supa = {
   select: (q) => call("GET", "/rest/v1/" + q),
   insert: async (table, row) =>
     (await call("POST", "/rest/v1/" + table, row, { headers: { Prefer: "return=representation" } }))[0],
+  /** Écriture sans relecture (table en écriture seule, ex. contact_messages). */
+  send: (table, row) => call("POST", "/rest/v1/" + table, row, { headers: { Prefer: "return=minimal" } }),
   delete: (q) => call("DELETE", "/rest/v1/" + q),
   rpc: (name, args) => call("POST", "/rest/v1/rpc/" + name, args),
   enc: encodeURIComponent,

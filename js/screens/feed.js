@@ -16,6 +16,7 @@ import { contestFeed } from "./contest.js";
 import { todayKey } from "./daily.js";
 import { Reported, reportButton } from "../report.js";
 import { withAds, loadAds } from "../ads.js";
+import { playBetaCard } from "../playbeta.js";
 
 const VIEWS = [
   { id: "world", label: "Monde" },
@@ -24,7 +25,7 @@ const VIEWS = [
 ];
 
 export function feed(view, [sub]) {
-  const card = installCard({ dismissible: true });
+  const card = playBetaCard({ dismissible: true }) || installCard({ dismissible: true }); // une seule bannière à la fois
   if (card) view.append(card);
   if (loginGate(view, "Connecte-toi pour voir les avions attrapés par tes amis et par les joueurs du monde entier, liker, commenter et participer à la photo de la semaine.")) return;
   const renamed = (v) => (v === "global" ? "contest" : v); // ancienne adresse #feed/global
