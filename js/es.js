@@ -1580,4 +1580,11 @@ export const ES = [
   ["Envoi…", "Enviando…"],
   ["Demande envoyée, merci !", "¡Solicitud enviada, gracias!"],
   ["Tu recevras un e-mail avec le lien de l'appli de test.", "Recibirás un correo con el enlace de la app de prueba."],
+  ["a attrapé un", "ha atrapado un"],
+  ["{1} a attrapé un {2}", "{1} ha atrapado un {2}"],
+  ["(militaire)", "(militar)"],
+  ["Immatriculation : {1}", "Matrícula: {1}"],
+  ["Indicatif : {1}", "Indicativo: {1}"],
+  ["Trajet : {1}", "Trayecto: {1}"],
+  ["Constructeur : {1}", "Fabricante: {1}"],
 ];

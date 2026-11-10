@@ -1579,4 +1579,11 @@ export const EN = [
   ["Envoi…", "Sending…"],
   ["Demande envoyée, merci !", "Request sent, thank you!"],
   ["Tu recevras un e-mail avec le lien de l'appli de test.", "You will receive an email with the link to the test app."],
+  ["a attrapé un", "caught"],
+  ["{1} a attrapé un {2}", "{1} caught {2}"],
+  ["(militaire)", "(military)"],
+  ["Immatriculation : {1}", "Registration: {1}"],
+  ["Indicatif : {1}", "Callsign: {1}"],
+  ["Trajet : {1}", "Route: {1}"],
+  ["Constructeur : {1}", "Manufacturer: {1}"],
 ];

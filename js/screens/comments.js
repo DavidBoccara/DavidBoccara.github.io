@@ -69,7 +69,8 @@ export function commentsPage(view, [id]) {
           photos.length > 1 ? " Enregistrer cette photo" : " Enregistrer la photo")),
       linkPlayer(h("h3", { style: { marginBottom: 0 } }, c.source === "old" ? `${user?.username || "Un spotter"} a partagé une photo ancienne : ${model || "un avion"}`
         : `${user?.username || "Un spotter"} a attrapé ${model ? "un " + model : "un avion"}`), user?.id),
-      h("div.small.dim.grade-line", gradeTag(user?.level, user?.beta), [user?.level.name, c.takenAt && timeAgo(c.takenAt)].filter(Boolean).join(" · ")),
+      h("div.small.dim.grade-line", gradeTag(user?.level, user?.beta), user?.level && h("span", user.level.name),
+        user?.level && c.takenAt && " · ", c.takenAt && h("span", timeAgo(c.takenAt))),
       aircraftInfoCard({ ...c, rarity }),
     ].filter(Boolean));
   }
