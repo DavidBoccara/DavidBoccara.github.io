@@ -55,7 +55,7 @@ export function commentsPage(view, [id]) {
   function renderTop(c) {
     const rarity = c.rarity?.stars ? c.rarity : rarityByName(c.rarity?.key || c.rarity);
     const user = c.user ? profileFrom({ id: c.user.id, username: c.user.username, avatar_path: c.user.avatarPath, xp: c.user.xp,
-      models: c.user.models, likes_received: c.user.likesReceived, grade_floor: c.user.gradeFloor }) : null;
+      models: c.user.models, likes_received: c.user.likesReceived, grade_floor: c.user.gradeFloor, beta_tester: c.user.beta }) : null;
     const model = c.modelName || "";
     // Photo du joueur, ou toutes ses photos de cet avion (album) en carrousel
     const photos = (c.photos?.length ? c.photos : c.photoUrls?.length ? c.photoUrls : [c.photo || c.photoUrl]).filter(Boolean);
@@ -69,7 +69,7 @@ export function commentsPage(view, [id]) {
           photos.length > 1 ? " Enregistrer cette photo" : " Enregistrer la photo")),
       linkPlayer(h("h3", { style: { marginBottom: 0 } }, c.source === "old" ? `${user?.username || "Un spotter"} a partagé une photo ancienne : ${model || "un avion"}`
         : `${user?.username || "Un spotter"} a attrapé ${model ? "un " + model : "un avion"}`), user?.id),
-      h("div.small.dim.grade-line", gradeTag(user?.level), [user?.level.name, c.takenAt && timeAgo(c.takenAt)].filter(Boolean).join(" · ")),
+      h("div.small.dim.grade-line", gradeTag(user?.level, user?.beta), [user?.level.name, c.takenAt && timeAgo(c.takenAt)].filter(Boolean).join(" · ")),
       aircraftInfoCard({ ...c, rarity }),
     ].filter(Boolean));
   }
@@ -98,7 +98,7 @@ export function commentsPage(view, [id]) {
         const av = h("img.avatar.sm", { alt: "", src: c.user?.avatarUrl || "icons/avatar.svg" });
         av.onerror = () => { av.src = "icons/avatar.svg"; };
         return h("div.row", { style: { alignItems: "flex-start" } }, linkPlayer(av, c.userId),
-          h("div.grow", h("div", linkPlayer(h("b", c.user?.username || "?"), c.userId), gradeTag(c.user?.level), "  ", c.body), h("div.small.dim", timeAgo(c.createdAt))),
+          h("div.grow", h("div", linkPlayer(h("b", c.user?.username || "?"), c.userId), gradeTag(c.user?.level, c.user?.beta), "  ", c.body), h("div.small.dim", timeAgo(c.createdAt))),
           c.userId === Supa.userId && h("button.btn.small.danger", { "aria-label": "Supprimer ce commentaire", onclick: async () => {
             if (await confirmBox("Supprimer ce commentaire ?", "Supprimer", true)) { await Cloud.deleteComment(c.id).catch((e) => toast(e.message)); reload(); }
           } }, icon("trash", 16)),

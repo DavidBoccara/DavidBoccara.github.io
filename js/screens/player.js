@@ -27,7 +27,7 @@ export function linkPlayer(el, id) {
 function openPost(c) {
   sessionStorage.setItem("catch_" + c.id, JSON.stringify({ ...c, user: c.user && { id: c.user.id, username: c.user.username,
     avatarPath: c.user.avatarPath, xp: c.user.xp, models: c.user.models,
-      likesReceived: c.user.likesReceived, gradeFloor: c.user.gradeFloor }, photo: c.photoUrl, photos: c.photoUrls, index: 0 }));
+      likesReceived: c.user.likesReceived, gradeFloor: c.user.gradeFloor, beta: c.user.beta }, photo: c.photoUrl, photos: c.photoUrls, index: 0 }));
   go("comments/" + c.id);
 }
 
@@ -82,7 +82,7 @@ export function playerPage(view, [id]) {
       actions.append(h("button.btn.small.outline", { title: "Bloquer ce joueur", onclick: async () => { if (await blockUser(id, p.username)) back(); } }, "Bloquer"));
     }
     head.replaceChildren(h("div.row", { style: { gap: "14px", alignItems: "center" } }, av,
-      h("div.grow", { style: { minWidth: 0 } }, h("div.player-name", p.username, gradeTag(p.level)),
+      h("div.grow", { style: { minWidth: 0 } }, h("div.player-name", p.username, gradeTag(p.level, p.beta)),
         h("div.small.dim", p.level.name),
         h("div.tags", { style: { marginTop: "6px" } }, friend ? h("span.chip.small", "Ami") : null, mine ? h("span.chip.small", "C'est toi") : null,
           h("span.chip.small", p.shareWorld === true ? "Profil public" : "Profil privé")))),

@@ -13,6 +13,7 @@ export function profileFrom(o) {
   return { id: o.id, username: o.username, avatarPath: o.avatar_path || null, xp: o.xp | 0,
     // Grade (grades.sql, likes_xp.sql) : modèles photographiés, likes reçus, grade gardé d'avant les nouvelles règles
     models: o.models | 0, likesReceived: o.likes_received | 0, gradeFloor: o.grade_floor | 0,
+    beta: !!o.beta_tester, // insigne « bêta-testeur » (beta.sql)
     // Feed 🌍 Monde : true = publications partagées avec tout le monde, false = amis seulement,
     // null = pas encore répondu, undefined = réglage pas encore installé sur le serveur
     shareWorld: "share_world" in o ? o.share_world : undefined,
@@ -36,7 +37,7 @@ export function catchFrom(o) {
   };
 }
 
-const PROFILE_SEL = "id,username,avatar_path,xp,models,likes_received,grade_floor";
+const PROFILE_SEL = "id,username,avatar_path,xp,models,likes_received,grade_floor,beta_tester";
 const CATCH_SELECT = `*,profiles!catches_user_id_fkey(${PROFILE_SEL}),likes(count),comments(count)`;
 
 export const Cloud = {
@@ -236,6 +237,7 @@ export const Admin = {
   player: (id) => Supa.rpc("admin_player", { p_user: id }),
   setXp: (id, points, mode, reason) => Supa.rpc("admin_set_xp", { p_user: id, p_points: points, p_mode: mode, p_reason: reason || null }),
   rename: (id, name) => Supa.rpc("admin_rename", { p_user: id, p_username: name }),
+  setBeta: (id, on) => Supa.rpc("admin_set_beta", { p_user: id, p_on: on }), // insigne bêta-testeur (beta.sql)
   unsuspend: (id) => Supa.rpc("admin_unsuspend", { p_user: id }),
   reports: () => rpcList("admin_reports"),
   removals: () => rpcList("admin_removals", { p_limit: 50 }),

@@ -47,7 +47,7 @@ export function grades(view) {
         // Ligne cliquable : page du joueur (ses photos si son profil est public, ou si c'est un ami)
         return linkPlayer(h("div.card.pad.row", { style: { borderColor: p.id === Supa.userId ? "var(--cyan)" : "" } },
           h("div", { style: { width: "38px", textAlign: "center", fontWeight: 800, fontSize: i < 3 ? "24px" : "15px" } }, `#${i + 1}`),
-          av, h("div.grow", h("div", { style: { fontWeight: 700 } }, p.username + (p.id === Supa.userId ? "  (toi)" : ""), gradeTag(p.level)),
+          av, h("div.grow", h("div", { style: { fontWeight: 700 } }, p.username + (p.id === Supa.userId ? "  (toi)" : ""), gradeTag(p.level, p.beta)),
             h("div.small.dim", p.level.name)),
           h("span.chip", `${p.xp.toLocaleString(LOCALE)} XP`)), p.id);
       }));

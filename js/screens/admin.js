@@ -188,7 +188,7 @@ function apiBlock(rows, o) {
 }
 
 // ---------- Joueurs ----------
-const SORTS = [["recent", "Inscription"], ["seen", "Vus récemment"], ["xp", "XP"], ["reported", "Signalés"]];
+const SORTS = [["recent", "Inscription"], ["seen", "Vus récemment"], ["xp", "XP"], ["reported", "Signalés"], ["beta", "Bêta"]]; // « Bêta » : seulement les bêta-testeurs (beta.sql)
 
 function players(body, ctx) {
   const q = h("input.input", { type: "search", placeholder: "Pseudo, e-mail ou identifiant", autocomplete: "off" });
@@ -229,7 +229,21 @@ function playerRow(p, onChange) {
         p.share_world && chip("Public"), p.reports > 0 && chip(plural(p.reports, "signalement", "signalements"), "warn")),
       h("div.small.dim", `${num(p.xp)} XP · Niv. ${lvl.number} · ${plural(p.catches, "publication", "publications")}`),
       h("div.small.dim", `Inscrit le ${new Date(p.created_at).toLocaleDateString(LOCALE)} · vu ${ago(p.last_seen)}`)),
-    h("span.adm-chev", "›"));
+    betaBox(p), h("span.adm-chev", "›"));
+}
+
+/** Case « Bêta » d'une ligne de la liste : coche ou décoche l'insigne bêta-testeur du joueur (beta.sql) sans ouvrir sa fiche. */
+function betaBox(p) {
+  const input = h("input", { type: "checkbox", checked: !!p.beta_tester, onchange: async () => {
+    input.disabled = true;
+    try {
+      await Admin.setBeta(p.id, input.checked);
+      p.beta_tester = input.checked;
+      toast(input.checked ? `${p.username} est bêta-testeur` : `${p.username} n'est plus bêta-testeur`);
+    } catch (e) { input.checked = !input.checked; toast(e.message); }
+    input.disabled = false;
+  } });
+  return h("label.adm-beta", { title: "Insigne bêta-testeur", onclick: (e) => e.stopPropagation() }, input, "Bêta");
 }
 
 /** Fiche d'un joueur : informations, XP, modération. onChange() après une modification. */
@@ -272,6 +286,11 @@ export function openPlayer(id, onChange = () => {}) {
       actBtn(".outline", "Ses publications", async () => { m.close(); showPosts({ userId: p.id, username: p.username }); }),
       actBtn(".outline", "Ses commentaires", async () => { m.close(); showPosts({ userId: p.id, username: p.username, tab: "comments" }); }),
       actBtn(".outline", "Sa page de joueur", async () => { m.close(); go("player/" + p.id); }),
+      actBtn(".outline", p.beta_tester ? "Retirer l'insigne bêta-testeur" : "Donner l'insigne bêta-testeur", async () => {
+        await Admin.setBeta(p.id, !p.beta_tester);
+        toast(p.beta_tester ? `${p.username} n'est plus bêta-testeur` : `${p.username} est bêta-testeur`);
+        changed();
+      }),
       !p.admin && actBtn(".danger", "Supprimer le compte", async () => {
         const typed = await prompt(`Supprimer le compte de ${p.username} ?`,
           `Tout sera effacé définitivement : profil, photos, XP, amis, commentaires. Tape le pseudo ${p.username} pour confirmer.`, "", 20);
@@ -287,6 +306,7 @@ export function openPlayer(id, onChange = () => {}) {
         h("div.grow", { style: { minWidth: 0 } }, h("div.player-name", p.username),
           h("div.small.dim", `Niv. ${lvl.number} · ${lvl.name}`),
           h("div.adm-name", { style: { marginTop: "4px" } }, p.admin && chip("Admin", "acc"), susp && chip("Suspendu", "warn"),
+            p.beta_tester && chip("Bêta-testeur", "beta"),
             chip(p.share_world ? "Profil public" : p.share_world === false ? "Profil privé" : "Profil : pas choisi")))),
       susp && h("div.card.pad.mt.adm-warn", h("b", susp.until ? `Suspendu jusqu'au ${when(susp.until)}` : "Suspendu sans date de fin"),
         h("div.small", susp.reason ? `Motif : ${susp.reason}` : "Pas de motif noté"), h("div.small.dim", `Depuis le ${when(susp.created_at)}`)),

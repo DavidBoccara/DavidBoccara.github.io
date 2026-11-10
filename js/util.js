@@ -38,11 +38,20 @@ export function rarityMark(r, text) {
 /**
  * Insigne de grade à côté du pseudo (feed, publication, commentaires, concours, classement, amis, page du joueur) :
  * chevrons + numéro, dans la couleur du grade (classe .g1 à .g8 de styles.css), plein au dernier grade.
+ * beta = joueur inscrit avant la sortie officielle (profiles.beta_tester) : petite fiole « bêta-testeur » juste après.
  */
-export function gradeTag(lvl) {
+export function gradeTag(lvl, beta) {
   if (!lvl) return null;
   const label = `Grade ${lvl.number} · ${lvl.name}`;
-  return h("span.grade-tag.g" + lvl.number, { title: label, "aria-label": label }, rankIcon(lvl.number, 12), String(lvl.number));
+  const tag = h("span.grade-tag.g" + lvl.number, { title: label, "aria-label": label }, rankIcon(lvl.number, 12), String(lvl.number));
+  return beta ? [tag, betaTag()] : tag;
+}
+
+/** Insigne « bêta-testeur » (supabase/beta.sql, demandé par le propriétaire le 10/11/2026) ; le toucher dit merci. */
+export function betaTag() {
+  return h("span.beta-tag", { title: "Bêta-testeur", "aria-label": "Bêta-testeur", role: "img",
+    onclick: (e) => { e.preventDefault(); e.stopPropagation(); toast("Bêta-testeur : a testé Plane GO avant sa sortie officielle. Merci !"); } },
+    icon("flask", 12));
 }
 
 /**
@@ -93,6 +102,8 @@ const ICONS = {
   xp: '<path d="M13 3 5 13.5h6L10 21l8-10.5h-6z"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   heart: '<path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.4-7.5 10-7.5 10z"/>',
+  // Fiole (insigne « bêta-testeur »)
+  flask: '<path d="M9.5 3.5h5M10.5 3.5v6L5.2 18.6A1.6 1.6 0 0 0 6.6 21h10.8a1.6 1.6 0 0 0 1.4-2.4L13.5 9.5v-6"/><path d="M7.6 15h8.8"/>',
   // Cloche (notifications, fenêtre « Nouveautés »)
   bell: '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
   trash: '<path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/>',

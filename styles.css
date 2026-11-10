@@ -190,6 +190,19 @@ img.cover { width: 100%; display: block; object-fit: cover; background: var(--ca
 .grade-tag { display: inline-flex; align-items: center; gap: 2px; margin-left: 6px; padding: 0 5px 0 3px; border: 1px solid var(--line-3);
   border-radius: 4px; font: 500 11px/16px var(--mono); color: var(--text-2); vertical-align: 1px; white-space: nowrap; }
 .grade-line > .grade-tag { margin: 0 6px 0 0; } /* insigne en début de ligne (page publication) */
+/* Insigne « bêta-testeur » (betaTag d'util.js) : petite fiole verte juste après l'insigne de grade ; ligne de merci du Profil */
+.beta-tag { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 18px; height: 18px;
+  margin-left: 4px; border: 1px solid color-mix(in srgb, var(--green) 60%, transparent); border-radius: 4px; color: var(--green);
+  vertical-align: 1px; cursor: pointer; }
+.beta-tag svg { display: block; }
+.beta-me { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 13px; color: var(--green); }
+.beta-me .beta-tag { margin-left: 0; }
+/* Console › Joueurs : case « Bêta » de chaque ligne, puce de la fiche */
+.adm-beta { display: inline-flex; align-items: center; gap: 5px; flex: none; padding: 4px 6px; font: 500 11px var(--mono);
+  letter-spacing: .08em; text-transform: uppercase; color: var(--dim); cursor: pointer; }
+.adm-beta:has(input:checked) { color: var(--green); }
+.adm-beta input { margin: 0; accent-color: var(--green); }
+.adm-chip.beta { color: var(--green); border-color: color-mix(in srgb, var(--green) 60%, transparent); }
 .grade-tag .rank-ico svg { display: block; }
 .grade-tag:not(.g1) { color: var(--g); border-color: color-mix(in srgb, var(--g) 60%, transparent); }
 .grade-tag.g8 { background: var(--g); border-color: var(--g); color: var(--ink); }

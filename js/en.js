@@ -1561,4 +1561,7 @@ export const EN = [
   ["Touche un pseudo pour voir son grade et ses photos.", "Tap a username to see their rank and photos."],
   ["Voir les grades", "See the ranks"],
   ["C'est parti", "Let's go"],
+  ["Bêta-testeur", "Beta tester"],
+  ["Bêta-testeur : a testé Plane GO avant sa sortie officielle. Merci !", "Beta tester: tested Plane GO before its official release. Thank you!"],
+  ["Bêta-testeur · merci d'avoir testé Plane GO !", "Beta tester · thanks for testing Plane GO!"],
 ];

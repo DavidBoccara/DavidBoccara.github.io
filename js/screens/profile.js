@@ -1,6 +1,6 @@
 // Onglet Profil : mon profil (pseudo, photo, grade, statistiques), mes amis et le classement.
 import { blockedList } from "../blocks.js";
-import { h, ls, toast, prompt, pickImage, toJpeg, confirmBox, infoButton, modal, dateDay } from "../util.js";
+import { h, ls, toast, prompt, pickImage, toJpeg, confirmBox, infoButton, modal, dateDay, betaTag } from "../util.js";
 import { Supa } from "../supa.js";
 import { Cloud, sync, MyStatus } from "../cloud.js";
 import { adminConsole } from "./admin.js";
@@ -150,6 +150,7 @@ function me(view, show) {
   const avatar = h("img.avatar.lg", { alt: "Ma photo de profil", src: "icons/avatar.svg", style: { cursor: "pointer" }, onclick: changeAvatar });
   avatar.onerror = () => { avatar.src = "icons/avatar.svg"; };
   const name = h("h2", { style: { margin: "10px 0 0" } }), email = h("div.small.dim");
+  const beta = h("div.beta-me", { style: { display: "none" } }, betaTag(), "Bêta-testeur · merci d'avoir testé Plane GO !");
   const level = h("h3", { style: { margin: "14px 0 4px" } }), bar = h("div.xpbar.cyan", h("i")), xpText = h("div.small");
   const stats = h("div.kv.mt");
   // Feed 🌍 Monde : mes publications visibles par tout le monde, ou par mes amis seulement
@@ -163,7 +164,7 @@ function me(view, show) {
   const shareRow = h("div.card.pad.mt", { style: { display: "none" } },
     h("label.switch", h("span.row", { style: { gap: "8px" } }, "Profil public",
       infoButton("Profil public", "Coché : tous les joueurs voient tes publications (même les anciennes) dans le feed Monde et sur ta page de joueur, ouverte en touchant ton pseudo, et peuvent les liker. Les commentaires restent entre amis. Décoché : seuls tes amis les voient.", { small: true })), shareInput));
-  view.append(h("div", { style: { textAlign: "center" } }, avatar, name, email,
+  view.append(h("div", { style: { textAlign: "center" } }, avatar, name, email, beta,
     h("div.row.mt", { style: { justifyContent: "center", flexWrap: "wrap" } },
       h("button.btn.small.outline", { onclick: changeAvatar }, "Changer la photo"), h("button.btn.small.outline", { onclick: editName }, "Modifier le pseudo"))),
     level, bar, xpText, stats, shareRow,
@@ -180,6 +181,7 @@ function me(view, show) {
     const p = Player.profile, xp = Player.bestXp(), lvl = Player.level();
     if (p?.avatarUrl) avatar.src = p.avatarUrl;
     name.textContent = p?.username || "…"; email.textContent = Supa.email;
+    beta.style.display = p?.beta ? "" : "none"; // inscrit avant la sortie officielle (beta.sql)
     shareRow.style.display = p && p.shareWorld !== undefined ? "" : "none"; // réglage installé sur le serveur ?
     shareInput.checked = !!p?.shareWorld;
     level.textContent = `Niveau ${lvl.number} — ${lvl.title}`;
