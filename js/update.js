@@ -1,12 +1,14 @@
 // Appli Android : prévenir quand une nouvelle version est publiée sur le site. Le numéro de la version publiée
 // est écrit dans apk-version.json par la compilation (workflow « Compiler l'appli Android (APK) ») ; l'appli
-// installée donne le sien (Native.version()).
+// installée donne le sien (Native.version()). Appli du Play Store : numéro lu dans play-version.json, mis à jour à la
+// main une fois la version publiée par Google (jamais d'annonce d'une version pas encore sur le Store), bouton → fiche Play Store.
 import { h, ls, modal } from "./util.js";
 import { Native, fromPlayStore } from "./native.js";
 import { APK_HOME } from "./config.js";
 
 // APK et numéro de version lus au même endroit (copie GitHub du site) : jamais d'annonce d'une version pas encore en ligne
 const APK = APK_HOME + "PlaneGO.apk";
+const PLAY = "https://play.google.com/store/apps/details?id=fr.planego";
 /** « 1.10 » est plus récent que « 1.9 ». */
 const newer = (a, b) => {
   const x = String(a).split(".").map((n) => parseInt(n, 10) || 0), y = String(b).split(".").map((n) => parseInt(n, 10) || 0);
@@ -18,19 +20,20 @@ const RECHECK_MS = 10 * 60e3; // version publiée relue au plus toutes les 10 mi
 
 /** { latest, mine } si une version plus récente que celle de l'appli installée est publiée, sinon null. */
 export async function appUpdate() {
-  // Installée par le Play Store : c'est lui qui la met à jour (Google interdit de proposer un autre téléchargement)
-  if (!Native || fromPlayStore()) return null;
+  if (!Native) return null;
   let mine = "";
   try { mine = String(Native.version() || ""); } catch { return null; }
   if (!mine) return null;
   if (Date.now() - fetchedAt > RECHECK_MS) { published = null; fetchedAt = Date.now(); }
-  published ||= fetch(APK_HOME + "apk-version.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  published ||= fetch(fromPlayStore() ? "/play-version.json" : APK_HOME + "apk-version.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
   const v = await published;
   return v?.versionName && newer(v.versionName, mine) ? { latest: v.versionName, mine } : null;
 }
 
 /** Télécharge la nouvelle version : dans le navigateur du téléphone (appli 1.7 et plus), sinon lien à copier. */
 export function downloadUpdate() {
+  // Play Store : Google interdit de proposer un autre téléchargement → fiche de l'appli (openUrl existe depuis la 1.7)
+  if (fromPlayStore()) { try { Native.openUrl(PLAY); } catch { /* rien */ } return; }
   if (typeof Native?.openUrl === "function") { try { Native.openUrl(APK); return; } catch { /* ancienne version */ } }
   navigator.clipboard?.writeText(APK).catch(() => {});
   modal({ title: "Télécharger la mise à jour", body: [
