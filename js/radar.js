@@ -175,9 +175,25 @@ function watchGps() {
   }, (e) => fallback(geoWhy(e)), { enableHighAccuracy: true, maximumAge: 10000, timeout: 30000 });
 }
 
+/**
+ * Veille : personne n'a touché l'écran depuis une heure (Scanner oublié ouvert, souvent toute la nuit) → une recherche par
+ * minute au plus, au lieu de la fréquence choisie (demandé par le propriétaire le 10/11/2026 : un seul iPhone faisait 4 200
+ * appels au relais par jour). Le premier toucher (ou le retour sur l'onglet) relance une recherche tout de suite.
+ */
+const IDLE_MS = 3600e3, IDLE_POLL_MS = 60e3;
+let lastInput = Date.now();
+const radarIdle = () => Date.now() - lastInput > IDLE_MS;
+function wakeUp() {
+  const was = radarIdle();
+  lastInput = Date.now();
+  if (was && Radar.running && Date.now() - Radar.lastUpdate > 5000) poll();
+}
+for (const ev of ["pointerdown", "keydown", "wheel"]) addEventListener(ev, wakeUp, { capture: true, passive: true });
+
 // Le verrou d'écran saute quand l'onglet passe en arrière-plan : on le reprend au retour
 document.addEventListener("visibilitychange", async () => {
   if (document.visibilityState === "visible") {
+    lastInput = Date.now(); // retour sur l'onglet = le joueur est là
     syncNative();
     // Retour à l'écran : liste remise à jour tout de suite (la page ne cherchait plus, ou plus lentement, en arrière-plan)
     if (Radar.running && Date.now() - Radar.lastUpdate > 5000) poll();
@@ -220,6 +236,7 @@ let polling = false, lastNativeAt = 0;
 async function poll() {
   const loc = Radar.location;
   if (!Radar.running || !loc || polling || nativeCovers()) return;
+  if (!fastOn && radarIdle() && Date.now() - Radar.lastUpdate < IDLE_POLL_MS - 1000) return; // veille : 1 recherche par minute
   // Fin du scan rapide : retour à la fréquence choisie
   if (fastOn && Radar.fastUntil() <= Date.now()) { schedule(); Radar.emit(); }
   polling = true;
