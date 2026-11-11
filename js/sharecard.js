@@ -1,13 +1,15 @@
 // Image de partage d'une capture (réseaux sociaux) : la photo du joueur en grand + un bandeau Plane GO (style
-// « Instrument ») avec le modèle, la rareté, les XP, le trajet, le logo et plane-go.com, au format
+// « Instrument ») avec le modèle, la rareté, les XP, l'avion (compagnie, immatriculation, vol), le trajet, le logo et plane-go.com, au format
 // 1080 × 1350 (portrait 4:5, celui d'Instagram et de Facebook). Si l'image ne peut pas être fabriquée (photo
 // illisible…), le partage se fait avec la photo seule.
 import { LANG } from "./i18n.js";
+import { airlineOf } from "./game.js";
 
-const W = 1080, H = 1350, BAND = 480, PAD = 64;
+const W = 1080, H = 1350, BAND = 480, FACTS_H = 92, PAD = 64;
 const C = { bg: "#0F1113", line: "#2A2E33", text: "#F2F3F5", dim: "#9AA1A9", soft: "#C9CDD2", accent: "#F2A93B", mil: "#E5484D", empty: "#2A2E33" };
 const SANS = '"IBM Plex Sans", system-ui, sans-serif', MONO = '"IBM Plex Mono", ui-monospace, monospace';
 const EN = LANG === "en", ES = LANG === "es";
+const T = (fr, en, es) => (EN ? en : ES ? es : fr);
 
 /** Couleur d'une rareté (variable CSS → valeur), ambre si inconnue. */
 function rarityColor(r) {
@@ -30,8 +32,33 @@ function fit(ctx, s, max) {
   while (s.length > 1 && ctx.measureText(s + "…").width > max) s = s.slice(0, -1);
   return s.trimEnd() + "…";
 }
+
+/** L'avion photographié (demandé par le propriétaire le 11/11/2026) : [étiquette, valeur, police] des infos connues. */
+function aircraftFacts(info) {
+  const airline = airlineOf(info.callsign); // nom propre de la compagnie d'après l'indicatif, sinon l'opérateur noté
+  return [
+    [airline ? T("COMPAGNIE", "AIRLINE", "AEROLÍNEA") : T("OPÉRATEUR", "OPERATOR", "OPERADOR"), airline?.name || info.operator, SANS],
+    [T("IMMATRICULATION", "REGISTRATION", "MATRÍCULA"), info.registration, MONO],
+    [T("VOL", "FLIGHT", "VUELO"), info.callsign, MONO],
+  ].filter(([, v]) => v && String(v).trim());
+}
+/** Une colonne par info (étiquette en capitales, valeur dessous) ; la 1re (compagnie) prend la place qui reste. */
+function drawFacts(ctx, facts, y) {
+  const GAP = 56, LABEL = `500 22px ${MONO}`, value = (f) => `500 34px ${f}`;
+  const label = (s, x, max) => { ctx.font = LABEL; ctx.letterSpacing = "3px"; const t = fit(ctx, s, max); if (x != null) ctx.fillText(t, x, y);
+    const w = ctx.measureText(t).width; ctx.letterSpacing = "0px"; return w; };
+  const ws = facts.map(([l, v, f]) => { const a = label(l, null, Infinity); ctx.font = value(f); return Math.max(a, ctx.measureText(String(v)).width); });
+  const room = W - 2 * PAD - ws.slice(1).reduce((s, w) => s + w + GAP, 0);
+  let x = PAD;
+  facts.forEach(([l, v, f], i) => {
+    const w = i ? ws[i] : Math.max(120, Math.min(ws[0], room));
+    ctx.fillStyle = C.dim; label(l, x, w);
+    ctx.font = value(f); ctx.fillStyle = C.soft; ctx.fillText(fit(ctx, String(v).trim(), w), x, y + 32);
+    x += w + GAP;
+  });
+}
 /**
- * Fabrique l'image de partage. info = { mine, player, model, rarity, xp, route, military }.
+ * Fabrique l'image de partage. info = { mine, player, model, rarity, xp, route, military, operator, registration, callsign }.
  * Renvoie une adresse blob: (JPEG) ou null si impossible.
  */
 export async function shareCard(photoUrl, info) {
@@ -43,8 +70,9 @@ export async function shareCard(photoUrl, info) {
     const ctx = cv.getContext("2d");
     ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
 
-    // Photo en haut, recadrée pour remplir la zone (centre gardé)
-    const ph = H - BAND, s = Math.max(W / photo.width, ph / photo.height);
+    // Photo en haut, recadrée pour remplir la zone (centre gardé) ; bandeau un peu plus haut s'il y a les infos de l'avion
+    const facts = aircraftFacts(info);
+    const ph = H - BAND - (facts.length ? FACTS_H : 0), s = Math.max(W / photo.width, ph / photo.height);
     const sw = W / s, sh = ph / s;
     ctx.drawImage(photo, (photo.width - sw) / 2, (photo.height - sh) / 2, sw, sh, 0, 0, W, ph);
     ctx.fillStyle = C.line; ctx.fillRect(0, ph, W, 2);
@@ -82,6 +110,9 @@ export async function shareCard(photoUrl, info) {
       ctx.font = `500 30px ${MONO}`; ctx.fillStyle = C.dim; ctx.fillText(`  ·  +${info.xp} XP`, lx, y + 4);
     }
     y += 62;
+
+    // L'avion : compagnie, immatriculation, vol
+    if (facts.length) { drawFacts(ctx, facts, y); y += FACTS_H; }
 
     // Trajet
     if (info.route) {

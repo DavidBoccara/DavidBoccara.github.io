@@ -775,7 +775,7 @@ export async function share(text, photoUrl) {
 
 export async function shareEntry(e) {
   shareCatch({ mine: true, player: Player.profile?.username, model: entryModel(e), rarity: entryRarity(e),
-    xp: e.xp, route: e.route, military: e.military }, await entryPhoto(e));
+    xp: e.xp, route: e.route, military: e.military, operator: e.operator, registration: e.registration, callsign: e.callsign }, await entryPhoto(e));
 }
 
 // ---------- Installation ----------

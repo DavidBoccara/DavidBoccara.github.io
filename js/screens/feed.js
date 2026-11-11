@@ -261,7 +261,8 @@ function post(c) {
     h("div.acts", likeBtn, h("button", { onclick: open, "aria-label": "Commentaires" }, icon("comment", 18), c.isFriend ? ` ${c.commentCount}` : ""),
       h("button", { onclick: () => old ? shareOld(c.modelName, current(), c.userId === Supa.userId ? null : c.user?.username || "")
         : shareCatch({ mine: c.userId === Supa.userId, player: c.user?.username, model: c.modelName,
-        rarity: c.rarity, xp: c.xp, route: c.route, military: c.military }, current()) }, icon("share", 18), " Partager"),
+        rarity: c.rarity, xp: c.xp, route: c.route, military: c.military, operator: c.operator, registration: c.registration,
+        callsign: c.callsign }, current()) }, icon("share", 18), " Partager"),
       h("button", { onclick: () => savePhoto(current(), photoName(c.modelName, c.takenAt)), "aria-label": "Enregistrer la photo sur le téléphone", title: "Enregistrer la photo" }, icon("download", 18))));
   return card;
 }
