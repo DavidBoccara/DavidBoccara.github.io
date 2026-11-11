@@ -299,7 +299,7 @@ export const EN = [
   ["Quel est cet avion ?", "What aircraft is this?"],
   ["Quelle est la compagnie de cet avion ?", "Which airline does this aircraft belong to?"],
   ["Modèle de l'avion :", "Aircraft model:"],
-  ["Avion de ligne : une question sur deux porte sur sa compagnie, à reconnaître à ses couleurs.", "Airliners: every other question is about the airline, to be recognised by its colours."],
+  ["Avion de ligne : une question sur deux porte sur sa compagnie, à reconnaître à ses couleurs (photo floutée jusqu'à ta réponse).", "Airliners: every other question is about the airline, to be recognised by its colours (photo blurred until you answer)."],
   ["Bonne réponse ! +{1} XP{2} · série de {3}", "Right! +{1} XP{2} · streak of {3}"],
   ["Série de {1} : les prochaines réponses rapportent ×{2} !", "Streak of {1}: your next answers earn ×{2}!"],
   ["Raté : c'était « {1} ». La série repart de zéro.", "Missed: it was “{1}”. The streak starts over."],

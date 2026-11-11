@@ -162,7 +162,9 @@ export async function questionPhoto(_ownUrl, wikiQ, name, ctx = {}) {
  * par erreur. Appeler `photo.showFlag()` une fois la réponse donnée.
  */
 export function quizPhoto(q, cls = "") {
-  const img = h("img.quiz-photo", { src: q.photoUrl, alt: "Photo de l'avion à reconnaître" });
+  // Question sur la compagnie : photo légèrement floutée jusqu'à la réponse (nom peint illisible, couleurs et dérive
+  // reconnaissables ; demandé par le propriétaire le 11/11/2026)
+  const img = h("img.quiz-photo" + (q.ask === "airline" ? ".blurred" : ""), { src: q.photoUrl, alt: "Photo de l'avion à reconnaître" });
   const flag = h("button.photo-flag", { type: "button", style: { display: "none" }, title: "Signaler une photo qui donne la réponse" }, "Signaler");
   const credit = creditLine(q.photoUrl, { hold: true }); // auteur et licence après la réponse (ils pourraient la donner)
   const wrap = h("div.quiz-photo-wrap" + cls, img, flag, credit);
@@ -178,7 +180,7 @@ export function quizPhoto(q, cls = "") {
   };
   // Question sur la compagnie : son nom peint sur l'avion n'est pas une raison de retirer la photo (elle sert aussi au
   // quiz des modèles) : pas de « Signaler »
-  wrap.showFlag = () => { if (q.ask !== "airline") flag.style.display = ""; credit.reveal(); };
+  wrap.showFlag = () => { if (q.ask !== "airline") flag.style.display = ""; img.classList.remove("blurred"); credit.reveal(); }; // après la réponse
   return wrap;
 }
 
@@ -219,7 +221,7 @@ export const AirlineTurn = {
   /** Question posée : tour suivant (renvoie q). */
   done(q) { if (q?.airliner) ls.set(TURN_KEY, q.ask === "airline" ? "model" : "airline"); return q; },
 };
-export const AIRLINE_RULE = "Avion de ligne : une question sur deux porte sur sa compagnie, à reconnaître à ses couleurs.";
+export const AIRLINE_RULE = "Avion de ligne : une question sur deux porte sur sa compagnie, à reconnaître à ses couleurs (photo floutée jusqu'à ta réponse).";
 
 /**
  * Question sur un avion (nom connu + photo), ou null. wantAirline et vol d'une compagnie connue : question sur la compagnie,

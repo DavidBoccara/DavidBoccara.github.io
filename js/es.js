@@ -300,7 +300,7 @@ export const ES = [
   ["Quel est cet avion ?", "¿Qué avión es?"],
   ["Quelle est la compagnie de cet avion ?", "¿De qué aerolínea es este avión?"],
   ["Modèle de l'avion :", "Modelo del avión:"],
-  ["Avion de ligne : une question sur deux porte sur sa compagnie, à reconnaître à ses couleurs.", "Aviones de línea: una de cada dos preguntas es sobre la aerolínea, que hay que reconocer por sus colores."],
+  ["Avion de ligne : une question sur deux porte sur sa compagnie, à reconnaître à ses couleurs (photo floutée jusqu'à ta réponse).", "Aviones de línea: una de cada dos preguntas es sobre la aerolínea, que hay que reconocer por sus colores (foto desenfocada hasta que respondas)."],
   ["Bonne réponse ! +{1} XP{2} · série de {3}", "¡Correcto! +{1} XP{2} · racha de {3}"],
   ["Série de {1} : les prochaines réponses rapportent ×{2} !", "Racha de {1}: ¡tus próximas respuestas dan ×{2}!"],
   ["Raté : c'était « {1} ». La série repart de zéro.", "Fallo: era « {1} ». La racha vuelve a cero."],
