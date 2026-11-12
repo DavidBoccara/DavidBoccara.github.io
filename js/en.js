@@ -264,6 +264,8 @@ export const EN = [
   ["Article sur le modèle de l'appareil", "Article about this aircraft's model"],
   ["Appareil photo branché : les photos que tu prends maintenant arrivent ici.", "Camera connected: the photos you take now arrive here."],
   ["Vérification…", "Checking…"],
+  ["Ajouter les {1} photos à cet avion", "Add the {1} photos to this aircraft"],
+  ["Ajouter la photo à cet avion", "Add the photo to this aircraft"],
   ["Ajouter {1} à cet avion", "Add {1} to this aircraft"],
   ["× pour supprimer une photo ratée, toucher une photo pour la voir en grand.", "× to delete a failed photo, tap a photo to see it full size."],
   ["Quiz en direct", "Live quiz"],

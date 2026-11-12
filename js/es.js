@@ -265,6 +265,8 @@ export const ES = [
   ["Article sur le modèle de l'appareil", "Artículo sobre el modelo del avión"],
   ["Appareil photo branché : les photos que tu prends maintenant arrivent ici.", "Cámara conectada: las fotos que hagas ahora llegan aquí."],
   ["Vérification…", "Comprobando…"],
+  ["Ajouter les {1} photos à cet avion", "Añadir las {1} fotos a este avión"],
+  ["Ajouter la photo à cet avion", "Añadir la foto a este avión"],
   ["Ajouter {1} à cet avion", "Añadir {1} a este avión"],
   ["× pour supprimer une photo ratée, toucher une photo pour la voir en grand.", "× para eliminar una foto fallida, toca una foto para verla en grande."],
   ["Quiz en direct", "Quiz en directo"],

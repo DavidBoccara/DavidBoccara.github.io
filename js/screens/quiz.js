@@ -158,13 +158,14 @@ function liveQuiz(view) {
     const lvl = Player.level();
     const next = radiusButton({ km: Quiz.radiusKm(lvl), lvl, label: "Avion suivant", sub: "Dans votre rayon de jeu", onClick: () => search() });
     next.style.display = "none"; next.classList.add("mt");
+    // Un span par morceau : chacun est traduit à part (en anglais, la ligne entière restait en français)
     const hint = [q.distanceKm > 30 ? "Repéré par votre radar" : "Au-dessus de vous", q.distanceKm != null && `à ${q.distanceKm.toFixed(1).replace(".", DEC)} km`,
-      q.altitudeM != null && `${q.altitudeM.toLocaleString(LOCALE)} m d'altitude`].filter(Boolean).join(" · ");
+      q.altitudeM != null && `${q.altitudeM.toLocaleString(LOCALE)} m d'altitude`].filter(Boolean).flatMap((x, i) => (i ? [" · ", h("span", x)] : [h("span", x)]));
     const opts = q.options.map((name) => h("button.opt", { onclick: () => answer(name) }, name));
     const tipBox = h("div"), bonusBox = h("div");
     if (Quiz.bonusCount(Player.level())) prefetchBonus(q); // questions bonus prêtes quand le joueur aura répondu
     const photo = quizPhoto(q);
-    qBox.replaceChildren(photo, h("p", hint),
+    qBox.replaceChildren(photo, h("p", ...hint),
       h("h3", { style: { margin: "4px 0" } }, questionTitle(q)), ...opts, result, tipBox, bonusBox, next);
 
     function answer(choice) {
